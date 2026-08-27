@@ -1,0 +1,11 @@
+{
+  "name": "license-plate-demo",
+  "version": "1.0.0",
+  "description": "Smart parking license plate and helmet detection UI",
+  "scripts": {
+    "dev": "vite frontend --port 3000"
+  },
+  "devDependencies": {
+    "vite": "^5.4.2"
+  }
+}

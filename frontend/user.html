@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SafeRide AI • Campus Safety Portal</title>
+  <meta name="description" content="AI-Powered Campus Security & Helmet Compliance System - YOLOv8 & Thai OCR">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="mobile-app-body">
+
+  <div id="app" class="mobile-app-wrapper">
+
+    <!-- ============================================== -->
+    <!-- VIEW 2: MAIN DASHBOARD (MOBILE APP VIEW) -->
+    <!-- ============================================== -->
+    <section id="dashboard-view" class="view-section active mobile-dashboard-screen">
+
+      <!-- Top Mobile App Header -->
+      <header class="app-mobile-header">
+        <div class="header-brand-group">
+          <div class="app-mini-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+          </div>
+          <div>
+            <span class="app-header-title">SafeRide <span class="text-blue">AI</span></span>
+            <div class="system-ready-indicator">
+              <span class="status-dot online"></span>
+              <span id="backend-status-text" data-i18n="status_ready">AI System Ready</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Profile Pill & Logout -->
+        <div class="header-user-actions">
+          <div class="user-profile-chip" id="user-profile-chip" title="Active User">
+            <div class="user-avatar-circle" id="user-avatar-badge">
+              <span id="user-avatar-letter">U</span>
+            </div>
+            <div class="user-chip-text">
+              <span class="user-chip-name" id="user-display-name">User</span>
+              <span class="user-chip-role" id="user-role-badge">Role</span>
+            </div>
+          </div>
+
+          <button type="button" id="btn-logout" class="btn-logout-icon" title="Sign Out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Guest Privacy Alert Banner -->
+      <div id="guest-alert-banner" class="guest-privacy-banner" style="display: none;">
+        <div class="banner-icon-col">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div class="banner-text-col">
+          <strong>Guest Mode (Privacy Protected)</strong>
+          <p>Personal vehicle records and student identities are masked under campus privacy policy.</p>
+        </div>
+        <button type="button" id="btn-banner-login" class="btn-banner-signin">Sign In</button>
+      </div>
+
+      <!-- Main Scrollable Content Area -->
+      <div class="mobile-content-scroll">
+
+        <!-- ============================================== -->
+        <!-- TAB 1: LIVE AI MONITORING & CAMERA STREAM -->
+        <!-- ============================================== -->
+        <div id="tab-live-monitor" class="tab-pane active">
+
+          <!-- KPI Summary Cards Grid -->
+          <div class="mobile-kpi-grid">
+
+            <div class="kpi-box">
+              <div class="kpi-box-header">
+                <span class="kpi-box-label">AVAILABLE</span>
+              </div>
+              <div class="kpi-box-value text-success" id="kpi-available-count">32</div>
+            </div>
+
+            <div class="kpi-box">
+              <div class="kpi-box-header">
+                <span class="kpi-box-label">OCCUPIED</span>
+                <span class="kpi-box-icon green">🪖</span>
+              </div>
+              <div class="kpi-box-value" id="kpi-occupied-count">3</div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 3: STUDENT PROFILE & REGISTERED VEHICLES -->
+        <!-- ============================================== -->
+        <div id="tab-profile" class="tab-pane">
+
+          <!-- Guest Lock Notice -->
+          <div id="profile-guest-locked" class="guest-locked-box" style="display: none;">
+            <div class="locked-icon-shield">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <h3>Privacy Restricted Access</h3>
+            <p>Student personal details, safety scoring, and registered vehicle license plates are confidential under
+              Campus Data Privacy Policy.</p>
+            <button type="button" id="btn-profile-login-cta" class="btn-primary-blue">Sign In with Microsoft</button>
+          </div>
+
+          <!-- Student Profile Content -->
+          <div id="profile-student-content" class="profile-layout">
+
+            <!-- Student ID Card -->
+            <div class="student-id-card">
+              <div class="id-card-banner">
+                <span class="univ-title">CAMPUS SAFETY PASS</span>
+                <span class="pass-year">2026</span>
+              </div>
+              <div class="id-card-body">
+                <div class="id-avatar-box">
+                  <div class="student-big-avatar" id="profile-avatar-char">C</div>
+                </div>
+                <div class="id-details">
+                  <h3 class="student-name" id="profile-full-name">Cherie A.</h3>
+                  <div class="id-row">
+                    <span class="id-label">Student ID:</span>
+                    <strong class="id-val" id="profile-student-id">65070042</strong>
+                  </div>
+                  <div class="id-row">
+                    <span class="id-label">Email:</span>
+                    <span class="id-val text-truncate" id="profile-email-text">65070042@student.university.ac.th</span>
+                  </div>
+                  <div class="id-row">
+                    <span class="id-label">Status:</span>
+                    <span class="status-badge-verified">✓ Verified Student</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="safety-score-bar">
+                <div class="score-header">
+                  <span>Safety Score:</span>
+                  <strong class="score-number text-success" id="profile-safety-score">98/100</strong>
+                </div>
+                <div class="mini-progress-bar">
+                  <div class="progress-fill green" style="width: 98%"></div>
+                </div>
+                <span class="score-desc">Consistently wears helmet. Eligible for Green Zone parking permit.</span>
+              </div>
+            </div>
+
+            <!-- Registered Vehicles -->
+            <div class="mobile-card">
+              <div class="card-header-row">
+                <strong>My Registered Vehicles</strong>
+                <button class="btn-sm-blue" id="btn-add-vehicle">+ Add Vehicle</button>
+              </div>
+
+              <div class="vehicles-list" id="student-vehicles-list">
+                <div class="vehicle-item">
+                  <div class="vehicle-icon">🛵</div>
+                  <div class="vehicle-info">
+                    <strong class="vehicle-plate">1กข 8924 Bangkok</strong>
+                    <span class="vehicle-model">Honda Click 160 (Black-Red)</span>
+                  </div>
+                  <div class="vehicle-sticker-status active">
+                    <span>Pass: Approved</span>
+                  </div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-icon">🛵</div>
+                  <div class="vehicle-info">
+                    <strong class="vehicle-plate">3ขพ 4512 Bangkok</strong>
+                    <span class="vehicle-model">Yamaha Grand Filano (White)</span>
+                  </div>
+                  <div class="vehicle-sticker-status active">
+                    <span>Pass: Approved</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Campus Access Log -->
+            <div class="mobile-card">
+              <div class="card-header-row">
+                <strong>My Gate Access History</strong>
+              </div>
+              <div class="history-table-wrapper">
+                <table class="history-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Gate</th>
+                      <th>Plate</th>
+                      <th>Helmet</th>
+                    </tr>
+                  </thead>
+                  <tbody id="my-history-tbody">
+                    <tr>
+                      <td>Today, 08:24 AM</td>
+                      <td>Gate 1</td>
+                      <td>1กข 8924 BKK</td>
+                      <td><span class="badge-ok">✓ Helmet On</span></td>
+                    </tr>
+                    <tr>
+                      <td>Yesterday, 04:45 PM</td>
+                      <td>Gate 2</td>
+                      <td>1กข 8924 BKK</td>
+                      <td><span class="badge-ok">✓ Helmet On</span></td>
+                    </tr>
+                    <tr>
+                      <td>Aug 12, 08:15 AM</td>
+                      <td>Gate 1</td>
+                      <td>1กข 8924 BKK</td>
+                      <td><span class="badge-ok">✓ Helmet On</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 4: SETTINGS & BACKEND CONFIG -->
+        <!-- ============================================== -->
+        <div id="tab-settings" class="tab-pane">
+
+          <div class="mobile-card">
+            <div class="card-header-row">
+              <strong>Python CV Backend API Bridge</strong>
+            </div>
+            <p class="text-muted text-sm">
+              Connect this mobile interface to your Python YOLOv8 & EasyOCR server via WebSocket.
+            </p>
+
+            <div class="backend-config-form">
+              <div class="input-group">
+                <label class="input-label">WebSocket URL:</label>
+                <input type="text" id="ws-backend-url" value="ws://localhost:8000/ws/detections" class="config-input">
+              </div>
+              <div class="config-actions">
+                <button type="button" id="btn-test-ws" class="btn-secondary-blue">Test Connection</button>
+                <span id="ws-test-result" class="test-result-text">Built-in Simulation Active</span>
+              </div>
+            </div>
+
+            <div class="code-snippet-guide">
+              <span class="snippet-title">💡 How to start Python backend:</span>
+              <pre><code>cd license-plate-demo
+python3 server.py</code></pre>
+            </div>
+          </div>
+
+          <div class="mobile-card">
+            <div class="card-header-row">
+              <strong>AI Detection Thresholds</strong>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Helmet Detection Confidence (YOLOv8):</span>
+                <strong id="conf-helmet-val" class="text-blue">50%</strong>
+              </div>
+              <input type="range" id="slider-conf-helmet" min="20" max="90" value="50" class="custom-slider">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>License Plate OCR Confidence (EasyOCR):</span>
+                <strong id="conf-plate-val" class="text-blue">40%</strong>
+              </div>
+              <input type="range" id="slider-conf-plate" min="20" max="90" value="40" class="custom-slider">
+            </div>
+
+            <div class="toggle-option-row">
+              <div class="toggle-text">
+                <strong>Audio Alarm on Violation</strong>
+                <span class="text-muted text-xs">Play chime alert when rider has no helmet</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-audio-alert" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Bottom Mobile App Navigation Bar -->
+      <nav class="mobile-bottom-nav">
+        <button class="mobile-nav-item active" data-tab="tab-live-monitor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 7l-7 5 7 5V7z"></path>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+          </svg>
+          <span>Monitor</span>
+        </button>
+
+        <button class="mobile-nav-item" data-tab="tab-profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>My Vehicle</span>
+        </button>
+
+        <button class="mobile-nav-item" data-tab="tab-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- MODAL: MICROSOFT ACCOUNT CHOOSER (SIMULATED OAUTH) -->
+    <!-- ============================================== -->
+    <div id="microsoft-modal" class="modal-backdrop">
+      <div class="microsoft-modal-card">
+        <div class="microsoft-modal-header">
+          <svg class="microsoft-logo-sm" viewBox="0 0 21 21" width="14" height="14">
+            <rect x="0" y="0" width="10" height="10" fill="#f25022" />
+            <rect x="11" y="0" width="10" height="10" fill="#7fba00" />
+            <rect x="0" y="11" width="10" height="10" fill="#00a4ef" />
+            <rect x="11" y="11" width="10" height="10" fill="#ffb900" />
+          </svg>
+          <span class="modal-app-name" data-i18n="microsoft_app_name">Sign in with Microsoft • SafeRide AI</span>
+          <button id="btn-close-microsoft-modal" class="modal-close-btn">&times;</button>
+        </div>
+
+        <div class="microsoft-modal-body">
+          <h3 class="modal-title" data-i18n="microsoft_choose_account">Choose a Student Account</h3>
+          <p class="modal-subtitle" data-i18n="microsoft_choose_desc">to continue to SafeRide Smart Campus System</p>
+
+          <div class="microsoft-accounts-list">
+            <button type="button" class="microsoft-account-item" data-email="65070042@student.university.ac.th"
+              data-name="Cherie A." data-id="65070042">
+              <div class="microsoft-account-avatar blue">C</div>
+              <div class="microsoft-account-info">
+                <span class="account-name">Cherie A.</span>
+                <span class="account-email">65070042@student.university.ac.th</span>
+              </div>
+              <span class="account-badge">Student</span>
+            </button>
+
+            <button type="button" class="microsoft-account-item" data-email="thanawat.p@student.university.ac.th"
+              data-name="Thanawat P." data-id="64010589">
+              <div class="microsoft-account-avatar indigo">T</div>
+              <div class="microsoft-account-info">
+                <span class="account-name">Thanawat Pongpanich</span>
+                <span class="account-email">thanawat.p@student.university.ac.th</span>
+              </div>
+              <span class="account-badge">Student</span>
+            </button>
+
+            <button type="button" class="microsoft-account-item" data-email="security.gate1@university.ac.th"
+              data-name="Officer Somchai" data-id="SEC-01">
+              <div class="microsoft-account-avatar amber">S</div>
+              <div class="microsoft-account-info">
+                <span class="account-name">Security Officer Somchai</span>
+                <span class="account-email">security.gate1@university.ac.th</span>
+              </div>
+              <span class="account-badge admin">Officer</span>
+            </button>
+
+            <!-- Custom Microsoft Student Account Option -->
+            <div class="custom-microsoft-input-box">
+              <label class="custom-microsoft-label" data-i18n="microsoft_other_account">Or use another Microsoft Student
+                account:</label>
+              <div class="custom-microsoft-field">
+                <input type="email" id="custom-microsoft-email" placeholder="your.name@student.ac.th">
+                <button type="button" id="btn-custom-microsoft-submit" class="btn-custom-microsoft">Next</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="microsoft-modal-footer">
+            <span data-i18n="microsoft_privacy">🔒 To continue, Microsoft will share your verified student credentials
+              with SafeRide AI under campus privacy terms.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL: ADD VEHICLE -->
+    <!-- ============================================== -->
+    <div id="add-vehicle-modal" class="modal-backdrop">
+      <div class="microsoft-modal-card">
+        <div class="microsoft-modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+          <strong style="font-size: 1rem; color: var(--brand-navy);">ลงทะเบียนยานพาหนะใหม่ (Add Vehicle)</strong>
+          <button id="btn-close-vehicle-modal" class="modal-close-btn">&times;</button>
+        </div>
+        <form id="add-vehicle-form" style="margin: 0;">
+          <div class="microsoft-modal-body"
+            style="display: flex; flex-direction: column; gap: 16px; padding-top: 16px;">
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label class="input-label"
+                style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">เลขทะเบียนรถ (เช่น 1กข
+                8924)</label>
+              <input type="text" id="vehicle-plate-input" placeholder="เลขทะเบียน เช่น 1กข 8924" required
+                class="config-input" style="width: 100%; box-sizing: border-box;">
+            </div>
+
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label class="input-label"
+                style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">จังหวัด (Province)</label>
+              <input type="text" id="vehicle-province-input" placeholder="เช่น กรุงเทพมหานคร" required
+                class="config-input" style="width: 100%; box-sizing: border-box;">
+            </div>
+
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label class="input-label"
+                style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">ยี่ห้อและรุ่นรถ (Model เช่น
+                Honda Click 160)</label>
+              <input type="text" id="vehicle-model-input" placeholder="ยี่ห้อและรุ่น เช่น Honda PCX 160" required
+                class="config-input" style="width: 100%; box-sizing: border-box;">
+            </div>
+
+            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label class="input-label"
+                style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">สีรถ (Color เช่น
+                สีดำ-แดง)</label>
+              <input type="text" id="vehicle-color-input" placeholder="ระบุสี เช่น สีขาว" required class="config-input"
+                style="width: 100%; box-sizing: border-box;">
+            </div>
+          </div>
+          <div class="microsoft-modal-footer"
+            style="display: flex; gap: 8px; justify-content: flex-end; padding: 12px 20px; border-top: 1px solid var(--border-color); background: var(--bg-card-alt);">
+            <button type="button" id="btn-cancel-vehicle" class="ctrl-btn"
+              style="padding: 6px 12px; font-size: 0.8rem;">ยกเลิก</button>
+            <button type="submit" class="btn-primary-blue"
+              style="padding: 6px 16px; font-size: 0.8rem; border-radius: var(--radius-md); background: var(--brand-blue-600); color: #ffffff; border: none; cursor: pointer;">ลงทะเบียน</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/auth.js?v=1.1"></script>
+  <script src="js/authority.js?v=1.1"></script>
+  <script src="js/detection.js?v=1.1"></script>
+  <script src="js/app.js?v=1.1"></script>
+</body>
+
+</html>

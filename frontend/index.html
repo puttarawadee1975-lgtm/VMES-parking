@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SafeRide AI • Smart Campus Helmet & License Plate Monitoring</title>
+  <meta name="description" content="AI-Powered Campus Security & Helmet Compliance System - YOLOv8 & Thai OCR">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="mobile-app-body">
+
+  <!-- Mobile App Frame Container -->
+  <div id="app" class="mobile-app-wrapper">
+
+    <!-- ============================================== -->
+    <!-- VIEW 1: AUTHENTICATION (MOBILE LOGIN SCREEN ONLY) -->
+    <!-- ============================================== -->
+    <main id="auth-view" class="view-section active mobile-auth-screen">
+      <div class="mobile-login-card">
+
+        <!-- App Logo & Branding Header -->
+        <div class="mobile-brand-header">
+          <div class="app-logo-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+          </div>
+          <h1 class="app-title"><span class="text-blue">AU</span> Parking</h1>
+          <p class="app-tagline">Availability Parking Monitoring</p>
+        </div>
+
+        <!-- Login Actions Group -->
+        <div class="auth-actions-group">
+
+          <!-- Option 1: Microsoft Student Sign-In -->
+          <button type="button" id="btn-microsoft-login" class="btn-microsoft-auth">
+            <svg class="microsoft-logo" viewBox="0 0 21 21" width="21" height="21">
+              <rect x="0" y="0" width="10" height="10" fill="#f25022" />
+              <rect x="11" y="0" width="10" height="10" fill="#7fba00" />
+              <rect x="0" y="11" width="10" height="10" fill="#00a4ef" />
+              <rect x="11" y="11" width="10" height="10" fill="#ffb900" />
+            </svg>
+            <div class="microsoft-btn-text">
+              <span class="main-text" data-i18n="microsoft_btn_text">Sign in with Microsoft</span>
+            </div>
+          </button>
+
+          <div class="divider-with-text">
+            <span class="divider-line"></span>
+            <span class="divider-label" data-i18n="divider_or">or</span>
+            <span class="divider-line"></span>
+          </div>
+
+          <!-- Option 2: Guest Mode Button -->
+          <button type="button" id="btn-guest-login" class="btn-guest-entry">
+            <div class="guest-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div class="guest-btn-content">
+              <div class="guest-btn-title">
+                <span data-i18n="btn_guest_title">Continue as Guest</span>
+              </div>
+            </div>
+            <svg class="guest-btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+
+        </div>
+
+      </div>
+    </main>
+
+
+
+    <!-- ============================================== -->
+    <!-- MODAL: MICROSOFT ACCOUNT CHOOSER (SIMULATED OAUTH) -->
+    <!-- ============================================== -->
+    <div id="microsoft-modal" class="modal-backdrop">
+      <div class="microsoft-modal-card">
+        <div class="microsoft-modal-header">
+          <svg class="microsoft-logo-sm" viewBox="0 0 21 21" width="14" height="14">
+            <rect x="0" y="0" width="10" height="10" fill="#f25022" />
+            <rect x="11" y="0" width="10" height="10" fill="#7fba00" />
+            <rect x="0" y="11" width="10" height="10" fill="#00a4ef" />
+            <rect x="11" y="11" width="10" height="10" fill="#ffb900" />
+          </svg>
+          <span class="modal-app-name" data-i18n="microsoft_app_name">Sign in with Microsoft • SafeRide AI</span>
+          <button id="btn-close-microsoft-modal" class="modal-close-btn">&times;</button>
+        </div>
+
+        <div class="microsoft-modal-body">
+          <h3 class="modal-title" data-i18n="microsoft_choose_account">Choose a Student Account</h3>
+          <p class="modal-subtitle" data-i18n="microsoft_choose_desc">to continue to SafeRide Smart Campus System</p>
+
+          <div class="microsoft-accounts-list">
+            <button type="button" class="microsoft-account-item" data-email="65070042@student.university.ac.th"
+              data-name="Cherie A." data-id="65070042">
+              <div class="microsoft-account-avatar blue">C</div>
+              <div class="microsoft-account-info">
+                <span class="account-name">Cherie A.</span>
+                <span class="account-email">65070042@student.university.ac.th</span>
+              </div>
+              <span class="account-badge">Student</span>
+            </button>
+
+            <button type="button" class="microsoft-account-item" data-email="thanawat.p@student.university.ac.th"
+              data-name="Thanawat P." data-id="64010589">
+              <div class="microsoft-account-avatar indigo">T</div>
+              <div class="microsoft-account-info">
+                <span class="account-name">Thanawat Pongpanich</span>
+                <span class="account-email">thanawat.p@student.university.ac.th</span>
+              </div>
+              <span class="account-badge">Student</span>
+            </button>
+
+            <button type="button" class="microsoft-account-item" data-email="security.gate1@university.ac.th"
+              data-name="Officer Somchai" data-id="SEC-01">
+              <div class="microsoft-account-avatar amber">S</div>
+              <div class="microsoft-account-info">
+                <span class="account-name">Security Officer Somchai</span>
+                <span class="account-email">security.gate1@university.ac.th</span>
+              </div>
+              <span class="account-badge admin">Officer</span>
+            </button>
+
+            <!-- Custom Microsoft Student Account Option -->
+            <div class="custom-microsoft-input-box">
+              <label class="custom-microsoft-label" data-i18n="microsoft_other_account">Or use another Microsoft Student
+                account:</label>
+              <div class="custom-microsoft-field">
+                <input type="email" id="custom-microsoft-email" placeholder="your.name@student.ac.th">
+                <button type="button" id="btn-custom-microsoft-submit" class="btn-custom-microsoft">Next</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="microsoft-modal-footer">
+            <span data-i18n="microsoft_privacy">🔒 To continue, Microsoft will share your verified student credentials
+              with SafeRide AI under campus privacy terms.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/auth.js?v=1.1"></script>
+  <script src="js/authority.js?v=1.1"></script>
+  <script src="js/detection.js?v=1.1"></script>
+  <script src="js/app.js?v=1.1"></script>
+</body>
+
+</html>
