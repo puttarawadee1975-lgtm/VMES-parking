@@ -6,15 +6,15 @@ export default function AccountScreen({
   currentUser,
   onLogout,
   websocketUrl = 'ws://192.168.1.100:8000/ws/detections',
-  setWebsocketUrl = () => {},
+  setWebsocketUrl = () => { },
   wsConnected = false,
-  onTestWebSocket = () => {},
+  onTestWebSocket = () => { },
   confidenceHelmet = 50,
-  setConfidenceHelmet = () => {},
+  setConfidenceHelmet = () => { },
   confidencePlate = 40,
-  setConfidencePlate = () => {},
+  setConfidencePlate = () => { },
   audioAlertEnabled = true,
-  setAudioAlertEnabled = () => {}
+  setAudioAlertEnabled = () => { }
 }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -46,16 +46,14 @@ export default function AccountScreen({
         <View className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
           <View className="flex-row items-center">
             <View
-              className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 border-2 ${
-                isAdmin
-                  ? 'bg-amber-100 border-amber-500'
-                  : 'bg-blue-100 border-blue-600'
-              }`}
+              className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 border-2 ${isAdmin
+                ? 'bg-amber-100 border-amber-500'
+                : 'bg-blue-100 border-blue-600'
+                }`}
             >
               <Text
-                className={`font-black text-2xl ${
-                  isAdmin ? 'text-amber-700' : 'text-blue-700'
-                }`}
+                className={`font-black text-2xl ${isAdmin ? 'text-amber-700' : 'text-blue-700'
+                  }`}
               >
                 {avatarInitial}
               </Text>
@@ -67,14 +65,12 @@ export default function AccountScreen({
                   {currentUser?.name || 'User'}
                 </Text>
                 <View
-                  className={`px-2.5 py-0.5 rounded-full ${
-                    isAdmin ? 'bg-amber-100' : 'bg-blue-100'
-                  }`}
+                  className={`px-2.5 py-0.5 rounded-full ${isAdmin ? 'bg-amber-100' : 'bg-blue-100'
+                    }`}
                 >
                   <Text
-                    className={`text-[10px] font-bold uppercase ${
-                      isAdmin ? 'text-amber-700' : 'text-blue-700'
-                    }`}
+                    className={`text-[10px] font-bold uppercase ${isAdmin ? 'text-amber-700' : 'text-blue-700'
+                      }`}
                   >
                     {roleLabel}
                   </Text>
@@ -96,124 +92,6 @@ export default function AccountScreen({
           </View>
         </View>
       )}
-
-      {/* WS Backend config */}
-      <View className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm">
-        <Text className="text-slate-900 font-bold text-sm mb-1">Python AI Backend Bridge</Text>
-        <Text className="text-slate-500 text-xs mb-4">Connect real-time YOLOv8 & Thai OCR stream from server.py</Text>
-
-        <View className="flex-col gap-3">
-          <View>
-            <Text className="text-slate-600 text-xs font-semibold mb-1">WebSocket URL:</Text>
-            <TextInput
-              value={websocketUrl || ''}
-              onChangeText={setWebsocketUrl}
-              autoCapitalize="none"
-              style={{
-                backgroundColor: '#f8fafc',
-                borderWidth: 1,
-                borderColor: '#e2e8f0',
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                color: '#1e293b',
-                fontSize: 12
-              }}
-            />
-          </View>
-
-          <View className="flex-row justify-between items-center pt-2">
-            <TouchableOpacity
-              onPress={onTestWebSocket}
-              activeOpacity={0.8}
-              className="bg-blue-50 border border-blue-200 py-2 px-4 rounded-xl active:bg-blue-100"
-            >
-              <Text className="text-blue-600 font-bold text-xs">Test Connection</Text>
-            </TouchableOpacity>
-            <Text className="text-slate-500 text-[10px]">{wsConnected ? 'Connected' : 'Simulation Mode'}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Threshold sliders */}
-      <View className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm">
-        <Text className="text-slate-900 font-bold text-sm mb-4">AI Detection Thresholds</Text>
-
-        <View className="mb-4">
-          <View className="flex-row justify-between items-center mb-1">
-            <Text className="text-slate-600 text-xs flex-1 mr-2">Helmet Confidence (YOLOv8):</Text>
-            <Text className="text-blue-600 font-bold text-xs">{confidenceHelmet || 50}%</Text>
-          </View>
-          <View className="flex-row items-center">
-            <TextInput
-              keyboardType="numeric"
-              value={String(confidenceHelmet ?? 50)}
-              onChangeText={(val) => {
-                const num = parseInt(val, 10);
-                setConfidenceHelmet(isNaN(num) ? 20 : Math.max(20, Math.min(90, num)));
-              }}
-              style={{
-                backgroundColor: '#f8fafc',
-                borderWidth: 1,
-                borderColor: '#e2e8f0',
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                color: '#0f172a',
-                fontSize: 12,
-                width: 64,
-                textAlign: 'center',
-                fontWeight: 'bold'
-              }}
-            />
-            <Text className="text-slate-400 text-[10px] ml-2">Recommended: 50%</Text>
-          </View>
-        </View>
-
-        <View className="mb-4">
-          <View className="flex-row justify-between items-center mb-1">
-            <Text className="text-slate-600 text-xs flex-1 mr-2">License Plate OCR Threshold:</Text>
-            <Text className="text-blue-600 font-bold text-xs">{confidencePlate || 40}%</Text>
-          </View>
-          <View className="flex-row items-center">
-            <TextInput
-              keyboardType="numeric"
-              value={String(confidencePlate ?? 40)}
-              onChangeText={(val) => {
-                const num = parseInt(val, 10);
-                setConfidencePlate(isNaN(num) ? 20 : Math.max(20, Math.min(90, num)));
-              }}
-              style={{
-                backgroundColor: '#f8fafc',
-                borderWidth: 1,
-                borderColor: '#e2e8f0',
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                color: '#0f172a',
-                fontSize: 12,
-                width: 64,
-                textAlign: 'center',
-                fontWeight: 'bold'
-              }}
-            />
-            <Text className="text-slate-400 text-[10px] ml-2">Recommended: 40%</Text>
-          </View>
-        </View>
-
-        <View className="flex-row justify-between items-center pt-3 border-t border-slate-100">
-          <View className="flex-1 pr-3">
-            <Text className="text-slate-800 font-bold text-xs">Audio Alarm Alert on Violation</Text>
-            <Text className="text-slate-500 text-[10px] leading-tight mt-0.5">Vibrate and trigger alarm when rider without helmet is detected</Text>
-          </View>
-          <Switch
-            value={Boolean(audioAlertEnabled)}
-            onValueChange={setAudioAlertEnabled}
-            trackColor={{ false: '#cbd5e1', true: '#2563eb' }}
-            thumbColor={audioAlertEnabled ? '#ffffff' : '#f1f5f9'}
-          />
-        </View>
-      </View>
 
       {/* Outline Red Log Out Button at the very end */}
       <View className="pt-2 pb-6">

@@ -19,9 +19,6 @@ export default function StudentHomeScreen({
     ? 'XXXX-XXXX (Guest)'
     : (currentUser?.vehicles?.[0]?.plate || activeSimVeh?.plateShort || '1AB 8924 BKK');
 
-  const baseScore = currentUser?.safetyScore || 95;
-  const effectiveScore = hasHelmet ? baseScore : Math.max(0, baseScore - 2);
-
   return (
     <View className="space-y-4">
       {/* Title */}
@@ -130,67 +127,6 @@ export default function StudentHomeScreen({
               ? 'Safety standards passed'
               : 'Warning: No helmet detected. 2 points have been deducted from your Driving Safety Score.'}
           </Text>
-        </View>
-      </View>
-
-      {/* 4. Safety Score Highlight (for non-guest students) */}
-      {!isGuest && (
-        <View className="bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl mb-2 shadow-sm">
-          <View className="flex-row justify-between items-center mb-2">
-            <View className="flex-row items-center flex-1 pr-2">
-              <Ionicons name="shield-checkmark" size={18} color={hasHelmet ? '#059669' : '#dc2626'} />
-              <Text className="text-slate-800 font-bold text-sm ml-2" numberOfLines={1}>Driving Safety Score</Text>
-            </View>
-            <View className="flex-row items-center">
-              {!hasHelmet && (
-                <Text className="text-xs font-bold text-red-600 mr-2 bg-red-50 px-2 py-0.5 rounded border border-red-200">
-                  -2 pts
-                </Text>
-              )}
-              <Text className={`text-lg font-black ${effectiveScore >= 90 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {effectiveScore}/100
-              </Text>
-            </View>
-          </View>
-          <View className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
-            <View
-              className={`h-full rounded-full ${effectiveScore >= 90 ? 'bg-emerald-500' : 'bg-amber-500'}`}
-              style={{ width: `${effectiveScore}%` }}
-            />
-          </View>
-          <Text className="text-slate-500 text-xs leading-relaxed">
-            {hasHelmet
-              ? 'You consistently wear a helmet during campus rides. Green Zone priority parking access granted.'
-              : 'Penalty applied: 2 points deducted today due to riding without a helmet.'}
-          </Text>
-        </View>
-      )}
-
-      {/* 5. Campus Guidelines & Rules */}
-      <View className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
-        <View className="flex-row items-center">
-          <Ionicons name="information-circle" size={20} color="#2563eb" />
-          <Text className="text-slate-900 font-bold text-sm ml-2">Campus Parking Guidelines</Text>
-        </View>
-        <View className="space-y-2.5 pt-1">
-          <View className="flex-row items-start">
-            <View className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 mr-2.5" />
-            <Text className="text-slate-600 text-xs flex-1 leading-relaxed">
-              <Text className="font-bold text-slate-800">Green Zone:</Text> Priority parking reserved for riders maintaining a Safety Score of 90+.
-            </Text>
-          </View>
-          <View className="flex-row items-start">
-            <View className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 mr-2.5" />
-            <Text className="text-slate-600 text-xs flex-1 leading-relaxed">
-              <Text className="font-bold text-slate-800">Smart Gate Scan:</Text> AI automatically detects license plate and helmet upon campus entry.
-            </Text>
-          </View>
-          <View className="flex-row items-start">
-            <View className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 mr-2.5" />
-            <Text className="text-slate-600 text-xs flex-1 leading-relaxed">
-              <Text className="font-bold text-slate-800">Safety Rule:</Text> Helmets are strictly required at all times inside university premises. 2 points will be deducted per violation.
-            </Text>
-          </View>
         </View>
       </View>
     </View>
