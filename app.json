@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "license-plate-demo",
+    "name": "SmartParking",
     "slug": "license-plate-demo",
+    "scheme": "smartparking",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -26,7 +27,8 @@
         {
           "cameraPermission": "Allow AU Smart Parking to access your camera to scan parking pillar QR codes."
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

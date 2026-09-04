@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function AccountScreen({
   currentUser,
   onLogout,
-  websocketUrl = 'ws://192.168.1.100:8000/ws/detections',
+  websocketUrl = 'ws://168.120.248.53:8000/ws/detections',
   setWebsocketUrl = () => { },
   wsConnected = false,
   onTestWebSocket = () => { },
@@ -93,7 +93,94 @@ export default function AccountScreen({
         </View>
       )}
 
-      {/* Outline Red Log Out Button at the very end */}
+      {/* Overview Section */}
+      {!isGuest && (
+        <View className="mt-2 space-y-3">
+          <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">Overview</Text>
+          <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            
+            <TouchableOpacity className="flex-row items-center justify-between p-4 border-b border-slate-100 active:bg-slate-50">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-full bg-emerald-100 items-center justify-center mr-3">
+                  <Ionicons name="speedometer-outline" size={20} color="#059669" />
+                </View>
+                <Text className="text-slate-700 font-semibold text-sm">Driving Score</Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text className="text-emerald-600 font-bold mr-2">{currentUser?.driving_score || 100}/100</Text>
+                <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity className="flex-row items-center justify-between p-4 active:bg-slate-50">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center mr-3">
+                  <Ionicons name="car-sport-outline" size={20} color="#2563eb" />
+                </View>
+                <Text className="text-slate-700 font-semibold text-sm">My Vehicles</Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text className="text-slate-400 text-xs mr-2">{currentUser?.vehicles?.length || 0} Registered</Text>
+                <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+              </View>
+            </TouchableOpacity>
+            
+          </View>
+        </View>
+      )}
+
+      {/* My Activity Section */}
+      {!isGuest && (
+        <View className="mt-2 space-y-3">
+          <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">My Activity</Text>
+          <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            
+            <TouchableOpacity className="flex-row items-center justify-between p-4 border-b border-slate-100 active:bg-slate-50">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-full bg-purple-100 items-center justify-center mr-3">
+                  <Ionicons name="git-compare-outline" size={20} color="#9333ea" />
+                </View>
+                <Text className="text-slate-700 font-semibold text-sm">Gate History & Violations</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+            </TouchableOpacity>
+
+            <TouchableOpacity className="flex-row items-center justify-between p-4 active:bg-slate-50">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center mr-3">
+                  <Ionicons name="location-outline" size={20} color="#d97706" />
+                </View>
+                <Text className="text-slate-700 font-semibold text-sm">Saved Parking</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+            </TouchableOpacity>
+            
+          </View>
+        </View>
+      )}
+
+      {/* Settings Section */}
+      <View className="mt-2 space-y-3">
+        <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">Settings</Text>
+        <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+          
+          <View className="flex-row items-center justify-between p-4 active:bg-slate-50">
+            <View className="flex-row items-center">
+              <View className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center mr-3">
+                <Ionicons name="notifications-outline" size={20} color="#475569" />
+              </View>
+              <Text className="text-slate-700 font-semibold text-sm">Notifications</Text>
+            </View>
+            <Switch
+              trackColor={{ false: '#cbd5e1', true: '#3b82f6' }}
+              thumbColor={'#ffffff'}
+              ios_backgroundColor="#cbd5e1"
+              value={true} // Mock state for now
+            />
+          </View>
+          
+        </View>
+      </View>
       <View className="pt-2 pb-6">
         <TouchableOpacity
           onPress={() => setShowLogoutConfirm(true)}

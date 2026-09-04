@@ -12,6 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import { useAuthRequest, makeRedirectUri, ResponseType, exchangeCodeAsync } from 'expo-auth-session';
+import { loginWithMicrosoft } from './src/services/api';
+
+WebBrowser.maybeCompleteAuthSession();
 
 // Data & Mock Sets
 import { DEMO_ACCOUNTS, SIMULATED_VEHICLES, INITIAL_DETECTION_LOGS } from './src/data/mockData';
@@ -20,7 +25,6 @@ import { DEMO_ACCOUNTS, SIMULATED_VEHICLES, INITIAL_DETECTION_LOGS } from './src
 import Header from './src/components/Header';
 import BottomNav from './src/components/BottomNav';
 import Toast from './src/components/Toast';
-import MicrosoftModal from './src/components/MicrosoftModal';
 import AddVehicleModal from './src/components/AddVehicleModal';
 
 // Role-based & Tab Screens
@@ -39,9 +43,57 @@ function MainApp() {
   // Navigation & User Role State
   const [currentUser, setCurrentUser] = useState(null); // null (Guest/Login), student, admin
   const [activeTab, setActiveTab] = useState('monitor'); // 'monitor' (Home), 'analytics', 'my-vehicle', 'account'
-  const [showMicrosoftModal, setShowMicrosoftModal] = useState(false);
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+
+  // Azure AD Config (Manual Discovery)
+  const discovery = {
+    authorizationEndpoint: 'https://login.microsoftonline.com/c1f3dc23-b7f8-48d3-9b5d-2b12f158f01f/oauth2/v2.0/authorize',
+    tokenEndpoint: 'https://login.microsoftonline.com/c1f3dc23-b7f8-48d3-9b5d-2b12f158f01f/oauth2/v2.0/token',
+  };
+
+  const [request, response, promptAsync] = useAuthRequest({
+    clientId: '779a1a49-5a7f-4142-acd3-b8f72152fc5e',
+    responseType: ResponseType.Code,
+    scopes: ['openid', 'profile', 'email', 'offline_access'],
+    redirectUri: makeRedirectUri({
+      scheme: 'smartparking'
+    }),
+  }, discovery);
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { code } = response.params;
+
+      exchangeCodeAsync({
+        clientId: '779a1a49-5a7f-4142-acd3-b8f72152fc5e',
+        code: code,
+        redirectUri: makeRedirectUri({ scheme: 'smartparking' }),
+        extraParams: request?.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
+      }, discovery)
+        .then(tokenResult => {
+          loginWithMicrosoft({
+            accessToken: tokenResult.accessToken,
+            idToken: tokenResult.idToken,
+          }).then(data => {
+            if (data && data.user) {
+              setCurrentUser(data.user);
+              setActiveTab('monitor');
+              showToast(`👋 Welcome back, ${data.user.name}`);
+            } else {
+              showToast('❌ Login Failed');
+            }
+          }).catch(err => {
+            console.error('Backend Auth Error:', err);
+            showToast('❌ Backend Verification Error');
+          });
+        })
+        .catch(err => {
+          console.error('Exchange Code Error:', err);
+          showToast('❌ Token Exchange Error');
+        });
+    }
+  }, [response]);
 
   // Global registry of all registered license plates to enforce 1 plate per 1 account policy
   const [allRegisteredAccounts, setAllRegisteredAccounts] = useState(DEMO_ACCOUNTS);
@@ -80,7 +132,7 @@ function MainApp() {
   ]);
 
   // Settings State
-  const [websocketUrl, setWebsocketUrl] = useState('ws://192.168.1.100:8000/ws/detections');
+  const [websocketUrl, setWebsocketUrl] = useState('ws://168.120.248.53:8000/ws/detections');
   const [wsConnected, setWsConnected] = useState(false);
   const [confidenceHelmet, setConfidenceHelmet] = useState(50);
   const [confidencePlate, setConfidencePlate] = useState(40);
@@ -148,12 +200,12 @@ function MainApp() {
     if (veh.isViolation) {
       setKpiViolations((prev) => prev + 1);
       if (audioAlertEnabled) {
-        try { Vibration.vibrate([0, 150, 100, 150]); } catch (e) {}
+        try { Vibration.vibrate([0, 150, 100, 150]); } catch (e) { }
         showToast(`🚨 Helmet violation detected: ${veh.plateShort}`);
       }
     } else {
       if (audioAlertEnabled) {
-        try { Vibration.vibrate(50); } catch (e) {}
+        try { Vibration.vibrate(50); } catch (e) { }
       }
     }
 
@@ -167,31 +219,7 @@ function MainApp() {
   };
 
   // Auth Handlers
-  const handleMicrosoftLogin = (email) => {
-    const cleanEmail = email.trim().toLowerCase();
-    if (DEMO_ACCOUNTS[cleanEmail]) {
-      setCurrentUser(DEMO_ACCOUNTS[cleanEmail]);
-      setShowMicrosoftModal(false);
-      setActiveTab('monitor');
-      showToast(`👋 Welcome back, ${DEMO_ACCOUNTS[cleanEmail].name}`);
-    } else if (cleanEmail.includes('@')) {
-      const parsedId = 'STD-' + Math.floor(1000 + Math.random() * 9000);
-      const student = {
-        role: 'student',
-        name: cleanEmail.split('@')[0],
-        studentId: parsedId,
-        email: cleanEmail,
-        vehicles: [],
-        safetyScore: 95
-      };
-      setCurrentUser(student);
-      setShowMicrosoftModal(false);
-      setActiveTab('monitor');
-      showToast(`👋 Welcome, ${student.name}`);
-    } else {
-      alert('Please enter a valid email address');
-    }
-  };
+
 
   const handleGuestLogin = () => {
     const guest = {
@@ -291,7 +319,7 @@ function MainApp() {
       {/* 1. Auth View (When not logged in) */}
       {!currentUser ? (
         <AuthScreen
-          onOpenMicrosoftModal={() => setShowMicrosoftModal(true)}
+          onOpenMicrosoftModal={() => promptAsync()}
           onGuestLogin={handleGuestLogin}
           insets={insets}
           screenWidth={screenWidth}
@@ -362,7 +390,7 @@ function MainApp() {
             {activeTab === 'my-vehicle' && (
               <MyVehicleScreen
                 currentUser={currentUser}
-                onOpenMicrosoftModal={() => setShowMicrosoftModal(true)}
+                onOpenMicrosoftModal={() => promptAsync()}
                 onOpenAddVehicleModal={() => setShowAddVehicleModal(true)}
                 onAddVehicle={handleAddVehicle}
                 tripHistory={tripHistory}
@@ -396,18 +424,12 @@ function MainApp() {
             insets={insets}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            isAdmin={isAdmin}
+            onOpenQR={() => setShowQRModal(true)}
           />
         </View>
       )}
 
-      {/* Account Login Modal */}
-      <MicrosoftModal
-        visible={showMicrosoftModal}
-        onClose={() => setShowMicrosoftModal(false)}
-        onLogin={handleMicrosoftLogin}
-        insets={insets}
-      />
+
 
       {/* Add Vehicle Modal */}
       <AddVehicleModal
