@@ -1,58 +1,66 @@
 import React from 'react';
 
-export default function CameraStream({ currentDetection, onTriggerScan }) {
+export default function CameraStream({ 
+  gateName = "Gate 1 (Main Entrance - ENTRY)", 
+  camId = "CAM-01: ENTRY RAMP", 
+  gateType = "ENTRY", 
+  currentDetection, 
+  onTriggerScan 
+}) {
   const isViolation = currentDetection?.isViolation;
-  const plateText = currentDetection ? `${currentDetection.plate} ${currentDetection.province}` : '1กข 1234 กรุงเทพมหานคร';
-  const helmetText = currentDetection ? (isViolation ? 'FAIL: No Helmet' : 'PASS: Helmet Worn') : 'PASS: Helmet Worn';
+  const isExit = gateType === "EXIT";
+  const plateText = currentDetection ? `${currentDetection.plate} ${currentDetection.province}` : (isExit ? '5กษ 8888 กรุงเทพมหานคร' : '1กข 1234 กรุงเทพมหานคร');
+  const helmetText = currentDetection ? (isViolation ? 'FAIL: No Helmet' : 'PASS: Helmet Worn') : (isExit ? 'PASS: Exit Verified' : 'PASS: Helmet Worn');
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
   return (
-    <div class="card card-camera">
-      <div class="card-header">
-        <div class="card-header-title">
-          <i class="ri-vidicon-line"></i>
-          <span>Gate 1 (Main Entrance) - AI CCTV Stream</span>
+    <div className="card card-camera" style={{ marginBottom: 0 }}>
+      <div className="card-header">
+        <div className="card-header-title">
+          <i className={isExit ? "ri-logout-box-r-line" : "ri-login-box-r-line"} style={{ color: isExit ? '#f59e0b' : '#10b981' }}></i>
+          <span>{gateName}</span>
         </div>
-        <div class="live-tag">
-          <span class="dot pulse-green"></span> LIVE 1080P
+        <div className="live-tag">
+          <span className={`dot ${isExit ? 'pulse-amber' : 'pulse-green'}`}></span> {gateType} LIVE 1080P
         </div>
       </div>
 
-      <div class="camera-viewport">
-        <div class="camera-overlay">
-          <div class="cam-info">
-            <span>CAM-01: GATE 1 RAMP</span>
+      <div className="camera-viewport" style={{ minHeight: 220 }}>
+        <div className="camera-overlay">
+          <div className="cam-info">
+            <span>{camId}</span>
             <span>{timestamp}</span>
           </div>
 
           <div 
-            class="ocr-bounding-box" 
-            style={{ borderColor: isViolation ? '#ef4444' : '#10b981' }}
+            className="ocr-bounding-box" 
+            style={{ borderColor: isViolation ? '#ef4444' : (isExit ? '#f59e0b' : '#10b981') }}
           >
-            <div class="corner tl"></div>
-            <div class="corner tr"></div>
-            <div class="corner bl"></div>
-            <div class="corner br"></div>
-            <div class="ocr-plate-badge">
-              <span class="sim-plate-text">{plateText}</span>
-              <span class={`badge-helmet ${isViolation ? 'fail' : 'pass'}`}>
-                {isViolation ? '⚠️ ' : '🛡️ '}{helmetText}
+            <div className="corner tl"></div>
+            <div className="corner tr"></div>
+            <div className="corner bl"></div>
+            <div className="corner br"></div>
+            <div className="ocr-plate-badge">
+              <span className="sim-plate-text">{plateText}</span>
+              <span className={`badge-helmet ${isViolation ? 'fail' : 'pass'}`}>
+                {isViolation ? '⚠️ ' : (isExit ? '🚗 ' : '🛡️ ')}{helmetText}
               </span>
             </div>
           </div>
         </div>
-        <div class="camera-bg-grid"></div>
+        <div className="camera-bg-grid"></div>
       </div>
 
-      <div class="camera-footer">
-        <div class="cam-spec">
+      <div className="camera-footer">
+        <div className="cam-spec">
           <span>Model: <strong>YOLOv8n + Thai OCR v4.2</strong></span>
-          <span>Inference Time: <strong style={{ color: '#10b981' }}>32ms</strong></span>
+          <span>Mode: <strong style={{ color: isExit ? '#f59e0b' : '#10b981' }}>{gateType} SURVEILLANCE</strong></span>
         </div>
-        <button class="btn btn-secondary btn-sm" onClick={onTriggerScan}>
-          <i class="ri-refresh-line"></i> Trigger AI Detection
+        <button className="btn btn-secondary btn-sm" onClick={() => onTriggerScan && onTriggerScan(gateType)}>
+          <i className="ri-refresh-line"></i> Trigger {gateType} Scan
         </button>
       </div>
     </div>
   );
 }
+

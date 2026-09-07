@@ -108,7 +108,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [fetchBackendData]);
 
-  const handleTriggerScan = async () => {
+  const handleTriggerScan = async (gateType = 'ENTRY') => {
     const nextIdx = (currentIndex + 1) % vehicles.length;
     setCurrentIndex(nextIdx);
     const item = vehicles[nextIdx];
@@ -120,7 +120,7 @@ export default function App() {
         license_plate: item.plate,
         vehicle_type: isCar ? 'car' : 'motorcycle',
         helmet_detected: isCar ? null : !item.isViolation,
-        gate_type: 'ENTRY',
+        gate_type: gateType,
         zone: 'Zone A'
       };
 
@@ -146,7 +146,7 @@ export default function App() {
         vehicle: item.vehicle,
         helmet: item.helmet,
         isViolation: item.isViolation,
-        gate: item.gate
+        gate: `Gate (${gateType})`
       };
       setLogs(prev => [newLog, ...prev.slice(0, 49)]);
     }
@@ -185,7 +185,7 @@ export default function App() {
 
   const titles = {
     'overview': { title: 'Live Gate & Operations Overview', subtitle: 'Real-time AI License Plate Recognition & Campus Safety Monitor' },
-    'live-camera': { title: 'AI Gate Camera Feed Surveillance', subtitle: 'Multi-Gate Real-time CCTV Stream & Optical Character Recognition' },
+    'live-camera': { title: 'AI Gate Camera Feed Surveillance Grid (ENTRY & EXIT)', subtitle: 'Multi-Gate Real-time CCTV Stream & Optical Character Recognition' },
     'vehicles': { title: 'Registered Vehicles & Campus Passes', subtitle: 'Manage student & staff approved license plates and 1-plate policy rules' },
     'safety-scores': { title: 'Driver Safety Scores & Audit Console', subtitle: '100-point scale enforcement, violation penalties, and score restorations' },
     'violations': { title: 'Helmet Violation Audit Logs', subtitle: 'Comprehensive AI detection history for campus motorcycle safety rules' },
@@ -203,7 +203,7 @@ export default function App() {
         <Header 
           pageTitle={currentMeta.title} 
           pageSubtitle={currentMeta.subtitle}
-          onTriggerScan={handleTriggerScan}
+          onTriggerScan={() => handleTriggerScan('ENTRY')}
         />
 
         {activeTab === 'overview' && (
@@ -226,14 +226,30 @@ export default function App() {
             <div className="card-header">
               <div className="card-header-title">
                 <i className="ri-camera-lens-line"></i>
-                <span>Multi-Gate AI CCTV Surveillance Grid</span>
+                <span>Multi-Gate Dual AI CCTV Surveillance (ENTRY & EXIT)</span>
               </div>
+              <span className="text-muted text-xs">Live 2-Camera Grid Stream</span>
             </div>
-            <div className="mt-16" style={{ marginTop: 16 }}>
-              <CameraStream currentDetection={logs[0]} onTriggerScan={handleTriggerScan} />
+
+            <div className="grid-2-col gap-16 mt-16" style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <CameraStream 
+                gateName="Gate 1 (Main Entrance - ENTRY)"
+                camId="CAM-01: ENTRY RAMP"
+                gateType="ENTRY"
+                currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]} 
+                onTriggerScan={() => handleTriggerScan('ENTRY')} 
+              />
+              <CameraStream 
+                gateName="Gate 2 (East Gate - EXIT)"
+                camId="CAM-02: EXIT RAMP"
+                gateType="EXIT"
+                currentDetection={logs.find(l => l.gate.includes('EXIT'))} 
+                onTriggerScan={() => handleTriggerScan('EXIT')} 
+              />
             </div>
           </div>
         )}
+
 
 
         {activeTab === 'vehicles' && (
