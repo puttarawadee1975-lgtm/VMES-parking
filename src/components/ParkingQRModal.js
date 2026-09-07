@@ -10,16 +10,35 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Predefined Pillar QR info
-const DEFAULT_PILLAR = {
-  id: 'QR-CL-F2-B14',
-  building: 'Building CL (Cathedral of Learning)',
-  floor: 'Floor 2 (Zone B)',
-  pillar: 'Pillar B-14',
-  zone: 'Zone B (Near Lift Lobby 2)',
-  nearestExit: 'North Gate Ramp',
-  mapCoords: { x: '55%', y: '40%' }
-};
+import { getEnglishFormattedDate, getEnglishFormattedTime, PRESET_ZONES } from '../data/mockData';
+
+// Predefined Zone QR presets (VEMS Building, Floor G)
+const PRESET_PILLARS = [
+  {
+    id: 'QR-VEMS-GA',
+    building: 'VEMS Building',
+    floor: 'Floor G',
+    pillar: 'G05-G09',
+    zone: 'Zone A',
+    nearestExit: 'Main Entrance Gate 1',
+  },
+  {
+    id: 'QR-VEMS-GB',
+    building: 'VEMS Building',
+    floor: 'Floor G',
+    pillar: 'G06-G10',
+    zone: 'Zone B',
+    nearestExit: 'East Exit Walkway',
+  },
+  {
+    id: 'QR-VEMS-GC',
+    building: 'VEMS Building',
+    floor: 'Floor G',
+    pillar: 'G11-G15',
+    zone: 'Zone C',
+    nearestExit: 'West Exit Ramp',
+  }
+];
 
 export default function ParkingQRModal({
   visible,
@@ -30,6 +49,7 @@ export default function ParkingQRModal({
   const [scannedSpot, setScannedSpot] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
 
   // Scan line laser animation
   const scanLineAnim = useRef(new Animated.Value(0)).current;
@@ -59,22 +79,29 @@ export default function ParkingQRModal({
     };
   }, [visible, scannedSpot]);
 
-  const handleTriggerScan = () => {
+  const handleTriggerScan = (overrideIndex) => {
+    const idx = typeof overrideIndex === 'number' ? overrideIndex : selectedPresetIndex;
     setIsScanning(true);
     setTimeout(() => {
       setIsScanning(false);
-      setScannedSpot(DEFAULT_PILLAR);
-    }, 800);
+      const preset = PRESET_PILLARS[idx] || PRESET_PILLARS[0];
+      const now = new Date();
+      setScannedSpot({
+        ...preset,
+        savedDate: getThaiFormattedDate(now),
+        savedTime: getThaiFormattedTime(now),
+        timestamp: now.getTime()
+      });
+    }, 600);
   };
 
   const handleConfirmSave = () => {
     if (!scannedSpot) return;
     const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
     onSaveSpot({
       ...scannedSpot,
-      parkedAt: timeStr,
+      savedDate: scannedSpot.savedDate || getThaiFormattedDate(now),
+      savedTime: scannedSpot.savedTime || getThaiFormattedTime(now),
       timestamp: Date.now()
     });
 
@@ -172,7 +199,7 @@ export default function ParkingQRModal({
 
               <View className="flex-row justify-between items-center pb-2.5 border-b border-slate-800">
                 <Text className="text-slate-400 text-xs font-semibold">Building:</Text>
-                <Text className="text-white font-bold text-xs">{scannedSpot.building}</Text>
+                <Text className="text-white font-bold text-xs">VEMS Building</Text>
               </View>
 
               <View className="flex-row justify-between items-center pb-2.5 border-b border-slate-800">

@@ -9,153 +9,321 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { toThaiProvince } from '../utils/provinceHelper';
+import LicensePlateScannerModal from './LicensePlateScannerModal';
 
 export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
+  const [vehicleType, setVehicleType] = useState(null); // null | 'motorcycle' | 'car'
   const [newPlate, setNewPlate] = useState('');
   const [newProvince, setNewProvince] = useState('');
+  const [newBrand, setNewBrand] = useState('');
   const [newModel, setNewModel] = useState('');
   const [newColor, setNewColor] = useState('');
+  const [showScannerModal, setShowScannerModal] = useState(false);
 
   const handleSubmit = () => {
-    if (!newPlate || !newProvince || !newModel || !newColor) {
-      alert('Please fill in all vehicle information fields');
+    if (!newPlate.trim() || !newProvince.trim() || !newBrand.trim() || !newModel.trim() || !newColor.trim()) {
+      alert('Please fill in all required vehicle information fields.');
       return;
     }
-    const fullPlate = `${newPlate} ${newProvince}`;
-    const fullModel = `${newModel} (${newColor})`;
 
-    onAdd(fullPlate, fullModel);
-    setNewPlate('');
-    setNewProvince('');
-    setNewModel('');
-    setNewColor('');
-    onClose();
+    // Thai License Plate Format Regex (Supports standard cars 1กข 1234, classic กข 1234, motorcycles 1กข 123, public 99-9999)
+    const thaiPlateRegex = /^([0-9]{1,2}[ก-ฮa-zA-Z]{1,2}\s?[0-9]{1,4}|[ก-ฮa-zA-Z]{1,3}\s?[0-9]{1,4}|[0-9]{2}-[0-9]{4}|[ก-ฮa-zA-Z0-9\s-]+)$/;
+    if (!thaiPlateRegex.test(newPlate.trim())) {
+      alert('Invalid License Plate Format.\nPlease enter a valid Thai license plate (e.g. 1กข 1234, กข 1234, 1กข 123).');
+      return;
+    }
+    const icon = vehicleType === 'car' ? '🚗' : '🛵';
+    const thaiProvince = toThaiProvince(newProvince.trim());
+    const fullPlate = `${newPlate.trim().toUpperCase()} ${thaiProvince}`;
+    const fullModel = `${icon} ${newBrand.trim()} ${newModel.trim()} (${newColor.trim()})`;
+
+    const success = onAdd(fullPlate, fullModel);
+    if (success !== false) {
+      setNewPlate('');
+      setNewProvince('');
+      setNewBrand('');
+      setNewModel('');
+      setNewColor('');
+      onClose();
+    }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="flex-1 bg-black/50 justify-end">
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="w-full"
+    <Modal
+      visible={Boolean(visible)}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          {/* Header Bar */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: 20,
+              paddingVertical: 16,
+              backgroundColor: '#ffffff',
+              borderBottomWidth: 1,
+              borderBottomColor: '#e2e8f0'
+            }}
           >
-            <View
-              style={{ paddingBottom: Math.max(insets.bottom + 12, 24) }}
-              className="bg-white rounded-t-3xl p-6 shadow-2xl space-y-4 max-w-lg mx-auto w-full"
-            >
-              <View className="flex-row justify-between items-center mb-1">
-                <Text className="text-lg font-bold text-slate-900">Register New Vehicle</Text>
-                <TouchableOpacity onPress={onClose} className="p-1.5 rounded-full bg-slate-100">
-                  <Ionicons name="close" size={20} color="#64748b" />
-                </TouchableOpacity>
+            <View>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>Register Vehicle</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={{ padding: 8, borderRadius: 20, backgroundColor: '#f1f5f9' }}>
+              <Ionicons name="close" size={20} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
+          >
+            <View style={{ gap: 16, maxWidth: 540, width: '100%', alignSelf: 'center' }}>
+
+              {/* 1. Vehicle Type (Motorcycle / Car) - First */}
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 8 }}>
+                  Vehicle Type <Text style={{ color: '#ef4444' }}>*</Text>
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => setVehicleType('motorcycle')}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      borderRadius: 16,
+                      borderWidth: 2,
+                      borderColor: vehicleType === 'motorcycle' ? '#2563eb' : '#e2e8f0',
+                      backgroundColor: vehicleType === 'motorcycle' ? '#eff6ff' : '#ffffff',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Text style={{ fontSize: 20, marginRight: 8 }}>🛵</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b' }}>
+                      Motorcycle
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setVehicleType('car')}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      borderRadius: 16,
+                      borderWidth: 2,
+                      borderColor: vehicleType === 'car' ? '#2563eb' : '#e2e8f0',
+                      backgroundColor: vehicleType === 'car' ? '#eff6ff' : '#ffffff',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Text style={{ fontSize: 20, marginRight: 8 }}>🚗</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: vehicleType === 'car' ? '#1d4ed8' : '#64748b' }}>
+                      Car
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
-              <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
-                <View className="space-y-3">
-                  <View>
-                    <Text className="text-slate-600 text-xs font-semibold mb-1">License Plate Number (e.g. 1AB 8924)</Text>
-                    <TextInput
-                      value={newPlate}
-                      onChangeText={setNewPlate}
-                      placeholder="e.g. 1AB 8924"
-                      placeholderTextColor="#94a3b8"
-                      style={{
-                        backgroundColor: '#f8fafc',
-                        borderWidth: 1,
-                        borderColor: '#e2e8f0',
-                        borderRadius: 12,
-                        paddingHorizontal: 16,
-                        paddingVertical: 10,
-                        color: '#0f172a',
-                        fontSize: 12
-                      }}
-                    />
-                  </View>
-
-                  <View>
-                    <Text className="text-slate-600 text-xs font-semibold mb-1">Province / City (e.g. Bangkok)</Text>
-                    <TextInput
-                      value={newProvince}
-                      onChangeText={setNewProvince}
-                      placeholder="e.g. Bangkok"
-                      placeholderTextColor="#94a3b8"
-                      style={{
-                        backgroundColor: '#f8fafc',
-                        borderWidth: 1,
-                        borderColor: '#e2e8f0',
-                        borderRadius: 12,
-                        paddingHorizontal: 16,
-                        paddingVertical: 10,
-                        color: '#0f172a',
-                        fontSize: 12
-                      }}
-                    />
-                  </View>
-
-                  <View>
-                    <Text className="text-slate-600 text-xs font-semibold mb-1">Vehicle Make & Model (e.g. Honda PCX 160)</Text>
-                    <TextInput
-                      value={newModel}
-                      onChangeText={setNewModel}
-                      placeholder="e.g. Honda PCX 160"
-                      placeholderTextColor="#94a3b8"
-                      style={{
-                        backgroundColor: '#f8fafc',
-                        borderWidth: 1,
-                        borderColor: '#e2e8f0',
-                        borderRadius: 12,
-                        paddingHorizontal: 16,
-                        paddingVertical: 10,
-                        color: '#0f172a',
-                        fontSize: 12
-                      }}
-                    />
-                  </View>
-
-                  <View>
-                    <Text className="text-slate-600 text-xs font-semibold mb-1">Vehicle Color (e.g. White)</Text>
-                    <TextInput
-                      value={newColor}
-                      onChangeText={setNewColor}
-                      placeholder="e.g. White"
-                      placeholderTextColor="#94a3b8"
-                      style={{
-                        backgroundColor: '#f8fafc',
-                        borderWidth: 1,
-                        borderColor: '#e2e8f0',
-                        borderRadius: 12,
-                        paddingHorizontal: 16,
-                        paddingVertical: 10,
-                        color: '#0f172a',
-                        fontSize: 12
-                      }}
-                    />
-                  </View>
+              {/* 2. License Plate */}
+              <View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>
+                    License Plate <Text style={{ color: '#ef4444' }}>*</Text>
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!vehicleType) {
+                        alert('Please select vehicle type first.');
+                        return;
+                      }
+                      setShowScannerModal(true);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', borderContent: '#bfdbfe', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
+                  >
+                    <Ionicons name="camera-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Scan with Camera</Text>
+                  </TouchableOpacity>
                 </View>
-              </ScrollView>
+                <TextInput
+                  value={newPlate}
+                  onChangeText={setNewPlate}
+                  placeholder="e.g. 1กข 1234, กข 1234, 1กข 123"
+                  placeholderTextColor="#94a3b8"
+                  autoCapitalize="characters"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderWidth: 1,
+                    borderColor: '#cbd5e1',
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    color: '#0f172a',
+                    fontSize: 14,
+                    fontWeight: '700'
+                  }}
+                />
+              </View>
 
-              <View className="flex-row space-x-3 pt-3">
+              {/* 3. Province */}
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
+                  Province <Text style={{ color: '#ef4444' }}>*</Text>
+                </Text>
+                <TextInput
+                  value={newProvince}
+                  onChangeText={setNewProvince}
+                  onBlur={() => {
+                    if (newProvince.trim()) {
+                      setNewProvince(toThaiProvince(newProvince));
+                    }
+                  }}
+                  placeholder="e.g. Samut Prakan, Bangkok"
+                  placeholderTextColor="#94a3b8"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderWidth: 1,
+                    borderColor: '#cbd5e1',
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    color: '#0f172a',
+                    fontSize: 14
+                  }}
+                />
+              </View>
+
+              {/* 4. Brand */}
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
+                  Brand <Text style={{ color: '#ef4444' }}>*</Text>
+                </Text>
+                <TextInput
+                  value={newBrand}
+                  onChangeText={setNewBrand}
+                  placeholder={vehicleType === 'car' ? "e.g. Toyota, Honda, Mazda" : "e.g. Honda, Yamaha, Vespa"}
+                  placeholderTextColor="#94a3b8"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderWidth: 1,
+                    borderColor: '#cbd5e1',
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    color: '#0f172a',
+                    fontSize: 14
+                  }}
+                />
+              </View>
+
+              {/* 5. Model */}
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
+                  Model <Text style={{ color: '#ef4444' }}>*</Text>
+                </Text>
+                <TextInput
+                  value={newModel}
+                  onChangeText={setNewModel}
+                  placeholder={vehicleType === 'car' ? "e.g. Camry, Civic" : "e.g. Click 160, Wave 125i"}
+                  placeholderTextColor="#94a3b8"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderWidth: 1,
+                    borderColor: '#cbd5e1',
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    color: '#0f172a',
+                    fontSize: 14
+                  }}
+                />
+              </View>
+
+              {/* 6. Color */}
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
+                  Color <Text style={{ color: '#ef4444' }}>*</Text>
+                </Text>
+                <TextInput
+                  value={newColor}
+                  onChangeText={setNewColor}
+                  placeholder="e.g. White, Black, Matte Gray"
+                  placeholderTextColor="#94a3b8"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderWidth: 1,
+                    borderColor: '#cbd5e1',
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    color: '#0f172a',
+                    fontSize: 14
+                  }}
+                />
+              </View>
+
+              {/* Rule Policy note */}
+              <View style={{ backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="information-circle" size={18} color="#2563eb" style={{ marginRight: 8 }} />
+                <Text style={{ fontSize: 11, color: '#1d4ed8', fontWeight: '600', flex: 1, lineHeight: 16 }}>
+                  Policy: 1 license plate can only be registered to 1 university account.
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={{ flexDirection: 'row', gap: 12, paddingTop: 12 }}>
                 <TouchableOpacity
                   onPress={onClose}
-                  className="flex-1 bg-slate-100 border border-slate-200 p-3.5 rounded-xl items-center active:bg-slate-200"
+                  activeOpacity={0.8}
+                  style={{ flex: 1, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#cbd5e1', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}
                 >
-                  <Text className="text-slate-600 font-bold text-xs">Cancel</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569' }}>Cancel</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   onPress={handleSubmit}
-                  className="flex-1 bg-blue-600 p-3.5 rounded-xl items-center shadow-md shadow-blue-500/25 active:opacity-90"
+                  activeOpacity={0.85}
+                  style={{ flex: 1, backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 16, alignItems: 'center', shadowColor: '#2563eb', shadowOpacity: 0.25, shadowRadius: 8, elevation: 2 }}
                 >
-                  <Text className="text-white font-bold text-xs">Register</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#ffffff' }}>Register Vehicle</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </KeyboardAvoidingView>
-        </View>
-      </TouchableWithoutFeedback>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      <LicensePlateScannerModal
+        visible={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        vehicleType={vehicleType}
+        onScanSuccess={(scannedPlate, scannedProvince) => {
+          setNewPlate(scannedPlate);
+          setNewProvince(scannedProvince);
+        }}
+      />
     </Modal>
   );
 }
+

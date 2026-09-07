@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Switch, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ParkingDetailsModal from '../components/ParkingDetailsModal';
+import NotificationsModal from '../components/NotificationsModal';
+import SettingsModal from '../components/SettingsModal';
+import GateHistoryModal from '../components/GateHistoryModal';
+import MyVehiclesModal from '../components/MyVehiclesModal';
+import DrivingScoreModal from '../components/DrivingScoreModal';
 
 export default function AccountScreen({
   currentUser,
+  parkedSpot,
+  onOpenQRScanner,
   onLogout,
   websocketUrl = 'ws://168.120.248.53:8000/ws/detections',
   setWebsocketUrl = () => { },
@@ -14,9 +22,18 @@ export default function AccountScreen({
   confidencePlate = 40,
   setConfidencePlate = () => { },
   audioAlertEnabled = true,
-  setAudioAlertEnabled = () => { }
+  setAudioAlertEnabled = () => { },
+  onOpenNotifications,
+  onOpenAddVehicleModal,
+  onNavigateToMyVehicle
 }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showGateHistoryModal, setShowGateHistoryModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMyVehiclesModal, setShowMyVehiclesModal] = useState(false);
+  const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
 
   const isGuest = !currentUser || currentUser?.role === 'guest';
   const isAdmin = currentUser?.role === 'admin';
@@ -24,6 +41,9 @@ export default function AccountScreen({
 
   const roleLabel = isAdmin ? 'Officer' : isStudent ? 'Student' : 'Guest';
   const avatarInitial = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
+  const rawId = currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '');
+  const digitsOnlyId = rawId ? rawId.replace(/\D/g, '') : null;
+  const displayId = isAdmin ? (currentUser?.staffId || 'SEC-01') : (digitsOnlyId || (isStudent ? '65070042' : null));
 
   return (
     <View className="flex-col gap-4">
@@ -83,9 +103,9 @@ export default function AccountScreen({
                 </Text>
               ) : null}
 
-              {currentUser?.studentId ? (
-                <Text className="text-slate-400 text-[11px] mt-0.5">
-                  {isAdmin ? 'Staff ID' : 'Student ID'}: {currentUser.studentId}
+              {displayId ? (
+                <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={1}>
+                  {isAdmin ? 'Staff ID' : 'Student ID'}: {displayId}
                 </Text>
               ) : null}
             </View>
@@ -99,7 +119,11 @@ export default function AccountScreen({
           <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">Overview</Text>
           <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             
-            <TouchableOpacity className="flex-row items-center justify-between p-4 border-b border-slate-100 active:bg-slate-50">
+            <TouchableOpacity 
+              onPress={() => setShowDrivingScoreModal(true)}
+              activeOpacity={0.7}
+              className="flex-row items-center justify-between p-4 border-b border-slate-100 active:bg-slate-50"
+            >
               <View className="flex-row items-center">
                 <View className="w-10 h-10 rounded-full bg-emerald-100 items-center justify-center mr-3">
                   <Ionicons name="speedometer-outline" size={20} color="#059669" />
@@ -107,12 +131,16 @@ export default function AccountScreen({
                 <Text className="text-slate-700 font-semibold text-sm">Driving Score</Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="text-emerald-600 font-bold mr-2">{currentUser?.driving_score || 100}/100</Text>
+                <Text className="text-emerald-600 font-bold mr-2">{currentUser?.safetyScore ?? currentUser?.driving_score ?? 100}/100</Text>
                 <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity className="flex-row items-center justify-between p-4 active:bg-slate-50">
+            <TouchableOpacity 
+              onPress={() => setShowMyVehiclesModal(true)}
+              activeOpacity={0.7}
+              className="flex-row items-center justify-between p-4 active:bg-slate-50"
+            >
               <View className="flex-row items-center">
                 <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center mr-3">
                   <Ionicons name="car-sport-outline" size={20} color="#2563eb" />
@@ -135,49 +163,123 @@ export default function AccountScreen({
           <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">My Activity</Text>
           <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             
-            <TouchableOpacity className="flex-row items-center justify-between p-4 border-b border-slate-100 active:bg-slate-50">
+            <TouchableOpacity
+              onPress={() => setShowGateHistoryModal(true)}
+              activeOpacity={0.7}
+              className="flex-row items-center justify-between p-4 border-b border-slate-100 active:bg-slate-50"
+            >
               <View className="flex-row items-center">
-                <View className="w-10 h-10 rounded-full bg-purple-100 items-center justify-center mr-3">
-                  <Ionicons name="git-compare-outline" size={20} color="#9333ea" />
+                <View className="w-10 h-10 rounded-full bg-indigo-100 items-center justify-center mr-3">
+                  <Ionicons name="time-outline" size={20} color="#4f46e5" />
                 </View>
                 <Text className="text-slate-700 font-semibold text-sm">Gate History & Violations</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
             </TouchableOpacity>
 
-            <TouchableOpacity className="flex-row items-center justify-between p-4 active:bg-slate-50">
-              <View className="flex-row items-center">
+            <TouchableOpacity
+              onPress={() => setShowDetailsModal(true)}
+              activeOpacity={0.7}
+              className="p-4 flex-row items-center justify-between border-b border-slate-100 active:bg-slate-50"
+            >
+              <View className="flex-row items-center flex-1 mr-2">
                 <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center mr-3">
                   <Ionicons name="location-outline" size={20} color="#d97706" />
                 </View>
-                <Text className="text-slate-700 font-semibold text-sm">Saved Parking</Text>
+                <View className="flex-1">
+                  <Text className="text-slate-700 font-semibold text-sm">Saved Parking Spot</Text>
+                  <Text className="text-slate-400 text-xs mt-0.5" numberOfLines={1}>
+                    {parkedSpot ? `${parkedSpot.building} (${parkedSpot.pillar})` : 'Not saved yet • Click to view'}
+                  </Text>
+                </View>
+              </View>
+              <View className="flex-row items-center">
+                <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+              </View>
+            </TouchableOpacity>
+
+            {/* Notifications Row */}
+            <TouchableOpacity
+              onPress={onOpenNotifications}
+              activeOpacity={0.7}
+              className="flex-row items-center justify-between p-4 active:bg-slate-50"
+            >
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center mr-3">
+                  <Ionicons name="notifications-outline" size={20} color="#2563eb" />
+                </View>
+                <Text className="text-slate-700 font-semibold text-sm">Notifications</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
             </TouchableOpacity>
+
+            {/* Driving Score Detail Modal */}
+            <DrivingScoreModal
+              visible={showDrivingScoreModal}
+              onClose={() => setShowDrivingScoreModal(false)}
+              currentUser={currentUser}
+            />
+
+            {/* My Vehicles List Modal */}
+            <MyVehiclesModal
+              visible={showMyVehiclesModal}
+              onClose={() => setShowMyVehiclesModal(false)}
+              currentUser={currentUser}
+              onOpenAddVehicle={() => {
+                setShowMyVehiclesModal(false);
+                if (onOpenAddVehicleModal) onOpenAddVehicleModal();
+              }}
+            />
+
+            {/* Gate History & Violations Modal */}
+            <GateHistoryModal
+              visible={showGateHistoryModal}
+              onClose={() => setShowGateHistoryModal(false)}
+              currentUser={currentUser}
+            />
+
+            {/* Modal Detail Window */}
+            <ParkingDetailsModal
+              visible={showDetailsModal}
+              onClose={() => setShowDetailsModal(false)}
+              parkedSpot={parkedSpot}
+              onOpenQRScanner={onOpenQRScanner}
+            />
             
           </View>
         </View>
       )}
 
-      {/* Settings Section */}
+      {/* App Settings Section */}
       <View className="mt-2 space-y-3">
-        <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">Settings</Text>
+        <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">App Settings</Text>
         <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
           
-          <View className="flex-row items-center justify-between p-4 active:bg-slate-50">
+          <TouchableOpacity
+            onPress={() => setShowSettingsModal(true)}
+            activeOpacity={0.7}
+            className="flex-row items-center justify-between p-4 active:bg-slate-50"
+          >
             <View className="flex-row items-center">
               <View className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center mr-3">
-                <Ionicons name="notifications-outline" size={20} color="#475569" />
+                <Ionicons name="settings-outline" size={20} color="#475569" />
               </View>
-              <Text className="text-slate-700 font-semibold text-sm">Notifications</Text>
+              <Text className="text-slate-700 font-semibold text-sm">Setting</Text>
             </View>
-            <Switch
-              trackColor={{ false: '#cbd5e1', true: '#3b82f6' }}
-              thumbColor={'#ffffff'}
-              ios_backgroundColor="#cbd5e1"
-              value={true} // Mock state for now
-            />
-          </View>
+            <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+          </TouchableOpacity>
+
+          {/* App Settings Modal */}
+          <SettingsModal
+            visible={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
+            audioAlertEnabled={audioAlertEnabled}
+            setAudioAlertEnabled={setAudioAlertEnabled}
+            confidenceHelmet={confidenceHelmet}
+            setConfidenceHelmet={setConfidenceHelmet}
+            confidencePlate={confidencePlate}
+            setConfidencePlate={setConfidencePlate}
+          />
           
         </View>
       </View>

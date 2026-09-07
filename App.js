@@ -14,7 +14,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthRequest, makeRedirectUri, ResponseType, exchangeCodeAsync } from 'expo-auth-session';
-import { loginWithMicrosoft } from './src/services/api';
+import { loginWithMicrosoft, saveSpotToMongoDB, clearSpotInMongoDB, registerVehicleToMongoDB, deleteVehicleFromMongoDB, getUserVehiclesFromMongoDB } from './src/services/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -26,6 +26,7 @@ import Header from './src/components/Header';
 import BottomNav from './src/components/BottomNav';
 import Toast from './src/components/Toast';
 import AddVehicleModal from './src/components/AddVehicleModal';
+import NotificationsModal from './src/components/NotificationsModal';
 
 // Role-based & Tab Screens
 import AuthScreen from './src/screens/AuthScreen';
@@ -45,6 +46,7 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState('monitor'); // 'monitor' (Home), 'analytics', 'my-vehicle', 'account'
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
   // Azure AD Config (Manual Discovery)
   const discovery = {
@@ -57,18 +59,27 @@ function MainApp() {
     responseType: ResponseType.Code,
     scopes: ['openid', 'profile', 'email', 'offline_access'],
     redirectUri: makeRedirectUri({
-      scheme: 'smartparking'
+      scheme: 'myapp'
     }),
   }, discovery);
 
   useEffect(() => {
+    if (request?.redirectUri) {
+      console.log('🔗 Expo Auth Redirect URI:', request.redirectUri);
+    }
+  }, [request]);
+
+  useEffect(() => {
+    if (response) {
+      console.log('🔑 Auth Response:', response);
+    }
     if (response?.type === 'success') {
       const { code } = response.params;
 
       exchangeCodeAsync({
         clientId: '779a1a49-5a7f-4142-acd3-b8f72152fc5e',
         code: code,
-        redirectUri: makeRedirectUri({ scheme: 'smartparking' }),
+        redirectUri: makeRedirectUri({ scheme: 'myapp' }),
         extraParams: request?.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
       }, discovery)
         .then(tokenResult => {
@@ -77,7 +88,12 @@ function MainApp() {
             idToken: tokenResult.idToken,
           }).then(data => {
             if (data && data.user) {
-              setCurrentUser(data.user);
+              const emailPrefixDigits = data.user.email ? data.user.email.split('@')[0].replace(/\D/g, '') : '';
+              const formattedUser = {
+                ...data.user,
+                studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : '65070042')
+              };
+              setCurrentUser(formattedUser);
               setActiveTab('monitor');
               showToast(`👋 Welcome back, ${data.user.name}`);
             } else {
@@ -100,36 +116,7 @@ function MainApp() {
 
   // Parking Location & Today's Connected Trip Access History (Resets Daily)
   const [parkedSpot, setParkedSpot] = useState(null);
-  const [tripHistory, setTripHistory] = useState([
-    {
-      id: 'TRIP-101',
-      date: 'Today',
-      vehicleType: 'motorcycle',
-      plate: '1AB 8924 Bangkok',
-      model: 'Honda Click 160 (Black-Red)',
-      entryTime: '08:24 AM',
-      entryGate: 'Gate 1 (Main Entrance)',
-      helmet: 'Helmet Worn (Pass)',
-      exitTime: '12:45 PM',
-      exitGate: 'Gate 1 Ramp',
-      spot: 'Building CL (Pillar B-14)',
-      status: 'Completed'
-    },
-    {
-      id: 'TRIP-102',
-      date: 'Today',
-      vehicleType: 'motorcycle',
-      plate: '2EF 5519 Chiang Mai',
-      model: 'Honda Wave 125i (Blue)',
-      entryTime: '08:15 AM',
-      entryGate: 'Gate 2 (West Gate)',
-      helmet: 'Helmet Worn (Pass)',
-      exitTime: '04:45 PM',
-      exitGate: 'Gate 2 Main Road',
-      spot: 'Science & IT (Pillar A-08)',
-      status: 'Completed'
-    }
-  ]);
+  const [tripHistory, setTripHistory] = useState([]);
 
   // Settings State
   const [websocketUrl, setWebsocketUrl] = useState('ws://168.120.248.53:8000/ws/detections');
@@ -151,6 +138,15 @@ function MainApp() {
   const [simStep, setSimStep] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const activeSimVeh = SIMULATED_VEHICLES[currentVehIndex];
+
+  useEffect(() => {
+    if (currentUser?.email) {
+      getUserVehiclesFromMongoDB(currentUser.email).then((dbVehicles) => {
+        const formattedVehicles = (dbVehicles || []).map(v => ({ plate: v.plate, model: v.model }));
+        setCurrentUser((prev) => prev ? { ...prev, vehicles: formattedVehicles } : prev);
+      });
+    }
+  }, [currentUser?.email]);
 
   useEffect(() => {
     let interval;
@@ -241,6 +237,12 @@ function MainApp() {
   };
 
   const handleAddVehicle = (fullPlate, fullModel) => {
+    // Check student 1-vehicle quota limit
+    if (currentUser?.role === 'student' && currentUser?.vehicles && currentUser.vehicles.length >= 1) {
+      alert('⚠️ Registration Limit Reached:\nStudents are allowed to register 1 vehicle per account only.');
+      return false;
+    }
+
     const normPlate = fullPlate.trim().toUpperCase();
     const platePrefix = normPlate.split(' ')[0];
 
@@ -256,6 +258,13 @@ function MainApp() {
       alert(`⚠️ Registration Error:\nLicense plate "${fullPlate}" is already registered in the system.\n\nPolicy: 1 license plate can only be registered to 1 university account.`);
       return false;
     }
+
+    // Call MongoDB API to persist vehicle registration
+    registerVehicleToMongoDB(
+      { plate: fullPlate, model: fullModel },
+      currentUser?.email || '65070042@student.university.ac.th',
+      currentUser?.role || 'student'
+    );
 
     setCurrentUser((prev) => {
       const updatedVehicles = [...(prev.vehicles || []), { plate: fullPlate, model: fullModel }];
@@ -275,9 +284,34 @@ function MainApp() {
     return true;
   };
 
+  const handleDeleteVehicle = (plateToDelete) => {
+    deleteVehicleFromMongoDB(plateToDelete, currentUser?.email || '65070042@student.university.ac.th');
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      const updatedVehicles = (prev.vehicles || []).filter(v => v.plate !== plateToDelete);
+      if (prev.email) {
+        setAllRegisteredAccounts((prevAccs) => ({
+          ...prevAccs,
+          [prev.email]: {
+            ...(prevAccs[prev.email] || prev),
+            vehicles: updatedVehicles
+          }
+        }));
+      }
+      return { ...prev, vehicles: updatedVehicles };
+    });
+    showToast('🗑️ Vehicle deleted successfully');
+  };
+
   const handleSaveParkedSpot = (spotData) => {
+    const isUpdate = !!parkedSpot;
     setParkedSpot(spotData);
-    showToast(`📍 Saved spot: ${spotData.building} (${spotData.pillar})`);
+    saveSpotToMongoDB(spotData, currentUser?.email || '65070042@student.university.ac.th');
+    if (isUpdate) {
+      showToast(`🔄 Updated parking spot: ${spotData.zone} ${spotData.floor} (${spotData.pillar})`);
+    } else {
+      showToast(`📍 Saved parking spot: ${spotData.zone} ${spotData.floor} (${spotData.pillar})`);
+    }
   };
 
   const handleExitBuilding = () => {
@@ -299,6 +333,7 @@ function MainApp() {
         status: 'Completed'
       };
       setTripHistory((prev) => [newTrip, ...prev]);
+      clearSpotInMongoDB(currentUser?.email || '65070042@student.university.ac.th');
       setParkedSpot(null);
       showToast('🚗 Exited building. Parking location cleared & trip logged.');
     }
@@ -332,6 +367,7 @@ function MainApp() {
             insets={insets}
             currentUser={currentUser}
             onLogout={handleLogout}
+            onOpenNotifications={() => setShowNotificationsModal(true)}
           />
 
           {/* Guest Role Notification Banner */}
@@ -379,6 +415,7 @@ function MainApp() {
                   onExitBuilding={handleExitBuilding}
                   activeSimVeh={activeSimVeh}
                   triggerScan={triggerScan}
+                  onOpenNotifications={() => setShowNotificationsModal(true)}
                 />
               )
             )}
@@ -393,6 +430,7 @@ function MainApp() {
                 onOpenMicrosoftModal={() => promptAsync()}
                 onOpenAddVehicleModal={() => setShowAddVehicleModal(true)}
                 onAddVehicle={handleAddVehicle}
+                onDeleteVehicle={handleDeleteVehicle}
                 tripHistory={tripHistory}
                 parkedSpot={parkedSpot}
                 onOpenQRScanner={() => setShowQRModal(true)}
@@ -404,6 +442,8 @@ function MainApp() {
             {activeTab === 'account' && (
               <AccountScreen
                 currentUser={currentUser}
+                parkedSpot={parkedSpot}
+                onOpenQRScanner={() => setShowQRModal(true)}
                 onLogout={handleLogout}
                 websocketUrl={websocketUrl}
                 setWebsocketUrl={setWebsocketUrl}
@@ -415,6 +455,9 @@ function MainApp() {
                 setConfidencePlate={setConfidencePlate}
                 audioAlertEnabled={audioAlertEnabled}
                 setAudioAlertEnabled={setAudioAlertEnabled}
+                onOpenNotifications={() => setShowNotificationsModal(true)}
+                onOpenAddVehicleModal={() => setShowAddVehicleModal(true)}
+                onNavigateToMyVehicle={() => setActiveTab('my-vehicle')}
               />
             )}
           </ScrollView>
@@ -449,9 +492,17 @@ function MainApp() {
         <QRScanScreen
           onClose={() => setShowQRModal(false)}
           onSaveSpot={handleSaveParkedSpot}
+          currentSpot={parkedSpot}
           insets={insets}
         />
       </Modal>
+
+      {/* Notifications Modal */}
+      <NotificationsModal
+        visible={showNotificationsModal}
+        onClose={() => setShowNotificationsModal(false)}
+        currentUser={currentUser}
+      />
 
       {/* Floating Toast Notification */}
       <Toast

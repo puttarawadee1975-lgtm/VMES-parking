@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { getEnglishFormattedDate, getEnglishFormattedTime, PRESET_ZONES } from '../data/mockData';
 
 // Force exact device dimensions to guarantee layout
 const { width, height } = Dimensions.get('window');
@@ -21,12 +22,14 @@ const { width, height } = Dimensions.get('window');
 export default function QRScanScreen({
   onClose,
   onSaveSpot,
+  currentSpot,
   insets
 }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scannedLock, setScannedLock] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
   const [scannedSpotData, setScannedSpotData] = useState(null);
+  const [selectedMockZone, setSelectedMockZone] = useState(0);
 
   const appState = useRef(AppState.currentState);
 
@@ -52,18 +55,33 @@ export default function QRScanScreen({
 
     try {
       let spotData;
+      const now = new Date();
       try {
         spotData = JSON.parse(data);
-        if (!spotData.building) throw new Error("Invalid format");
       } catch (e) {
-        spotData = { building: "VMES Parking", pillar: String(data).substring(0, 15) };
+        const defaultPreset = PRESET_ZONES[selectedMockZone] || PRESET_ZONES[0];
+        spotData = {
+          zone: defaultPreset.zone,
+          building: defaultPreset.building,
+          floor: defaultPreset.floor,
+          pillar: defaultPreset.pillar
+        };
       }
-      setScannedSpotData(spotData);
+
+      setScannedSpotData({
+        zone: spotData.zone || (spotData.building && spotData.building.startsWith('Zone') ? spotData.building : "Zone A"),
+        building: spotData.building || "VEMS Building",
+        floor: spotData.floor || "Floor G",
+        pillar: spotData.pillar || "G05-G09",
+        savedDate: getEnglishFormattedDate(now),
+        savedTime: getEnglishFormattedTime(now),
+        timestamp: now.getTime()
+      });
     } catch (error) {
       Alert.alert(
-        "❌ สแกนล้มเหลว",
-        "ไม่สามารถอ่านข้อมูล QR Code ได้",
-        [{ text: "ลองใหม่", onPress: () => setScannedLock(false) }]
+        "Scan Error",
+        "Could not read QR Code data",
+        [{ text: "Try Again", onPress: () => setScannedLock(false) }]
       );
     }
   };
@@ -85,10 +103,10 @@ export default function QRScanScreen({
     if (!res.granted && !res.canAskAgain) {
        Alert.alert(
         "Camera Permission",
-        "กรุณาไปที่ตั้งค่า (Settings) เพื่อเปิดสิทธิ์ใช้งานกล้อง",
+        "Please go to Settings to grant camera permission",
         [
-          { text: "ยกเลิก", style: "cancel" },
-          { text: "เปิดตั้งค่า", onPress: () => Linking.openSettings() }
+          { text: "Cancel", style: "cancel" },
+          { text: "Open Settings", onPress: () => Linking.openSettings() }
         ]
       );
     }
@@ -131,7 +149,7 @@ export default function QRScanScreen({
     <View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
       <StatusBar barStyle="light-content" />
 
-      {/* FULL SCREEN CAMERA VIEW (FORCED DIMENSIONS) */}
+      {/* FULL SCREEN CAMERA VIEW */}
       <View style={{ width, height, position: 'absolute', top: 0, left: 0 }}>
         <CameraView
           style={{ width: '100%', height: '100%' }}
@@ -140,6 +158,20 @@ export default function QRScanScreen({
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           onBarcodeScanned={handleBarcodeScanned}
         />
+      </View>
+
+      {/* SCANNER OVERLAY & L-CORNER MARKS */}
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 10, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ width: Math.min(width * 0.75, 290), height: Math.min(width * 0.75, 290), position: 'relative' }}>
+          {/* Top-Left Corner L */}
+          <View style={{ position: 'absolute', top: 0, left: 0, width: 36, height: 36, borderTopWidth: 3.5, borderLeftWidth: 3.5, borderColor: '#ffffff' }} />
+          {/* Top-Right Corner L */}
+          <View style={{ position: 'absolute', top: 0, right: 0, width: 36, height: 36, borderTopWidth: 3.5, borderRightWidth: 3.5, borderColor: '#ffffff' }} />
+          {/* Bottom-Left Corner L */}
+          <View style={{ position: 'absolute', bottom: 0, left: 0, width: 36, height: 36, borderBottomWidth: 3.5, borderLeftWidth: 3.5, borderColor: '#ffffff' }} />
+          {/* Bottom-Right Corner L */}
+          <View style={{ position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderBottomWidth: 3.5, borderRightWidth: 3.5, borderColor: '#ffffff' }} />
+        </View>
       </View>
 
       {/* TOP CONTROLS */}
@@ -151,52 +183,73 @@ export default function QRScanScreen({
           <Ionicons name="close" size={24} color="#ffffff" />
         </TouchableOpacity>
         <View className="bg-black/40 backdrop-blur-md px-6 py-2.5 rounded-full border border-white/20">
-          <Text className="text-white font-bold text-sm tracking-wide">Scan QR Code</Text>
+          <Text className="text-white font-bold text-sm tracking-wide">Scan Parking QR Code</Text>
         </View>
         <TouchableOpacity onPress={() => setFlashOn(!flashOn)} className={`w-12 h-12 rounded-full items-center justify-center border ${flashOn ? 'bg-amber-500/90 border-amber-400' : 'bg-black/40 backdrop-blur-md border-white/20'}`}>
           <Ionicons name={flashOn ? 'flash' : 'flash-outline'} size={22} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
-      {/* BOTTOM MOCK BUTTON */}
-      <View style={{ position: 'absolute', bottom: 48, left: 0, right: 0, zIndex: 30 }} className="items-center px-6 pointer-events-auto">
-        <TouchableOpacity onPress={() => handleBarcodeScanned('{"building":"VMES Parking","pillar":"A-01","floor":"1st Floor","zone":"Zone A"}')} className="bg-blue-600/90 backdrop-blur-md px-8 py-3.5 rounded-2xl border border-blue-400/30 shadow-lg shadow-blue-500/30 flex-row items-center">
-          <Ionicons name="flask" size={18} color="#ffffff" style={{ marginRight: 8 }} />
-          <Text className="text-white font-bold text-sm">Mock Scan (Simulator)</Text>
-        </TouchableOpacity>
+      {/* BOTTOM INSTRUCTION */}
+      <View style={{ position: 'absolute', bottom: 40, left: 0, right: 0, zIndex: 30 }} className="items-center px-6">
+        <View className="bg-black/60 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex-row items-center">
+          <Ionicons name="information-circle-outline" size={18} color="#38bdf8" style={{ marginRight: 8 }} />
+          <Text className="text-white text-xs font-semibold">Align parking pillar QR code inside the frame to scan</Text>
+        </View>
       </View>
 
       {/* CONFIRMATION MODAL */}
       {scannedSpotData && (
-        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 50, backgroundColor: 'rgba(0,0,0,0.8)' }} className="items-center justify-center p-6">
-          <View className="bg-white rounded-3xl w-full p-8 shadow-2xl">
-            <View className="items-center mb-6">
-              <View className="w-16 h-16 bg-blue-50 rounded-full items-center justify-center mb-4">
-                <Ionicons name="location" size={32} color="#3b82f6" />
+        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 50, backgroundColor: 'rgba(0,0,0,0.85)' }} className="items-center justify-center p-6">
+          <View className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
+            <View className="items-center mb-4">
+              <View className="w-14 h-14 bg-blue-50 rounded-full items-center justify-center mb-3">
+                <Ionicons name="location" size={30} color="#2563eb" />
               </View>
-              <Text className="text-2xl font-extrabold text-slate-900">บันทึกที่จอดรถ</Text>
-              <Text className="text-slate-500 text-center mt-2 text-sm leading-relaxed">
-                คุณต้องการบันทึกข้อมูลการจอดรถที่จุดนี้ใช่หรือไม่?
+              <Text className="text-2xl font-extrabold text-slate-900">
+                {currentSpot ? 'Update Parking Spot' : 'Save Parking Spot'}
               </Text>
+              {currentSpot && (
+                <View className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 mt-2 w-full flex-row items-center">
+                  <Ionicons name="refresh-circle" size={20} color="#d97706" style={{ marginRight: 6 }} />
+                  <Text className="text-amber-800 text-xs font-semibold flex-1">
+                    Existing spot detected. Saving will update to this new location.
+                  </Text>
+                </View>
+              )}
             </View>
 
-            <View className="bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-100">
-              <View className="flex-row justify-between items-start mb-3">
-                <Text className="text-slate-500 font-medium text-sm mr-4 mt-0.5">โซน/อาคาร</Text>
-                <Text className="text-slate-900 font-bold text-sm flex-shrink-1 text-right leading-relaxed">{scannedSpotData.building}</Text>
+            <View className="bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-200 space-y-2.5">
+              <View className="flex-row justify-between items-center pb-2 border-b border-slate-200">
+                <Text className="text-slate-500 font-medium text-xs">Zone</Text>
+                <Text className="text-blue-600 font-bold text-sm">{scannedSpotData.zone}</Text>
               </View>
-              <View className="flex-row justify-between items-start">
-                <Text className="text-slate-500 font-medium text-sm mr-4 mt-0.5">เสา/ช่องจอด</Text>
-                <Text className="text-blue-600 font-bold text-lg flex-shrink-1 text-right">{scannedSpotData.pillar}</Text>
+              <View className="flex-row justify-between items-center pb-2 border-b border-slate-200">
+                <Text className="text-slate-500 font-medium text-xs">Floor</Text>
+                <Text className="text-slate-900 font-bold text-sm">{scannedSpotData.floor}</Text>
+              </View>
+              <View className="flex-row justify-between items-center pb-2 border-b border-slate-200">
+                <Text className="text-slate-500 font-medium text-xs">Pillar</Text>
+                <Text className="text-emerald-600 font-extrabold text-sm">{scannedSpotData.pillar}</Text>
+              </View>
+              <View className="flex-row justify-between items-center pb-2 border-b border-slate-200">
+                <Text className="text-slate-500 font-medium text-xs">Building</Text>
+                <Text className="text-slate-900 font-bold text-xs">{scannedSpotData.building}</Text>
+              </View>
+              <View className="flex-row justify-between items-center">
+                <Text className="text-slate-500 font-medium text-xs">Saved Date</Text>
+                <Text className="text-slate-700 font-bold text-xs">{scannedSpotData.savedDate} ({scannedSpotData.savedTime})</Text>
               </View>
             </View>
 
-            <View className="flex-row space-x-4">
-              <TouchableOpacity onPress={cancelSaveSpot} className="flex-1 bg-white py-4 rounded-xl items-center border border-slate-200">
-                <Text className="text-slate-700 font-bold text-base">ยกเลิก</Text>
+            <View className="flex-row space-x-3">
+              <TouchableOpacity onPress={cancelSaveSpot} className="flex-1 bg-white py-3.5 rounded-xl items-center border border-slate-300">
+                <Text className="text-slate-700 font-bold text-sm">Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={confirmSaveSpot} className="flex-1 bg-blue-600 py-4 rounded-xl items-center shadow-lg shadow-blue-500/30">
-                <Text className="text-white font-bold text-base">บันทึก</Text>
+              <TouchableOpacity onPress={confirmSaveSpot} className="flex-1 bg-blue-600 py-3.5 rounded-xl items-center shadow-lg shadow-blue-500/30">
+                <Text className="text-white font-bold text-sm">
+                  {currentSpot ? 'Update Location' : 'Save Spot'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -205,3 +258,4 @@ export default function QRScanScreen({
     </View>
   );
 }
+

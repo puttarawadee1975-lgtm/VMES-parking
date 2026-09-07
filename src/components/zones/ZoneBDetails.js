@@ -3,16 +3,16 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ZoneBDetails({ parkedSpot }) {
-  const zoneSlots = ['B-01', 'B-02', 'B-03', 'B-04', 'B-05', 'B-06', 'B-07', 'B-08'];
+  const zoneSlots = ['G06', 'G07', 'G08', 'G09', 'G10', 'G06-G10', 'B-01', 'B-02'];
   
   return (
     <View className="bg-slate-900 rounded-2xl p-4 overflow-hidden border border-slate-800 mb-6">
       <View className="flex-row justify-between items-center mb-3">
         <View className="flex-row items-center">
           <Ionicons name="map" size={16} color="#f472b6" style={{ marginRight: 6 }} />
-          <Text className="text-white font-bold text-xs">Zone B Floor Plan (East Wing)</Text>
+          <Text className="text-white font-bold text-xs">Zone B • Floor G (VEMS Building)</Text>
         </View>
-        <Text className="text-slate-400 text-[10px]">{parkedSpot.floor}</Text>
+        <Text className="text-pink-400 font-bold text-[10px]">{parkedSpot.floor || 'Floor G'}</Text>
       </View>
 
       <View className="bg-slate-800 rounded-xl h-48 border border-slate-700 relative items-center justify-center overflow-hidden">
@@ -21,7 +21,7 @@ export default function ZoneBDetails({ parkedSpot }) {
             <View
               key={i}
               className={`w-[22%] h-8 rounded m-1 items-center justify-center border ${
-                parkedSpot.pillar === slot
+                parkedSpot.pillar === slot || (parkedSpot.pillar && slot.includes(parkedSpot.pillar.split('-')[0]))
                   ? 'bg-pink-600/40 border-pink-400'
                   : 'border-slate-500'
               }`}
@@ -40,12 +40,12 @@ export default function ZoneBDetails({ parkedSpot }) {
             <Text className="text-2xl">🛵</Text>
           </View>
           <View className="bg-pink-600 px-3 py-1 rounded-full mt-2 shadow-sm">
-            <Text className="text-white text-[10px] font-bold">Parked at {parkedSpot.pillar}</Text>
+            <Text className="text-white text-[10px] font-bold">Parked at Pillar {parkedSpot.pillar || 'G06-G10'}</Text>
           </View>
         </View>
       </View>
       <Text className="text-slate-400 text-[9px] text-center mt-3">
-        Standard zone located at the East Wing
+        Zone B • Floor G • VEMS Building (East Wing Zone)
       </Text>
     </View>
   );

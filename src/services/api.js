@@ -51,6 +51,36 @@ export const getParkingStatus = async () => {
   }
 };
 
+// 1.5 Announcements API (Public)
+export const getAnnouncements = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/announcements`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to fetch announcements:', err);
+    return [
+      {
+        id: 'ANN-01',
+        title: 'Zone B Maintenance Notice',
+        content: 'Zone B Floor 2 will be temporarily closed for sensor maintenance tomorrow from 09:00 AM to 02:00 PM. Please park at Zone A or Zone C.',
+        date: 'Today, 09:00 AM',
+        priority: 'high'
+      },
+      {
+        id: 'ANN-02',
+        title: 'Helmet Safety Policy Reminder',
+        content: 'All motorcycle drivers must wear a safety helmet when entering university gates. AI CCTV cameras will deduct 10 safety points for non-compliance.',
+        date: 'Yesterday',
+        priority: 'normal'
+      }
+    ];
+  }
+};
+
 // 2. Microsoft Entra ID Login
 export const loginWithMicrosoft = async ({ accessToken, idToken, email, name }) => {
   try {
@@ -107,23 +137,101 @@ export const getAdminUsers = async () => {
   }
 };
 
-// 5. Verify QR Code
-export const verifyQRCode = async (qrData) => {
+// 6. Save Spot to MongoDB
+export const saveSpotToMongoDB = async (spotData, userEmail = '65070042@student.university.ac.th') => {
   try {
-    const res = await fetch(`${API_BASE_URL}/verify-qr`, {
+    const res = await fetch(`${API_BASE_URL}/parking/save-spot?user_email=${encodeURIComponent(userEmail)}`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ qr_code_data: qrData }),
+      body: JSON.stringify(spotData),
     });
-    
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${res.status}`);
-    }
-    
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
   } catch (err) {
-    console.warn('[API] QR Verification failed:', err);
-    throw err;
+    console.warn('[API] Failed to save spot to MongoDB:', err);
+    return null;
   }
 };
+
+// 7. Get Saved Spot from MongoDB
+export const getSpotFromMongoDB = async (userEmail = '65070042@student.university.ac.th') => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/parking/get-spot?user_email=${encodeURIComponent(userEmail)}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to fetch spot from MongoDB:', err);
+    return null;
+  }
+};
+
+// 8. Clear Saved Spot in MongoDB
+export const clearSpotInMongoDB = async (userEmail = '65070042@student.university.ac.th') => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/parking/clear-spot?user_email=${encodeURIComponent(userEmail)}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to clear spot in MongoDB:', err);
+    return null;
+  }
+};
+
+// 9. Register Vehicle to MongoDB
+export const registerVehicleToMongoDB = async (vehicleData, userEmail = '65070042@student.university.ac.th', role = 'student') => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/parking/register-vehicle`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        plate: vehicleData.plate,
+        model: vehicleData.model,
+        user_email: userEmail,
+        role: role
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to register vehicle in MongoDB:', err);
+    return null;
+  }
+};
+
+// 10. Delete Vehicle from MongoDB
+export const deleteVehicleFromMongoDB = async (plate, userEmail = '65070042@student.university.ac.th') => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/parking/delete-vehicle?user_email=${encodeURIComponent(userEmail)}&plate=${encodeURIComponent(plate)}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to delete vehicle from MongoDB:', err);
+    return null;
+  }
+};
+
+// 11. Fetch User Vehicles from MongoDB
+export const getUserVehiclesFromMongoDB = async (userEmail = '65070042@student.university.ac.th') => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/parking/user-vehicles?user_email=${encodeURIComponent(userEmail)}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to fetch user vehicles from MongoDB:', err);
+    return [];
+  }
+};
+
+

@@ -9,6 +9,7 @@ export default function ParkingLocationCard({
 }) {
   // If user currently has a parked spot saved (Compact View)
   if (parkedSpot) {
+    const zoneStr = parkedSpot.zone ? `${parkedSpot.zone} • ${parkedSpot.floor || 'Floor G'}` : (parkedSpot.floor || 'Floor G');
     return (
       <TouchableOpacity 
         onPress={onOpenDetails}
@@ -16,16 +17,18 @@ export default function ParkingLocationCard({
         className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm mb-4 flex-row items-center justify-between"
       >
         <View className="flex-row items-center flex-1">
-          <View className="w-12 h-12 rounded-2xl bg-emerald-100 items-center justify-center mr-4 border border-emerald-300">
-            <Ionicons name="car" size={24} color="#059669" />
+          <View className="w-12 h-12 rounded-2xl bg-emerald-100 items-center justify-center mr-3.5 border border-emerald-300">
+            <Ionicons name="location" size={24} color="#059669" />
           </View>
           <View className="flex-1">
-            <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">Parked At</Text>
-            <Text className="text-slate-900 font-bold text-base" numberOfLines={1}>
-              {parkedSpot.building}
+            <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">
+              My Parking Spot ({zoneStr})
+            </Text>
+            <Text className="text-slate-900 font-extrabold text-base" numberOfLines={1}>
+              {(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VEMS Building' : parkedSpot.building}
             </Text>
             <Text className="text-blue-600 font-bold text-xs mt-0.5">
-              Pillar {parkedSpot.pillar}
+              Pillar {parkedSpot.pillar || 'G05-G09'} • {parkedSpot.savedDate || '28 June 2026'}
             </Text>
           </View>
         </View>

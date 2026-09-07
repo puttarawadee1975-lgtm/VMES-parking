@@ -3,26 +3,35 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ParkingLocationCard from '../components/ParkingLocationCard';
 import ParkingDetailsModal from '../components/ParkingDetailsModal';
-import { getParkingStatus } from '../services/api';
+import DrivingScoreModal from '../components/DrivingScoreModal';
+import { getParkingStatus, getAnnouncements } from '../services/api';
 
 export default function StudentHomeScreen({
   currentUser,
   parkedSpot,
   onOpenQRScanner,
   onExitBuilding,
+  onOpenNotifications
 }) {
+  const [isDetailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
+
   const isGuest = currentUser?.role === 'guest';
   const hasPenalty = currentUser?.safetyScore !== null && currentUser?.safetyScore < 100;
   
   const [parkingZones, setParkingZones] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isDetailsModalVisible, setDetailsModalVisible] = useState(false);
 
   const fetchParkingData = async () => {
     setLoading(true);
     const data = await getParkingStatus();
     if (data) {
       setParkingZones(data);
+    }
+    const anns = await getAnnouncements();
+    if (anns) {
+      setAnnouncements(anns);
     }
     setLoading(false);
   };
@@ -36,25 +45,30 @@ export default function StudentHomeScreen({
 
   return (
     <View className="space-y-4">
-      {/* Title & Refresh */}
+      {/* Title */}
       <View className="mb-4">
-        <View className="mb-3">
-          <Text className="text-xl font-bold text-slate-900">Live Parking Status</Text>
-          <Text className="text-slate-500 text-xs mt-0.5">
-            Real-time space availability across all zones
-          </Text>
+        <View className="mb-3 flex-row justify-between items-center">
+          <View className="flex-1 mr-2">
+            <Text className="text-xl font-bold text-slate-900">Live Parking Status</Text>
+            <Text className="text-slate-500 text-xs mt-0.5">
+              Real-time space availability across all zones
+            </Text>
+          </View>
         </View>
 
-        {/* 1. Dynamic Parking Zones */}
+        {/* 1. Single Total Available Parking Spots Card */}
         {loading && parkingZones.length === 0 ? (
           <View className="bg-white py-12 rounded-3xl items-center justify-center border border-slate-200">
             <ActivityIndicator size="large" color="#3b82f6" />
             <Text className="text-slate-500 mt-3 text-sm">Fetching parking data...</Text>
           </View>
         ) : (
-          <View className="space-y-4">
-            {parkingZones.map((zone, index) => (
-              <View key={index} className="bg-white border border-slate-200 py-6 px-4 rounded-3xl relative shadow-sm items-center justify-center">
+          (() => {
+            const totalAvailable = parkingZones.reduce((sum, zone) => sum + (zone.available_slots || 0), 0);
+            const totalSlots = parkingZones.reduce((sum, zone) => sum + (zone.total_slots || 0), 0);
+
+            return (
+              <View className="bg-white border border-slate-200 py-8 px-4 rounded-3xl relative shadow-sm items-center justify-center">
                 {/* Refresh Icon (Top Right of Card) */}
                 <TouchableOpacity 
                   onPress={fetchParkingData} 
@@ -66,40 +80,52 @@ export default function StudentHomeScreen({
                 
                 {/* Title */}
                 <Text className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-1">
-                  {zone.zone}
+                  VEMS Building - Total Available
                 </Text>
                 
                 {/* Huge Centered Number */}
                 <Text 
                   style={{ fontSize: 72, lineHeight: 76 }} 
-                  className={`font-black tracking-tighter ${zone.available_slots > 0 ? 'text-emerald-500' : 'text-red-500'}`}
+                  className={`font-black tracking-tighter ${totalAvailable > 0 ? 'text-emerald-500' : 'text-red-500'}`}
                 >
-                  {zone.available_slots}
+                  {totalAvailable}
                 </Text>
                 
                 {/* Subtext */}
-                <Text className={`text-sm font-bold uppercase tracking-widest mt-2 ${zone.available_slots > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {zone.available_slots > 0 ? 'Spots Available' : 'Parking Full'}
+                <Text className={`text-sm font-bold uppercase tracking-widest mt-2 ${totalAvailable > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {totalAvailable > 0 ? 'Total Spots Available' : 'Parking Full'}
                 </Text>
+                {totalSlots > 0 && (
+                  <Text className="text-xs text-slate-400 font-medium mt-1">
+                    Out of {totalSlots} total capacity
+                  </Text>
+                )}
               </View>
-            ))}
-          </View>
+            );
+          })()
         )}
       </View>
 
       {/* 2. Penalty Notification Banner (Only shows if safetyScore < 100) */}
       {hasPenalty && !isGuest && (
-        <View className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm flex-row items-start mt-2">
+        <TouchableOpacity 
+          onPress={() => setShowDrivingScoreModal(true)}
+          activeOpacity={0.85}
+          className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm flex-row items-start mt-2"
+        >
           <Ionicons name="warning" size={24} color="#dc2626" style={{ marginTop: 2, marginRight: 12 }} />
           <View className="flex-1">
-            <Text className="text-red-800 font-bold text-sm mb-1">
-              Safety Violation Detected
-            </Text>
+            <View className="flex-row justify-between items-center mb-1">
+              <Text className="text-red-800 font-bold text-sm">
+                Safety Violation Detected
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color="#dc2626" />
+            </View>
             <Text className="text-red-700 text-xs">
-              Your driving safety score is {currentUser.safetyScore}/100. Points were deducted due to a recent "No Helmet" detection. Please wear a helmet when entering the campus!
+              Your driving safety score is {currentUser.safetyScore}/100. Points were deducted due to a recent "No Helmet" detection. Click to view score details.
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* 3. Where did you park? (Parking Location QR Card) */}
@@ -111,15 +137,67 @@ export default function StudentHomeScreen({
         />
       </View>
 
+      {/* 4. Announcements Section */}
+      <View className="mt-4 space-y-2">
+        <Text className="text-xl font-bold text-slate-900 px-1">Announcement</Text>
+        
+        <View className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
+          <View className="flex-row items-center justify-between pb-2 border-b border-slate-100">
+            <View className="flex-row items-center">
+              <View className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 items-center justify-center mr-2.5">
+                <Ionicons name="megaphone" size={16} color="#d97706" />
+              </View>
+              <View>
+                <Text className="text-slate-900 font-bold text-sm">Official Notices</Text>
+                <Text className="text-slate-400 text-[10px]">Campus updates configured via Admin Website</Text>
+              </View>
+            </View>
+          </View>
+
+          {announcements.length === 0 ? (
+            <Text className="text-slate-400 text-xs py-2 text-center">No announcements available</Text>
+          ) : (
+            announcements.map((ann) => (
+              <View key={ann.id} className="bg-slate-50 border border-slate-200/70 rounded-2xl p-3.5 space-y-1.5 mt-2">
+                <View className="flex-row justify-between items-center">
+                  <View className="flex-row items-center flex-1 mr-2">
+                    {ann.categoryLabel && (
+                      <View style={{ backgroundColor: ann.badgeBg || '#eff6ff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginRight: 8 }}>
+                        <Text style={{ color: ann.badgeColor || '#2563eb', fontSize: 9, fontWeight: '800', textTransform: 'uppercase' }}>
+                          {ann.categoryLabel}
+                        </Text>
+                      </View>
+                    )}
+                    <Text className="text-slate-900 font-bold text-xs flex-1" numberOfLines={1}>
+                      {ann.title}
+                    </Text>
+                  </View>
+                  <Text className="text-slate-400 text-[10px]">{ann.date}</Text>
+                </View>
+
+                <Text className="text-slate-600 text-xs leading-relaxed mt-1">{ann.content}</Text>
+              </View>
+            ))
+          )}
+        </View>
+      </View>
+
       {/* Parking Details Modal */}
       <ParkingDetailsModal
         visible={isDetailsModalVisible}
         onClose={() => setDetailsModalVisible(false)}
         parkedSpot={parkedSpot}
+        onOpenQRScanner={onOpenQRScanner}
         onExitBuilding={() => {
           setDetailsModalVisible(false);
           if (onExitBuilding) onExitBuilding();
         }}
+      />
+
+      <DrivingScoreModal
+        visible={showDrivingScoreModal}
+        onClose={() => setShowDrivingScoreModal(false)}
+        currentUser={currentUser}
       />
     </View>
   );

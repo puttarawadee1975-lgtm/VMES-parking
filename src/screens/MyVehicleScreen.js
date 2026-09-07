@@ -2,23 +2,29 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ParkingLocationCard from '../components/ParkingLocationCard';
+import { toThaiProvince } from '../utils/provinceHelper';
+import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
+import DrivingScoreModal from '../components/DrivingScoreModal';
 
 export default function MyVehicleScreen({
   currentUser,
   onOpenMicrosoftModal,
   onOpenAddVehicleModal,
   onAddVehicle,
+  onDeleteVehicle,
   tripHistory = [],
   parkedSpot,
   onOpenQRScanner,
   onExitBuilding
 }) {
   const [isRegistering, setIsRegistering] = useState(false);
-  const [vehicleType, setVehicleType] = useState('motorcycle');
+  const [vehicleType, setVehicleType] = useState(null); // null | 'motorcycle' | 'car'
   const [newPlate, setNewPlate] = useState('');
   const [newProvince, setNewProvince] = useState('');
   const [newModel, setNewModel] = useState('');
   const [newColor, setNewColor] = useState('');
+  const [showScannerModal, setShowScannerModal] = useState(false);
+  const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
 
   const isGuest = currentUser?.role === 'guest';
   const isStudent = currentUser?.role === 'student';
@@ -29,13 +35,13 @@ export default function MyVehicleScreen({
   const myTripHistory = isGuest
     ? []
     : tripHistory.filter((trip) => {
-        const tripPlate = (trip.plate || '').trim().toUpperCase();
-        const tripPlatePrefix = tripPlate.split(' ')[0];
-        return userPlates.some((up) => {
-          const upPrefix = up.split(' ')[0];
-          return up === tripPlate || upPrefix === tripPlatePrefix || tripPlate.includes(upPrefix);
-        });
+      const tripPlate = (trip.plate || '').trim().toUpperCase();
+      const tripPlatePrefix = tripPlate.split(' ')[0];
+      return userPlates.some((up) => {
+        const upPrefix = up.split(' ')[0];
+        return up === tripPlate || upPrefix === tripPlatePrefix || tripPlate.includes(upPrefix);
       });
+    });
 
   const handleRegisterSubmit = () => {
     if (!newPlate.trim() || !newProvince.trim() || !newModel.trim() || !newColor.trim()) {
@@ -43,7 +49,8 @@ export default function MyVehicleScreen({
       return;
     }
 
-    const fullPlate = `${newPlate.trim().toUpperCase()} ${newProvince.trim()}`;
+    const thaiProvince = toThaiProvince(newProvince.trim());
+    const fullPlate = `${newPlate.trim().toUpperCase()} ${thaiProvince}`;
     const icon = vehicleType === 'motorcycle' ? '🛵' : '🚗';
     const fullModel = `${icon} ${newModel.trim()} (${newColor.trim()})`;
 
@@ -109,11 +116,10 @@ export default function MyVehicleScreen({
               <TouchableOpacity
                 onPress={() => setVehicleType('motorcycle')}
                 activeOpacity={0.8}
-                className={`flex-1 py-3 px-4 rounded-2xl border flex-row items-center justify-center ${
-                  vehicleType === 'motorcycle'
+                className={`flex-1 py-3 px-4 rounded-2xl border flex-row items-center justify-center ${vehicleType === 'motorcycle'
                     ? 'bg-blue-50 border-blue-500'
                     : 'bg-slate-50 border-slate-200'
-                }`}
+                  }`}
               >
                 <Text className="text-lg mr-2">🛵</Text>
                 <Text className={`text-xs font-bold ${vehicleType === 'motorcycle' ? 'text-blue-700' : 'text-slate-600'}`}>
@@ -124,11 +130,10 @@ export default function MyVehicleScreen({
               <TouchableOpacity
                 onPress={() => setVehicleType('car')}
                 activeOpacity={0.8}
-                className={`flex-1 py-3 px-4 rounded-2xl border flex-row items-center justify-center ${
-                  vehicleType === 'car'
+                className={`flex-1 py-3 px-4 rounded-2xl border flex-row items-center justify-center ${vehicleType === 'car'
                     ? 'bg-blue-50 border-blue-500'
                     : 'bg-slate-50 border-slate-200'
-                }`}
+                  }`}
               >
                 <Text className="text-lg mr-2">🚗</Text>
                 <Text className={`text-xs font-bold ${vehicleType === 'car' ? 'text-blue-700' : 'text-slate-600'}`}>
@@ -138,11 +143,28 @@ export default function MyVehicleScreen({
             </View>
           </View>
 
+
+
           {/* License Plate Input */}
           <View>
-            <Text className="text-slate-600 text-xs font-semibold mb-1">
-              License Plate Number:
-            </Text>
+            <View className="flex-row justify-between items-center mb-1">
+              <Text className="text-slate-600 text-xs font-semibold">
+                License Plate Number:
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!vehicleType) {
+                    alert('Please select vehicle type first.');
+                    return;
+                  }
+                  setShowScannerModal(true);
+                }}
+                className="flex-row items-center bg-blue-50 border border-blue-200 py-1 px-2.5 rounded-lg active:bg-blue-100"
+              >
+                <Ionicons name="camera-outline" size={13} color="#2563eb" style={{ marginRight: 4 }} />
+                <Text className="text-blue-600 font-bold text-[11px]">Scan with Camera</Text>
+              </TouchableOpacity>
+            </View>
             <TextInput
               value={newPlate}
               onChangeText={setNewPlate}
@@ -171,6 +193,11 @@ export default function MyVehicleScreen({
             <TextInput
               value={newProvince}
               onChangeText={setNewProvince}
+              onBlur={() => {
+                if (newProvince.trim()) {
+                  setNewProvince(toThaiProvince(newProvince));
+                }
+              }}
               placeholder="e.g. Bangkok"
               placeholderTextColor="#94a3b8"
               style={{
@@ -298,19 +325,17 @@ export default function MyVehicleScreen({
                 {currentUser?.name}
               </Text>
               <Text className="text-slate-400 text-xs mt-0.5">
-                {isAdmin ? `Staff ID: ${currentUser?.staffId}` : isStudent ? `Student ID: ${currentUser?.studentId}` : 'Temporary Visitor Pass'}
+                {isAdmin ? `Staff ID: ${currentUser?.staffId || 'SEC-01'}` : isStudent ? `Student ID: ${(currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')).replace(/\D/g, '')}` : 'Temporary Visitor Pass'}
               </Text>
             </View>
-            <View className={`px-2.5 py-1 rounded-full border ${
-              isAdmin
+            <View className={`px-2.5 py-1 rounded-full border ${isAdmin
                 ? 'bg-purple-900/60 border-purple-500/50'
                 : isStudent
-                ? 'bg-blue-900/60 border-blue-500/50'
-                : 'bg-amber-900/60 border-amber-500/50'
-            }`}>
-              <Text className={`text-[10px] font-black uppercase ${
-                isAdmin ? 'text-purple-300' : isStudent ? 'text-blue-300' : 'text-amber-300'
+                  ? 'bg-blue-900/60 border-blue-500/50'
+                  : 'bg-amber-900/60 border-amber-500/50'
               }`}>
+              <Text className={`text-[10px] font-black uppercase ${isAdmin ? 'text-purple-300' : isStudent ? 'text-blue-300' : 'text-amber-300'
+                }`}>
                 {currentUser?.role}
               </Text>
             </View>
@@ -319,8 +344,13 @@ export default function MyVehicleScreen({
 
         <View className="p-4 sm:p-5 flex-row justify-between items-center bg-white border-t border-slate-100">
           <View className="flex-1 pr-2">
-            <Text className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Account Email</Text>
+            <Text className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Account Email & ID</Text>
             <Text className="text-slate-700 text-xs font-semibold mt-0.5" numberOfLines={1}>{currentUser?.email}</Text>
+            {currentUser?.role !== 'guest' && (
+              <Text className="text-slate-700 text-xs font-semibold mt-0.5" numberOfLines={1}>
+                {isAdmin ? 'Staff ID' : 'Student ID'}: {isAdmin ? (currentUser?.staffId || 'SEC-01') : (currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')).replace(/\D/g, '')}
+              </Text>
+            )}
           </View>
           <View className="items-end">
             <Text className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Status</Text>
@@ -329,15 +359,22 @@ export default function MyVehicleScreen({
         </View>
 
         {isStudent && (
-          <View className="border-t border-slate-100 p-4 bg-slate-50">
-            <View className="flex-row justify-between items-center mb-1.5">
-              <Text className="text-slate-600 text-xs font-semibold">Safety Drive Score:</Text>
-              <Text className="text-emerald-600 font-black text-sm">{currentUser?.safetyScore}/100</Text>
+          <TouchableOpacity 
+            onPress={() => setShowDrivingScoreModal(true)}
+            activeOpacity={0.8}
+            className="border-t border-slate-100 p-4 bg-slate-50 flex-row items-center"
+          >
+            <View className="flex-1 mr-4">
+              <View className="flex-row justify-between items-center mb-1.5">
+                <Text className="text-slate-600 text-xs font-semibold">Safety Drive Score:</Text>
+                <Text className="text-emerald-600 font-black text-sm">{currentUser?.safetyScore}/100</Text>
+              </View>
+              <View className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                <View className="h-full bg-emerald-500" style={{ width: `${currentUser?.safetyScore}%` }} />
+              </View>
             </View>
-            <View className="h-2 bg-slate-200 rounded-full overflow-hidden">
-              <View className="h-full bg-emerald-500" style={{ width: `${currentUser?.safetyScore}%` }} />
-            </View>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
+          </TouchableOpacity>
         )}
       </View>
 
@@ -352,25 +389,23 @@ export default function MyVehicleScreen({
       <View className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm">
         <View className="flex-row justify-between items-center mb-4">
           <View>
-            <Text className="text-slate-900 font-bold text-sm">Registered Vehicles</Text>
+            <Text className="text-slate-900 font-bold text-sm">Registered Vehicle</Text>
             <Text className="text-slate-400 text-[10px]">1 account per license plate</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => setIsRegistering(true)}
-            className="bg-blue-50 border border-blue-200 py-1.5 px-3 rounded-xl active:bg-blue-100 flex-row items-center"
-          >
-            <Ionicons name="add-circle" size={14} color="#2563eb" style={{ marginRight: 4 }} />
-            <Text className="text-blue-600 font-bold text-xs">Add Vehicle</Text>
-          </TouchableOpacity>
         </View>
 
         <View className="space-y-3">
           {!currentUser?.vehicles || currentUser.vehicles.length === 0 ? (
             <View className="items-center py-6">
-              <Text className="text-3xl mb-2">🛵</Text>
               <Text className="text-slate-400 text-xs text-center mb-3">No registered vehicles yet</Text>
               <TouchableOpacity
-                onPress={() => setIsRegistering(true)}
+                onPress={() => {
+                  if (onOpenAddVehicleModal) {
+                    onOpenAddVehicleModal();
+                  } else {
+                    setIsRegistering(true);
+                  }
+                }}
                 className="bg-blue-600 py-2 px-4 rounded-xl active:opacity-90"
               >
                 <Text className="text-white font-bold text-xs">+ Register First Vehicle</Text>
@@ -378,13 +413,25 @@ export default function MyVehicleScreen({
             </View>
           ) : (
             currentUser.vehicles.map((v, i) => (
-              <View key={i} className="flex-row items-center p-3.5 bg-slate-50 rounded-xl border border-slate-200 mb-2">
-                <Text className="text-2xl">{v.model?.includes('🚗') ? '🚗' : '🛵'}</Text>
-                <View className="ml-3 flex-1">
-                  <Text className="text-slate-900 font-bold text-xs">{v.plate}</Text>
-                  <Text className="text-slate-500 text-[10px] mt-0.5">{v.model?.replace(/^[🛵🚗]\s*/, '')}</Text>
+              <View key={i} className="flex-row items-center p-3.5 bg-slate-50 rounded-xl border border-slate-200 mb-2 justify-between">
+                <View className="flex-row items-center flex-1 mr-2">
+                  <Text className="text-2xl">{v.model?.includes('🚗') ? '🚗' : '🛵'}</Text>
+                  <View className="ml-3 flex-1">
+                    <Text className="text-slate-900 font-bold text-xs">{v.plate}</Text>
+                    <Text className="text-slate-500 text-[10px] mt-0.5">{v.model?.replace(/^[🛵🚗]\s*/, '')}</Text>
+                  </View>
                 </View>
-                <Text className="text-emerald-700 text-[10px] font-bold uppercase bg-emerald-100 py-1 px-2.5 rounded-md">Approved</Text>
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-emerald-700 text-[10px] font-bold uppercase bg-emerald-100 py-1 px-2.5 rounded-md">Approved</Text>
+                  {onDeleteVehicle && (
+                    <TouchableOpacity
+                      onPress={() => onDeleteVehicle(v.plate)}
+                      className="p-1.5 bg-red-50 rounded-lg border border-red-100 active:bg-red-100"
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             ))
           )}
@@ -474,11 +521,10 @@ export default function MyVehicleScreen({
                         {/* Helmet check condition: Only displayed for motorcycles, NEVER for cars! */}
                         {hasHelmetStatus && (
                           <View className="flex-row items-center mt-1">
-                            <Text className={`text-[10px] font-semibold ${
-                              trip.helmet.includes('Worn') || trip.helmet.includes('Pass')
+                            <Text className={`text-[10px] font-semibold ${trip.helmet.includes('Worn') || trip.helmet.includes('Pass')
                                 ? 'text-emerald-600'
                                 : 'text-red-600'
-                            }`}>
+                              }`}>
                               🛡️ Helmet Check: {trip.helmet}
                             </Text>
                           </View>
@@ -516,6 +562,22 @@ export default function MyVehicleScreen({
           )}
         </View>
       </View>
+
+      <LicensePlateScannerModal
+        visible={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        vehicleType={vehicleType}
+        onScanSuccess={(scannedPlate, scannedProvince) => {
+          setNewPlate(scannedPlate);
+          setNewProvince(scannedProvince);
+        }}
+      />
+
+      <DrivingScoreModal 
+        visible={showDrivingScoreModal}
+        onClose={() => setShowDrivingScoreModal(false)}
+        currentUser={currentUser}
+      />
     </View>
   );
 }
