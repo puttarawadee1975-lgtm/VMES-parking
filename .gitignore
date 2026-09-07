@@ -47,3 +47,7 @@ __pycache__/
 
 # IDE configuration
 .claude/
+
+# DB data
+backend-Smart-Campus-Parking/data/db/
+backend-Smart-Campus-Parking/data/*.log
