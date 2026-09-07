@@ -24,18 +24,7 @@ export default function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [parkingOccupancy, setParkingOccupancy] = useState({ available: 12, occupied: 6, total: 18, rate: 33.3 });
 
-  const [logs, setLogs] = useState(() => {
-    const now = new Date();
-    return INITIAL_VEHICLES.map((item, idx) => ({
-      time: new Date(now.getTime() - idx * 180000).toTimeString().split(' ')[0],
-      plate: item.plate,
-      province: item.province,
-      vehicle: item.vehicle,
-      helmet: item.helmet,
-      isViolation: item.isViolation,
-      gate: item.gate
-    }));
-  });
+  const [logs, setLogs] = useState([]);
 
   // Fetch real data from Backend FastAPI
   const fetchBackendData = useCallback(async () => {
@@ -44,7 +33,7 @@ export default function App() {
       const resDet = await fetch('http://localhost:8000/detections');
       if (resDet.ok) {
         const dataDet = await resDet.json();
-        if (Array.isArray(dataDet) && dataDet.length > 0) {
+        if (Array.isArray(dataDet)) {
           const transformedLogs = dataDet.map(item => {
             const timeStr = item.timestamp ? new Date(item.timestamp).toTimeString().split(' ')[0] : 'Just now';
             const isV = item.violation || false;
@@ -60,13 +49,16 @@ export default function App() {
             };
           });
           setLogs(transformedLogs);
-          setTotalScans(prev => Math.max(prev, transformedLogs.length));
-          setViolationsCount(prev => Math.max(prev, transformedLogs.filter(l => l.isViolation).length));
+          if (transformedLogs.length > 0) {
+            setTotalScans(prev => Math.max(prev, transformedLogs.length));
+            setViolationsCount(prev => Math.max(prev, transformedLogs.filter(l => l.isViolation).length));
+          }
         }
       }
     } catch (e) {
       console.log('Backend connection notice (detections):', e.message);
     }
+
 
     try {
       // 2. Fetch Parking Status
