@@ -135,3 +135,70 @@ async def get_all_score_logs():
     """
     return SCORE_LOGS
 
+@router.get("/all-vehicles")
+async def get_all_registered_vehicles():
+    """
+    Admin website endpoint: Get list of all registered vehicles.
+    """
+    from database import registered_vehicles_collection, users_collection
+    vehicles = []
+    
+    if registered_vehicles_collection is not None:
+        docs = list(registered_vehicles_collection.find({}, {"_id": 0}))
+        for d in docs:
+            vehicles.append({
+                "plate": d.get("plate", ""),
+                "province": "กรุงเทพมหานคร",
+                "vehicle": d.get("model", "Vehicle"),
+                "owner": d.get("user_email", "").split("@")[0].capitalize(),
+                "ownerEmail": d.get("user_email", ""),
+                "id": "STU-" + d.get("user_email", "0000")[:4],
+                "role": d.get("role", "Student").capitalize(),
+                "score": 100
+            })
+            
+    if users_collection is not None:
+        u_docs = list(users_collection.find({}, {"_id": 0}))
+        for u in u_docs:
+            u_score = u.get("driving_score", 100)
+            u_name = u.get("name", u.get("email", "").split("@")[0])
+            u_email = u.get("email", "")
+            for v in u.get("vehicles", []):
+                # Avoid duplicate plates
+                if not any(veh["plate"] == v.get("plate") for veh in vehicles):
+                    vehicles.append({
+                        "plate": v.get("plate", ""),
+                        "province": v.get("province", "กรุงเทพมหานคร"),
+                        "vehicle": f"{'🛵' if v.get('type')=='motorcycle' else '🚗'} {v.get('brand','')} {v.get('model','')}".strip(),
+                        "owner": u_name,
+                        "ownerEmail": u_email,
+                        "id": u.get("student_id", f"6507{len(vehicles)+1:04d}"),
+                        "role": u.get("role", "Student").capitalize(),
+                        "score": u_score
+                    })
+                    
+    return vehicles
+
+@router.get("/public-users")
+async def get_public_users_scores():
+    """
+    Admin website endpoint: Get users and their driving scores without requiring OAuth headers in dev mode.
+    """
+    from database import users_collection
+    if users_collection is None:
+        return []
+
+    users = []
+    cursor = users_collection.find()
+    for doc in cursor:
+        users.append({
+            "id": str(doc.get("_id")),
+            "email": doc.get("email"),
+            "role": doc.get("role", "student"),
+            "name": doc.get("name", "Unknown"),
+            "driving_score": doc.get("driving_score", 100),
+            "vehicles": doc.get("vehicles", [])
+        })
+    return users
+
+

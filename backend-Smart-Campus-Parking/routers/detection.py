@@ -62,6 +62,22 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         res = detection_logs_collection.insert_one(log_doc)
         inserted_id = str(res.inserted_id)
 
+    log_response = DetectionLogResponse(
+        id=inserted_id,
+        license_plate=payload.license_plate,
+        vehicle_type=vehicle_type,
+        helmet_detected=helmet_detected,
+        violation=is_violation,
+        gate_type=payload.gate_type,
+        zone=payload.zone,
+        timestamp=now,
+        matched_user=matched_user_name
+    )
+
+    IN_MEMORY_DETECTIONS.insert(0, log_response.model_dump())
+    if len(IN_MEMORY_DETECTIONS) > 100:
+        IN_MEMORY_DETECTIONS.pop()
+
     # Automatically update parking slots in real-time (ONLY FOR CARS)
     if parking_status_collection is not None and vehicle_type == "car":
         zone_name = payload.zone or "VMES Parking (Car Only)"
@@ -85,14 +101,32 @@ async def ingest_detection_event(payload: DetectionLogCreate):
                 }
             )
 
-    return DetectionLogResponse(
-        id=inserted_id,
-        license_plate=payload.license_plate,
-        vehicle_type=vehicle_type,
-        helmet_detected=helmet_detected,
-        violation=is_violation,
-        gate_type=payload.gate_type,
-        zone=payload.zone,
-        timestamp=now,
-        matched_user=matched_user_name
-    )
+    return log_response
+
+IN_MEMORY_DETECTIONS = []
+
+@router.get("", response_model=List[DetectionLogResponse])
+async def get_all_detections():
+    """
+    Get recent AI detection logs for Admin Web Inspection Feed.
+    """
+    if detection_logs_collection is not None:
+        docs = list(detection_logs_collection.find().sort("timestamp", -1).limit(50))
+        if docs:
+            result = []
+            for doc in docs:
+                result.append(DetectionLogResponse(
+                    id=str(doc.get("_id", "id")),
+                    license_plate=doc.get("license_plate", ""),
+                    vehicle_type=doc.get("vehicle_type", "motorcycle"),
+                    helmet_detected=doc.get("helmet_detected"),
+                    violation=doc.get("violation", False),
+                    gate_type=doc.get("gate_type", "ENTRY"),
+                    zone=doc.get("zone", "Zone A"),
+                    timestamp=doc.get("timestamp", datetime.now(timezone.utc)),
+                    matched_user=doc.get("matched_email", "Guest / Unregistered")
+                ))
+            return result
+
+    return IN_MEMORY_DETECTIONS
+
