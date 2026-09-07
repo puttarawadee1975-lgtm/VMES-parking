@@ -234,4 +234,41 @@ export const getUserVehiclesFromMongoDB = async (userEmail = '65070042@student.u
   }
 };
 
+// 12. Adjust Driver Safety Score in MongoDB
+export const adjustScoreInMongoDB = async (userEmail, pointsChanged, reason, gateName, imageUrl) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/adjust-score`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        user_email: userEmail,
+        points_changed: pointsChanged,
+        reason: reason,
+        gate_name: gateName || 'Gate 1 (Main Entrance)',
+        image_url: imageUrl || null
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to adjust score in MongoDB:', err);
+    return null;
+  }
+};
+
+// 13. Fetch Driver Safety Score Audit Logs
+export const getScoreLogsFromMongoDB = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/score-logs`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to fetch score logs from MongoDB:', err);
+    return [];
+  }
+};
+
 

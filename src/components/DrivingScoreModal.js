@@ -196,6 +196,12 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
                   <View style={{ flex: 1, marginRight: 8 }}>
                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>{item.title}</Text>
                     <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{item.date} • {item.gate}</Text>
+                    {item.type === 'violation' && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        <Ionicons name="camera-outline" size={12} color="#ef4444" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 10, color: '#ef4444', fontWeight: '700' }}>📸 Evidence Captured & Logged</Text>
+                      </View>
+                    )}
                   </View>
 
                   <View style={{

@@ -64,7 +64,27 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentIndex, vehicles]);
 
-  const handleAdjustScore = (owner, change) => {
+  const handleAdjustScore = async (owner, change) => {
+    const targetVeh = vehicles.find(v => v.owner === owner);
+    const email = targetVeh?.ownerEmail || '65070042@student.university.ac.th';
+    const reason = change < 0 ? 'Admin Manual Deduction (No Helmet Violation)' : 'Admin Score Restoration';
+
+    try {
+      await fetch('http://localhost:8000/admin/adjust-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_email: email,
+          points_changed: change,
+          reason: reason,
+          gate_name: 'Gate 1 (Main Entrance)',
+          image_url: 'http://localhost:8000/snapshots/ev_violation_no_helmet.svg'
+        })
+      });
+    } catch (e) {
+      console.warn('API sync warning:', e);
+    }
+
     setVehicles(prev => prev.map(v => {
       if (v.owner === owner) {
         const newScore = Math.min(100, Math.max(0, v.score + change));
