@@ -215,11 +215,7 @@ export default function App() {
               occupiedRate={parkingOccupancy.rate} 
             />
 
-            <div className="grid-2-col">
-              <CameraStream 
-                currentDetection={logs[0]} 
-                onTriggerScan={handleTriggerScan} 
-              />
+            <div style={{ marginTop: 16 }}>
               <InspectionTable logs={logs} />
             </div>
           </div>
@@ -233,13 +229,12 @@ export default function App() {
                 <span>Multi-Gate AI CCTV Surveillance Grid</span>
               </div>
             </div>
-            <div className="grid-2-col gap-16 mt-16" style={{ marginTop: 16 }}>
-              <div className="camera-box-large">
-                <CameraStream currentDetection={logs[0]} onTriggerScan={handleTriggerScan} />
-              </div>
+            <div className="mt-16" style={{ marginTop: 16 }}>
+              <CameraStream currentDetection={logs[0]} onTriggerScan={handleTriggerScan} />
             </div>
           </div>
         )}
+
 
         {activeTab === 'vehicles' && (
           <VehiclesTable vehicles={vehicles} onRefreshVehicles={fetchBackendData} />
