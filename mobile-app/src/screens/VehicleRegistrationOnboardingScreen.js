@@ -145,7 +145,7 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* Vehicle Type Segmented Control */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 8 }}>
-                Vehicle Type:
+                Vehicle Type <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity
@@ -196,7 +196,7 @@ export default function VehicleRegistrationOnboardingScreen({
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569' }}>
-                  License Plate Number:
+                  License Plate Number <Text style={{ color: '#ef4444' }}>*</Text>
                 </Text>
                 <TouchableOpacity
                   onPress={() => {
@@ -235,7 +235,7 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* Province Selection */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Province / City:
+                Province / City <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <TouchableOpacity
                 onPress={() => setShowProvinceModal(true)}
@@ -264,7 +264,7 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* Brand */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Brand:
+                Brand <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <TextInput
                 value={brand}
@@ -294,7 +294,7 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* Model */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Model:
+                Model <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <TextInput
                 value={model}
@@ -324,7 +324,7 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* Color */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Color:
+                Color <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <TextInput
                 value={color}
