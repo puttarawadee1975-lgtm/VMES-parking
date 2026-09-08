@@ -24,11 +24,16 @@ export default function VehicleRegistrationOnboardingScreen({
   const [province, setProvince] = useState('Bangkok (กรุงเทพมหานคร)');
   const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
-  const [vehicleType, setVehicleType] = useState('motorcycle'); // 'motorcycle' or 'car'
+  const [vehicleType, setVehicleType] = useState(null); // null | 'motorcycle' | 'car'
   const [model, setModel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFormSubmit = () => {
+    if (!vehicleType) {
+      Alert.alert('Required Field', 'Please select your vehicle type (Motorcycle or Car).');
+      return;
+    }
+
     if (!plateNumber.trim()) {
       Alert.alert('Required Field', 'Please enter your license plate number.');
       return;
@@ -181,7 +186,13 @@ export default function VehicleRegistrationOnboardingScreen({
                   License Plate Number:
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setShowScannerModal(true)}
+                  onPress={() => {
+                    if (!vehicleType) {
+                      Alert.alert('Selection Required', 'Please select your vehicle type (Motorcycle or Car) first.');
+                      return;
+                    }
+                    setShowScannerModal(true);
+                  }}
                   style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
                 >
                   <Ionicons name="camera-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
