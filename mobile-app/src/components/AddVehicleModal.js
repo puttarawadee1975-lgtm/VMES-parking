@@ -15,11 +15,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { toThaiProvince } from '../utils/provinceHelper';
 import LicensePlateScannerModal from './LicensePlateScannerModal';
+import ProvincePickerModal from './ProvincePickerModal';
 
 export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
   const [vehicleType, setVehicleType] = useState(null); // null | 'motorcycle' | 'car'
   const [newPlate, setNewPlate] = useState('');
-  const [newProvince, setNewProvince] = useState('');
+  const [newProvince, setNewProvince] = useState('Bangkok (กรุงเทพมหานคร)');
+  const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [newBrand, setNewBrand] = useState('');
   const [newModel, setNewModel] = useState('');
   const [newColor, setNewColor] = useState('');
@@ -189,18 +191,11 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
               {/* 3. Province */}
               <View>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
-                  Province <Text style={{ color: '#ef4444' }}>*</Text>
+                  Province / City <Text style={{ color: '#ef4444' }}>*</Text>
                 </Text>
-                <TextInput
-                  value={newProvince}
-                  onChangeText={setNewProvince}
-                  onBlur={() => {
-                    if (newProvince.trim()) {
-                      setNewProvince(toThaiProvince(newProvince));
-                    }
-                  }}
-                  placeholder="e.g. Samut Prakan, Bangkok"
-                  placeholderTextColor="#94a3b8"
+                <TouchableOpacity
+                  onPress={() => setShowProvinceModal(true)}
+                  activeOpacity={0.8}
                   style={{
                     backgroundColor: '#ffffff',
                     borderWidth: 1,
@@ -208,10 +203,16 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                     borderRadius: 14,
                     paddingHorizontal: 16,
                     paddingVertical: 14,
-                    color: '#0f172a',
-                    fontSize: 14
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
                   }}
-                />
+                >
+                  <Text style={{ color: newProvince ? '#0f172a' : '#94a3b8', fontSize: 14, fontWeight: '700', flex: 1, marginRight: 8 }} numberOfLines={1}>
+                    {newProvince || 'Select Province / City'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color="#64748b" />
+                </TouchableOpacity>
               </View>
 
               {/* 4. Brand */}
@@ -322,6 +323,13 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
           setNewPlate(scannedPlate);
           setNewProvince(scannedProvince);
         }}
+      />
+
+      <ProvincePickerModal
+        visible={showProvinceModal}
+        onClose={() => setShowProvinceModal(false)}
+        onSelect={(prov) => setNewProvince(prov)}
+        selectedProvince={newProvince}
       />
     </Modal>
   );

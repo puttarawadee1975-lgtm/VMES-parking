@@ -11,18 +11,7 @@ import {
   Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const COMMON_PROVINCES = [
-  'Bangkok',
-  'Nonthaburi',
-  'Pathum Thani',
-  'Samut Prakan',
-  'Samut Sakhon',
-  'Nakhon Pathom',
-  'Chonburi',
-  'Chiang Mai',
-  'Khon Kaen'
-];
+import ProvincePickerModal from '../components/ProvincePickerModal';
 
 export default function VehicleRegistrationOnboardingScreen({
   currentUser,
@@ -31,7 +20,8 @@ export default function VehicleRegistrationOnboardingScreen({
   onSkipToGuest
 }) {
   const [plateNumber, setPlateNumber] = useState('');
-  const [province, setProvince] = useState('Bangkok');
+  const [province, setProvince] = useState('Bangkok (กรุงเทพมหานคร)');
+  const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [vehicleType, setVehicleType] = useState('motorcycle'); // 'motorcycle' or 'car'
   const [model, setModel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -205,29 +195,29 @@ export default function VehicleRegistrationOnboardingScreen({
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
                 Province / City:
               </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {COMMON_PROVINCES.map((prov) => {
-                  const isSel = province === prov;
-                  return (
-                    <TouchableOpacity
-                      key={prov}
-                      onPress={() => setProvince(prov)}
-                      style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: 10,
-                        backgroundColor: isSel ? '#2563eb' : '#f1f5f9',
-                        borderWidth: 1,
-                        borderColor: isSel ? '#2563eb' : '#e2e8f0'
-                      }}
-                    >
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: isSel ? '#ffffff' : '#475569' }}>
-                        {prov}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <TouchableOpacity
+                onPress={() => setShowProvinceModal(true)}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: '#f8fafc',
+                  borderWidth: 1,
+                  borderColor: '#cbd5e1',
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                  <Ionicons name="location-outline" size={18} color="#2563eb" style={{ marginRight: 10 }} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }} numberOfLines={1}>
+                    {province || 'Select Province / City'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-down" size={18} color="#64748b" />
+              </TouchableOpacity>
             </View>
 
             {/* Make & Model */}
@@ -272,6 +262,13 @@ export default function VehicleRegistrationOnboardingScreen({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ProvincePickerModal
+        visible={showProvinceModal}
+        onClose={() => setShowProvinceModal(false)}
+        onSelect={(prov) => setProvince(prov)}
+        selectedProvince={province}
+      />
     </SafeAreaView>
   );
 }
