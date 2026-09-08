@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
   SafeAreaView,
-  ScrollView
+  ScrollView,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getGateDetectionsHistory } from '../services/api';
 
 export default function GateHistoryModal({
   visible,
@@ -16,10 +18,66 @@ export default function GateHistoryModal({
   currentUser
 }) {
   const [selectedFilter, setSelectedFilter] = useState('ALL'); // 'ALL', 'TRIPS', 'VIOLATIONS'
+  const [liveHistory, setLiveHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const combinedHistory = (tripHistory || []).map(t => ({ ...t, type: t.type || 'trip' }));
+  useEffect(() => {
+    if (visible) {
+      loadHistory();
+    }
+  }, [visible]);
 
-  const filteredItems = combinedHistory.filter(item => {
+  const loadHistory = async () => {
+    setLoading(true);
+    try {
+      const data = await getGateDetectionsHistory();
+      if (Array.isArray(data) && data.length > 0) {
+        const transformed = data.map(item => {
+          const isV = item.violation || false;
+          const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
+          const dateStr = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+          const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+          const gateName = item.gate_type || 'Gate 1 (Main Entrance)';
+
+          if (isV) {
+            return {
+              id: item.id,
+              type: 'violation',
+              title: 'No Helmet Detected',
+              penalty: -10,
+              details: `Rider (${item.matched_user || 'Unregistered'}) entered campus without wearing a safety helmet.`,
+              plate: item.license_plate,
+              gate: gateName,
+              time: `${dateStr}, ${timeStr}`
+            };
+          } else {
+            return {
+              id: item.id,
+              type: 'trip',
+              plate: item.license_plate,
+              vehicleType: item.vehicle_type,
+              date: dateStr,
+              entryTime: timeStr,
+              entryGate: gateName,
+              exitTime: 'Verified Pass',
+              exitGate: gateName,
+              status: 'Pass Granted',
+              helmet: item.vehicle_type === 'car' ? 'N/A' : (item.helmet_detected ? 'Pass (Worn)' : 'NO HELMET')
+            };
+          }
+        });
+        setLiveHistory(transformed);
+      }
+    } catch (err) {
+      console.warn('[GateHistoryModal] Error fetching live history:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const displayHistory = liveHistory.length > 0 ? liveHistory : (tripHistory || []).map(t => ({ ...t, type: t.type || 'trip' }));
+
+  const filteredItems = displayHistory.filter(item => {
     if (selectedFilter === 'TRIPS') return item.type === 'trip';
     if (selectedFilter === 'VIOLATIONS') return item.type === 'violation';
     return true;

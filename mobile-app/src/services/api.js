@@ -265,10 +265,24 @@ export const getScoreLogsFromMongoDB = async () => {
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
-  } catch (err) {
-    console.warn('[API] Failed to fetch score logs from MongoDB:', err);
     return [];
   }
 };
+
+// 14. Fetch Gate Detections History (Public / Student / Admin)
+export const getGateDetectionsHistory = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/detections`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to fetch gate detections history:', err);
+    return [];
+  }
+};
+
 
 

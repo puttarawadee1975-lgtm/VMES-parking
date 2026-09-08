@@ -1,18 +1,69 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
   ScrollView,
-  SafeAreaView
+  SafeAreaView,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getGateDetectionsHistory } from '../services/api';
 
 export default function DrivingScoreModal({ visible, onClose, currentUser }) {
+  const [liveHistory, setLiveHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      loadScoreHistory();
+    }
+  }, [visible]);
+
+  const loadScoreHistory = async () => {
+    setLoading(true);
+    try {
+      const data = await getGateDetectionsHistory();
+      if (Array.isArray(data) && data.length > 0) {
+        const transformed = data.map((item, idx) => {
+          const isV = item.violation || false;
+          const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
+          const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+          const dateStr = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+          
+          if (isV) {
+            return {
+              id: item.id || idx,
+              date: `${dateStr}, ${timeStr}`,
+              type: 'violation',
+              title: 'No Helmet Detected',
+              points: '-10',
+              gate: item.gate_type || 'Gate 1 (Main Entrance)'
+            };
+          } else {
+            return {
+              id: item.id || idx,
+              date: `${dateStr}, ${timeStr}`,
+              type: 'reward',
+              title: item.vehicle_type === 'car' ? 'Car Gate Access (Approved)' : 'Safe Driving (Helmet Worn)',
+              points: '+0',
+              gate: item.gate_type || 'Gate 1 (Main Entrance)'
+            };
+          }
+        });
+        setLiveHistory(transformed);
+      }
+    } catch (e) {
+      console.warn('[DrivingScoreModal] Error loading score history:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!visible) return null;
 
-  const score = currentUser?.safetyScore ?? 100;
+  const score = currentUser?.safetyScore ?? currentUser?.driving_score ?? 100;
   const isPerfect = score === 100;
   const isGood = score >= 80 && score < 100;
   const isWarning = score < 80;
@@ -37,33 +88,13 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
     statusDesc = 'Your score is low. Further violations may result in restricted access.';
   }
 
-  // Mock History
-  const history = [
-    {
-      id: 1,
-      date: 'Today, 08:24 AM',
-      type: 'violation',
-      title: 'No Helmet Detected',
-      points: -10,
-      gate: 'Gate 1 (Main Entrance)'
-    },
-    {
-      id: 2,
-      date: 'Yesterday, 09:15 AM',
-      type: 'reward',
-      title: 'Safe Driving (Helmet Worn)',
-      points: '+0',
-      gate: 'Gate 2 (East)'
-    },
-    {
-      id: 3,
-      date: 'Sep 05, 08:30 AM',
-      type: 'reward',
-      title: 'Safe Driving (Helmet Worn)',
-      points: '+0',
-      gate: 'Gate 1 (Main Entrance)'
-    }
+  // Fallback History if offline
+  const defaultHistory = [
+    { id: 1, date: 'Today, 08:24 AM', type: 'violation', title: 'No Helmet Detected', points: '-10', gate: 'Gate 1 (Main Entrance)' },
+    { id: 2, date: 'Yesterday, 09:15 AM', type: 'reward', title: 'Safe Driving (Helmet Worn)', points: '+0', gate: 'Gate 2 (East Gate)' }
   ];
+
+  const history = liveHistory.length > 0 ? liveHistory : defaultHistory;
 
   return (
     <Modal
