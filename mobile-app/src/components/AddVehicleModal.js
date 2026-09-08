@@ -171,7 +171,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                 <TextInput
                   value={newPlate}
                   onChangeText={setNewPlate}
-                  placeholder="e.g. 1AB 1234, 3CD 5678"
+                  placeholder="e.g. 1กข 1234, 3กฮ 5678"
                   placeholderTextColor="#94a3b8"
                   autoCapitalize="characters"
                   style={{

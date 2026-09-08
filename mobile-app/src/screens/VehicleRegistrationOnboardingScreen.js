@@ -202,7 +202,7 @@ export default function VehicleRegistrationOnboardingScreen({
               <TextInput
                 value={plateNumber}
                 onChangeText={setPlateNumber}
-                placeholder="e.g. 1AB 1234 or 3CD 5678"
+                placeholder="e.g. 1กข 1234 or 3กฮ 5678"
                 placeholderTextColor="#94a3b8"
                 autoCapitalize="characters"
                 style={{
