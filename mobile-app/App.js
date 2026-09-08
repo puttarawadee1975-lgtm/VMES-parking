@@ -96,7 +96,7 @@ function MainApp() {
               };
               setCurrentUser(formattedUser);
               setActiveTab('monitor');
-              showToast(`👋 Welcome back, ${data.user.name}`);
+              showToast(`Signed in as ${data.user.name}`);
             } else {
               showToast('❌ Login Failed');
             }

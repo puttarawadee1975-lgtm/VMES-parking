@@ -109,7 +109,7 @@ export default function VehicleRegistrationOnboardingScreen({
               Vehicle Registration Required
             </Text>
             <Text style={{ fontSize: 13, color: '#94a3b8', lineHeight: 20 }}>
-              Welcome, <Text style={{ color: '#ffffff', fontWeight: '700' }}>{currentUser?.name || 'Student'}</Text>! To access campus gate scanning, spot saving, and safety score tracking, please register your vehicle plate first.
+              To access campus gate scanning, spot saving, and safety score tracking, please register your vehicle plate first.
             </Text>
 
             <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#334155', flexDirection: 'row', alignItems: 'center' }}>
