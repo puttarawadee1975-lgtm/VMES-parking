@@ -66,34 +66,6 @@ export default function ProvincePickerModal({ visible, onClose, onSelect, select
             )}
           </View>
 
-          {/* Quick Shortcuts */}
-          {!searchQuery && (
-            <View style={styles.shortcutsContainer}>
-              <Text style={styles.shortcutLabel}>Popular:</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                {['Bangkok (กรุงเทพมหานคร)', 'Nonthaburi (นนทบุรี)', 'Pathum Thani (ปทุมธานี)', 'Samut Prakan (สมุทรปราการ)', 'Chon Buri (ชลบุรี)'].map((p) => (
-                  <TouchableOpacity
-                    key={p}
-                    onPress={() => handleSelect({ label: p })}
-                    style={[
-                      styles.shortcutBadge,
-                      selectedProvince === p && styles.shortcutBadgeSelected
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.shortcutText,
-                        selectedProvince === p && styles.shortcutTextSelected
-                      ]}
-                    >
-                      {p.split(' ')[0]}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
           {/* Province List */}
           <FlatList
             data={filteredProvinces}
