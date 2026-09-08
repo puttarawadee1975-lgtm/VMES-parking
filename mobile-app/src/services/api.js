@@ -263,8 +263,9 @@ export const getScoreLogsFromMongoDB = async () => {
       method: 'GET',
       headers: getHeaders(),
     });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to fetch score logs from MongoDB:', err);
     return [];
   }
 };
