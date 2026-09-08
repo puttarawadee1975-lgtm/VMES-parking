@@ -102,9 +102,6 @@ export default function VehicleRegistrationOnboardingScreen({
               elevation: 4
             }}
           >
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#3b82f6', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-              <Ionicons name="car-sport" size={26} color="#ffffff" />
-            </View>
             <Text style={{ fontSize: 20, fontWeight: '800', color: '#ffffff', marginBottom: 6 }}>
               Vehicle Registration Required
             </Text>
