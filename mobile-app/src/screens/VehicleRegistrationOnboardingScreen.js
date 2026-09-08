@@ -150,7 +150,7 @@ export default function VehicleRegistrationOnboardingScreen({
                     borderColor: vehicleType === 'motorcycle' ? '#2563eb' : '#e2e8f0'
                   }}
                 >
-                  <Text style={{ fontSize: 18, marginRight: 6 }}>🛵</Text>
+                  <Ionicons name="bicycle-outline" size={18} color={vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 6 }} />
                   <Text style={{ fontSize: 13, fontWeight: '700', color: vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b' }}>
                     Motorcycle
                   </Text>
@@ -171,7 +171,7 @@ export default function VehicleRegistrationOnboardingScreen({
                     borderColor: vehicleType === 'car' ? '#2563eb' : '#e2e8f0'
                   }}
                 >
-                  <Text style={{ fontSize: 18, marginRight: 6 }}>🚗</Text>
+                  <Ionicons name="car-outline" size={18} color={vehicleType === 'car' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 6 }} />
                   <Text style={{ fontSize: 13, fontWeight: '700', color: vehicleType === 'car' ? '#1d4ed8' : '#64748b' }}>
                     Car / Automobile
                   </Text>
@@ -199,17 +199,24 @@ export default function VehicleRegistrationOnboardingScreen({
                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Scan Plate with Camera</Text>
                 </TouchableOpacity>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 14, paddingHorizontal: 14 }}>
-                <Ionicons name="card-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
-                <TextInput
-                  value={plateNumber}
-                  onChangeText={setPlateNumber}
-                  placeholder="e.g. 1AB 1234 or 3CD 5678"
-                  placeholderTextColor="#94a3b8"
-                  autoCapitalize="characters"
-                  style={{ flex: 1, paddingVertical: 12, fontSize: 14, fontWeight: '700', color: '#0f172a' }}
-                />
-              </View>
+              <TextInput
+                value={plateNumber}
+                onChangeText={setPlateNumber}
+                placeholder="e.g. 1AB 1234 or 3CD 5678"
+                placeholderTextColor="#94a3b8"
+                autoCapitalize="characters"
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderWidth: 1,
+                  borderColor: '#cbd5e1',
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: '#0f172a'
+                }}
+              />
             </View>
 
             {/* Province Selection */}
@@ -233,7 +240,6 @@ export default function VehicleRegistrationOnboardingScreen({
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                  <Ionicons name="location-outline" size={18} color="#2563eb" style={{ marginRight: 10 }} />
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }} numberOfLines={1}>
                     {province || 'Select Province / City'}
                   </Text>
@@ -247,16 +253,23 @@ export default function VehicleRegistrationOnboardingScreen({
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
                 Vehicle Make & Model:
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 14, paddingHorizontal: 14 }}>
-                <Ionicons name="pricetag-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
-                <TextInput
-                  value={model}
-                  onChangeText={setModel}
-                  placeholder="e.g. Honda PCX 160, Yamaha Grand Filano"
-                  placeholderTextColor="#94a3b8"
-                  style={{ flex: 1, paddingVertical: 12, fontSize: 13, fontWeight: '600', color: '#0f172a' }}
-                />
-              </View>
+              <TextInput
+                value={model}
+                onChangeText={setModel}
+                placeholder="e.g. Honda PCX 160, Yamaha Grand Filano"
+                placeholderTextColor="#94a3b8"
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderWidth: 1,
+                  borderColor: '#cbd5e1',
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: '#0f172a'
+                }}
+              />
             </View>
 
             {/* Submit Button */}

@@ -118,7 +118,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                       justifyContent: 'center'
                     }}
                   >
-                    <Text style={{ fontSize: 20, marginRight: 8 }}>🛵</Text>
+                    <Ionicons name="bicycle-outline" size={20} color={vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 8 }} />
                     <Text style={{ fontSize: 13, fontWeight: '700', color: vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b' }}>
                       Motorcycle
                     </Text>
@@ -140,7 +140,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                       justifyContent: 'center'
                     }}
                   >
-                    <Text style={{ fontSize: 20, marginRight: 8 }}>🚗</Text>
+                    <Ionicons name="car-outline" size={20} color={vehicleType === 'car' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 8 }} />
                     <Text style={{ fontSize: 13, fontWeight: '700', color: vehicleType === 'car' ? '#1d4ed8' : '#64748b' }}>
                       Car
                     </Text>
