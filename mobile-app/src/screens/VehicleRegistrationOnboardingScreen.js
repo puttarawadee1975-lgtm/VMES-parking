@@ -13,15 +13,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 const COMMON_PROVINCES = [
-  'กรุงเทพมหานคร',
-  'นนทบุรี',
-  'ปทุมธานี',
-  'สมุทรปราการ',
-  'สมุทรสาคร',
-  'นครปฐม',
-  'ชลบุรี',
-  'เชียงใหม่',
-  'ขอนแก่น'
+  'Bangkok',
+  'Nonthaburi',
+  'Pathum Thani',
+  'Samut Prakan',
+  'Samut Sakhon',
+  'Nakhon Pathom',
+  'Chonburi',
+  'Chiang Mai',
+  'Khon Kaen'
 ];
 
 export default function VehicleRegistrationOnboardingScreen({
@@ -31,7 +31,7 @@ export default function VehicleRegistrationOnboardingScreen({
   onSkipToGuest
 }) {
   const [plateNumber, setPlateNumber] = useState('');
-  const [province, setProvince] = useState('กรุงเทพมหานคร');
+  const [province, setProvince] = useState('Bangkok');
   const [vehicleType, setVehicleType] = useState('motorcycle'); // 'motorcycle' or 'car'
   const [model, setModel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -138,7 +138,7 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* Vehicle Type Segmented Control */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 8 }}>
-                Vehicle Type (ประเภทรถ):
+                Vehicle Type:
               </Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity
@@ -188,14 +188,14 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* License Plate Input */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                License Plate Number (เลขทะเบียน):
+                License Plate Number:
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 14, paddingHorizontal: 14 }}>
                 <Ionicons name="card-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
                 <TextInput
                   value={plateNumber}
                   onChangeText={setPlateNumber}
-                  placeholder="e.g. 1กข 1234 or 3กฮ 5678"
+                  placeholder="e.g. 1AB 1234 or 3CD 5678"
                   placeholderTextColor="#94a3b8"
                   autoCapitalize="characters"
                   style={{ flex: 1, paddingVertical: 12, fontSize: 14, fontWeight: '700', color: '#0f172a' }}
@@ -206,7 +206,7 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* Province Selection */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Province (จังหวัด):
+                Province / City:
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {COMMON_PROVINCES.map((prov) => {
@@ -236,7 +236,7 @@ export default function VehicleRegistrationOnboardingScreen({
             {/* Make & Model */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Vehicle Make & Model (ยี่ห้อ/รุ่น):
+                Vehicle Make & Model:
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 14, paddingHorizontal: 14 }}>
                 <Ionicons name="pricetag-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />

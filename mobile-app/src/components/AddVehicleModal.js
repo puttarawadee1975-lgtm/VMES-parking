@@ -31,10 +31,10 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
       return;
     }
 
-    // Thai License Plate Format Regex (Supports standard cars 1กข 1234, classic กข 1234, motorcycles 1กข 123, public 99-9999)
-    const thaiPlateRegex = /^([0-9]{1,2}[ก-ฮa-zA-Z]{1,2}\s?[0-9]{1,4}|[ก-ฮa-zA-Z]{1,3}\s?[0-9]{1,4}|[0-9]{2}-[0-9]{4}|[ก-ฮa-zA-Z0-9\s-]+)$/;
-    if (!thaiPlateRegex.test(newPlate.trim())) {
-      alert('Invalid License Plate Format.\nPlease enter a valid Thai license plate (e.g. 1กข 1234, กข 1234, 1กข 123).');
+    // License Plate Format Regex (Supports standard formats e.g. 1AB 1234, 3CD 5678, 99-9999)
+    const plateRegex = /^([0-9]{1,2}[\u0E00-\u0E7Fa-zA-Z]{1,2}\s?[0-9]{1,4}|[\u0E00-\u0E7Fa-zA-Z]{1,3}\s?[0-9]{1,4}|[0-9]{2}-[0-9]{4}|[\u0E00-\u0E7Fa-zA-Z0-9\s-]+)$/;
+    if (!plateRegex.test(newPlate.trim())) {
+      alert('Invalid License Plate Format.\nPlease enter a valid license plate (e.g. 1AB 1234, 3CD 5678).');
       return;
     }
     const icon = vehicleType === 'car' ? '🚗' : '🛵';
@@ -169,7 +169,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                 <TextInput
                   value={newPlate}
                   onChangeText={setNewPlate}
-                  placeholder="e.g. 1กข 1234, กข 1234, 1กข 123"
+                  placeholder="e.g. 1AB 1234, 3CD 5678"
                   placeholderTextColor="#94a3b8"
                   autoCapitalize="characters"
                   style={{

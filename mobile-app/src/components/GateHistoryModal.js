@@ -181,7 +181,7 @@ export default function GateHistoryModal({
                   );
                 }
 
-                const isCar = item.vehicleType === 'car' || item.model?.includes('🚗') || item.plate?.includes('3กฮ');
+                const isCar = item.vehicleType === 'car' || item.model?.includes('🚗') || item.plate?.includes('9AB');
                 const isMotorcycle = !isCar;
 
                 return (

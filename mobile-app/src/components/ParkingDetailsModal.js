@@ -14,7 +14,7 @@ export default function ParkingDetailsModal({
   // Safe property fallbacks
   const pillar = hasSpot ? (parkedSpot.pillar || 'G05-G09') : '-';
   const floorRaw = hasSpot ? (parkedSpot.floor || 'Floor G') : '-';
-  const displayFloor = hasSpot ? (floorRaw.replace(/Floor|ชั้น/gi, '').trim() || 'G') : '-';
+  const displayFloor = hasSpot ? (floorRaw.replace(/Floor/gi, '').trim() || 'G') : '-';
   const building = hasSpot ? (parkedSpot.building || 'VEMS Building') : '-';
   const zone = hasSpot ? (parkedSpot.zone || (parkedSpot.building && parkedSpot.building.startsWith('Zone') ? parkedSpot.building : 'Zone A')) : 'Not Saved';
   const savedDate = hasSpot ? (parkedSpot.savedDate || parkedSpot.date || '-') : 'No Date Saved';

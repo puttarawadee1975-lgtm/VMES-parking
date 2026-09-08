@@ -26,7 +26,7 @@ export default function NotificationsModal({
       message: 'AI CCTV Gate 1 detected driving without a helmet on campus. -10 points deducted from safety score.',
       date: '08:22 AM',
       location: 'Gate 1 (Main Entrance)',
-      plate: '1กข-9999',
+      plate: '1AB-9999',
       scoreDeducted: 10,
       unread: true
     },

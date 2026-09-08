@@ -37,7 +37,7 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
     } catch (e) { }
 
     setTimeout(() => {
-      const defaultScanned = { plate: '1กข 1234', province: 'กรุงเทพมหานคร' };
+      const defaultScanned = { plate: '1AB 1234', province: 'Bangkok' };
       const target = customPlateData || defaultScanned;
       const thaiProv = toThaiProvince(target.province);
 
