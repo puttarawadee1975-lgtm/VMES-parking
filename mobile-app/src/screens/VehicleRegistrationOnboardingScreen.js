@@ -261,10 +261,10 @@ export default function VehicleRegistrationOnboardingScreen({
               </TouchableOpacity>
             </View>
 
-            {/* Vehicle Brand */}
+            {/* Brand */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Vehicle Brand:
+                Brand:
               </Text>
               <TextInput
                 value={brand}
@@ -291,10 +291,10 @@ export default function VehicleRegistrationOnboardingScreen({
               />
             </View>
 
-            {/* Vehicle Model */}
+            {/* Model */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Vehicle Model:
+                Model:
               </Text>
               <TextInput
                 value={model}
@@ -321,10 +321,10 @@ export default function VehicleRegistrationOnboardingScreen({
               />
             </View>
 
-            {/* Vehicle Color */}
+            {/* Color */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Vehicle Color:
+                Color:
               </Text>
               <TextInput
                 value={color}
