@@ -96,7 +96,7 @@ export default function VehicleRegistrationOnboardingScreen({
               Vehicle Registration Required
             </Text>
             <Text style={{ fontSize: 13, color: '#94a3b8', lineHeight: 20 }}>
-              To use the app, please register your vehicle.
+              Please register your vehicle to access campus parking services, gate recognition, and live spot availability.
             </Text>
 
             <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#334155', flexDirection: 'row', alignItems: 'center' }}>
