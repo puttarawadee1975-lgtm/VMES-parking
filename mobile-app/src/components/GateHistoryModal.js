@@ -234,7 +234,7 @@ export default function GateHistoryModal({
                       {isMotorcycle && item.helmet && (
                         <View style={{ marginLeft: 14 }}>
                           <Text style={{ fontSize: 11, color: item.helmet.includes('Worn') || item.helmet.includes('Pass') ? '#059669' : '#dc2626', fontWeight: '600' }}>
-                            🛡️ Helmet Check: {item.helmet}
+                            Helmet Check: {item.helmet}
                           </Text>
                         </View>
                       )}

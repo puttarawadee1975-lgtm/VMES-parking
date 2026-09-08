@@ -525,7 +525,7 @@ export default function MyVehicleScreen({
                                 ? 'text-emerald-600'
                                 : 'text-red-600'
                               }`}>
-                              🛡️ Helmet Check: {trip.helmet}
+                              Helmet Check: {trip.helmet}
                             </Text>
                           </View>
                         )}

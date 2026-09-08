@@ -44,7 +44,7 @@ export default function InspectionTable({ logs }) {
                   </td>
                   <td>
                     <span className={`badge ${item.isViolation ? 'badge-danger' : 'badge-live'}`}>
-                      {item.isViolation ? '⚠️ ' + item.helmet : '🛡️ ' + item.helmet}
+                      {item.helmet}
                     </span>
                   </td>
                   <td>{item.gate}</td>

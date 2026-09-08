@@ -43,7 +43,7 @@ export default function CameraStream({
             <div className="ocr-plate-badge">
               <span className="sim-plate-text">{plateText}</span>
               <span className={`badge-helmet ${isViolation ? 'fail' : 'pass'}`}>
-                {isViolation ? '⚠️ ' : (isExit ? '🚗 ' : '🛡️ ')}{helmetText}
+                {helmetText}
               </span>
             </div>
           </div>
