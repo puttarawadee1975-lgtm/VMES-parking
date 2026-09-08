@@ -81,7 +81,7 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
             <Ionicons name="close" size={22} color="#ffffff" />
           </TouchableOpacity>
 
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#ffffff' }}>AI License Plate Scanner</Text>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: '#ffffff' }}>License Plate Scanner</Text>
 
           <TouchableOpacity
             onPress={() => setFlashOn(!flashOn)}
