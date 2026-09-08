@@ -36,6 +36,7 @@ import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import MyVehicleScreen from './src/screens/MyVehicleScreen';
 import AccountScreen from './src/screens/AccountScreen';
 import QRScanScreen from './src/screens/QRScanScreen';
+import VehicleRegistrationOnboardingScreen from './src/screens/VehicleRegistrationOnboardingScreen';
 
 function MainApp() {
   const insets = useSafeAreaInsets();
@@ -358,6 +359,13 @@ function MainApp() {
           onGuestLogin={handleGuestLogin}
           insets={insets}
           screenWidth={screenWidth}
+        />
+      ) : currentUser?.role !== 'guest' && (!currentUser?.vehicles || currentUser.vehicles.length === 0) ? (
+        /* 1.5 Mandatory Vehicle Registration Onboarding Screen */
+        <VehicleRegistrationOnboardingScreen
+          currentUser={currentUser}
+          onRegisterVehicle={handleAddVehicle}
+          onLogout={handleLogout}
         />
       ) : (
         /* 2. Main Dashboard Container */
