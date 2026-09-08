@@ -38,7 +38,10 @@ export default function InspectionTable({ logs }) {
                 <tr key={index}>
                   <td style={{ fontWeight: 700, color: '#38bdf8' }}>{item.time}</td>
                   <td><span className="plate-tag">{item.plate} {item.province}</span></td>
-                  <td>{item.vehicle}</td>
+                  <td>
+                    <div style={{ fontWeight: 600, color: '#f8fafc' }}>{item.owner}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{item.vehicle}</div>
+                  </td>
                   <td>
                     <span className={`badge ${item.isViolation ? 'badge-danger' : 'badge-live'}`}>
                       {item.isViolation ? '⚠️ ' + item.helmet : '🛡️ ' + item.helmet}

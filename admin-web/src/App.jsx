@@ -35,17 +35,22 @@ export default function App() {
         const dataDet = await resDet.json();
         if (Array.isArray(dataDet)) {
           const transformedLogs = dataDet.map(item => {
-            const timeStr = item.timestamp ? new Date(item.timestamp).toTimeString().split(' ')[0] : 'Just now';
+            const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
+            const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const isV = item.violation || false;
             const hText = item.vehicle_type === 'car' ? 'N/A (Automobile)' : (item.helmet_detected ? 'Pass (Worn)' : 'NO HELMET');
+            const gateName = item.gate_type ? (item.gate_type.includes('Gate') ? item.gate_type : `Gate 1 (${item.gate_type})`) : 'Gate 1 (Main Entrance)';
             return {
+              id: item.id,
               time: timeStr,
               plate: item.license_plate || 'Unregistered',
-              province: 'กรุงเทพมหานคร',
-              vehicle: `${item.vehicle_type === 'car' ? '🚗 Car' : '🛵 Motorcycle'} (${item.matched_user || 'Unknown'})`,
+              province: item.province || 'กรุงเทพมหานคร',
+              vehicle: `${item.vehicle_type === 'car' ? '🚗 Car' : '🛵 Motorcycle'}`,
+              owner: item.matched_user || 'Guest / Unregistered',
               helmet: hText,
               isViolation: isV,
-              gate: item.gate_type ? `Gate 1 (${item.gate_type})` : 'Gate 1 (Main Entrance)'
+              gate: gateName,
+              zone: item.zone || 'Zone A'
             };
           });
           setLogs(transformedLogs);
@@ -58,8 +63,7 @@ export default function App() {
     } catch (e) {
       console.log('Backend connection notice (detections):', e.message);
     }
-
-
+    
     try {
       // 2. Fetch Parking Status
       const resPark = await fetch('http://localhost:8000/parking/status');
@@ -138,6 +142,7 @@ export default function App() {
         plate: item.plate,
         province: item.province,
         vehicle: item.vehicle,
+        owner: item.owner || 'Student',
         helmet: item.helmet,
         isViolation: item.isViolation,
         gate: `Gate (${gateType})`
@@ -244,8 +249,6 @@ export default function App() {
           </div>
         )}
 
-
-
         {activeTab === 'vehicles' && (
           <VehiclesTable vehicles={vehicles} onRefreshVehicles={fetchBackendData} />
         )}
@@ -258,35 +261,59 @@ export default function App() {
           <div className="card">
             <div className="card-header">
               <div className="card-header-title">
-                <i className="ri-alarm-warning-line"></i>
+                <i className="ri-alarm-warning-line" style={{ color: '#ef4444' }}></i>
                 <span>Helmet Violation Log & Audit Trail</span>
               </div>
+              <span className="badge badge-danger" style={{ fontSize: 13, padding: '4px 12px' }}>
+                {logs.filter(l => l.isViolation).length} Total Violations Logged
+              </span>
             </div>
             <div className="table-container">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Log ID</th>
-                    <th>Timestamp</th>
-                    <th>Plate Number</th>
-                    <th>Location Gate</th>
-                    <th>Violation Detail</th>
-                    <th>Penalty</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.filter(l => l.isViolation).map((item, i) => (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 700, color: '#ef4444' }}>LOG-V0{i + 1}</td>
-                      <td>{item.time}</td>
-                      <td><span className="plate-tag">{item.plate} {item.province}</span></td>
-                      <td>{item.gate}</td>
-                      <td><span style={{ color: '#ef4444', fontWeight: 700 }}>No Helmet Detected</span></td>
-                      <td><span className="badge badge-danger">-10 Safety Points</span></td>
+              {logs.filter(l => l.isViolation).length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                  <i className="ri-shield-check-line" style={{ fontSize: 36, color: '#10b981', display: 'block', marginBottom: 12 }}></i>
+                  <div style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: 4 }}>No Helmet Violations Detected</div>
+                  <div style={{ fontSize: 13 }}>All motorcycle riders scanned at campus gates were wearing helmets.</div>
+                </div>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Incident ID</th>
+                      <th>Time</th>
+                      <th>Plate Number</th>
+                      <th>Rider / Owner</th>
+                      <th>Location Gate</th>
+                      <th>AI Violation Detail</th>
+                      <th>Penalty Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {logs.filter(l => l.isViolation).map((item, i) => (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 700, color: '#ef4444' }}>LOG-V{String(i + 1).padStart(3, '0')}</td>
+                        <td style={{ fontWeight: 600, color: '#38bdf8' }}>{item.time}</td>
+                        <td><span className="plate-tag">{item.plate} {item.province}</span></td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: '#f8fafc' }}>{item.owner}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8' }}>{item.vehicle}</div>
+                        </td>
+                        <td>{item.gate}</td>
+                        <td>
+                          <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <i className="ri-close-circle-line"></i> No Helmet Worn
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ color: '#ef4444', fontWeight: 700, fontSize: 13 }}>
+                            -10 Safety Points
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}

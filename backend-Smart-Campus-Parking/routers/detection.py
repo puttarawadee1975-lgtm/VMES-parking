@@ -125,7 +125,7 @@ async def get_all_detections():
                     gate_type=doc.get("gate_type", "ENTRY"),
                     zone=doc.get("zone", "Zone A"),
                     timestamp=doc.get("timestamp", datetime.now(timezone.utc)),
-                    matched_user=doc.get("matched_email", "Guest / Unregistered")
+                    matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered"
                 ))
             return result
 
