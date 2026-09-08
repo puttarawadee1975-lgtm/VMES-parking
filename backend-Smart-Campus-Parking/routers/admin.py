@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, status
 from database import users_collection
 from schemas import UserResponse, UserCreate
@@ -57,8 +58,23 @@ async def create_or_update_user(
 
     return doc
 
-# --- Announcements Endpoints (Public GET / Admin POST) ---
-MOCK_ANNOUNCEMENTS = []
+# --- Announcements Endpoints (Public GET / Admin POST / Admin DELETE) ---
+MOCK_ANNOUNCEMENTS = [
+    {
+        "id": "ANN-01",
+        "title": "Zone B Maintenance Notice",
+        "content": "Zone B Floor 2 will be temporarily closed for sensor maintenance tomorrow from 09:00 AM to 02:00 PM. Please park at Zone A or Zone C.",
+        "date": "Today, 09:00 AM",
+        "priority": "high"
+    },
+    {
+        "id": "ANN-02",
+        "title": "Helmet Safety Policy Reminder",
+        "content": "All motorcycle drivers must wear a safety helmet when entering university gates. AI CCTV cameras will deduct 10 safety points for non-compliance.",
+        "date": "Yesterday",
+        "priority": "normal"
+    }
+]
 
 @router.get("/announcements")
 async def get_announcements():
@@ -72,15 +88,41 @@ async def create_announcement(announcement: dict):
     """
     Admin website endpoint: Post new campus announcement.
     """
+    now_str = datetime.now().strftime("%H:%M")
     new_ann = {
         "id": f"ANN-{len(MOCK_ANNOUNCEMENTS) + 1:02d}",
         "title": announcement.get("title", "Campus Notice"),
         "content": announcement.get("content", ""),
-        "date": "Just Now",
+        "date": f"Today, {now_str}",
         "priority": announcement.get("priority", "normal")
     }
     MOCK_ANNOUNCEMENTS.insert(0, new_ann)
     return {"status": "success", "announcement": new_ann}
+
+@router.delete("/announcements/{ann_id}")
+async def delete_announcement(ann_id: str):
+    """
+    Admin website endpoint: Delete a campus announcement by ID.
+    """
+    global MOCK_ANNOUNCEMENTS
+    MOCK_ANNOUNCEMENTS = [a for a in MOCK_ANNOUNCEMENTS if a.get("id") != ann_id]
+    return {"status": "success", "message": f"Announcement {ann_id} deleted"}
+
+@router.put("/announcements/{ann_id}")
+async def update_announcement(ann_id: str, payload: dict):
+    """
+    Admin website endpoint: Edit an existing campus announcement by ID.
+    """
+    for a in MOCK_ANNOUNCEMENTS:
+        if a.get("id") == ann_id:
+            if "title" in payload:
+                a["title"] = payload["title"]
+            if "content" in payload:
+                a["content"] = payload["content"]
+            if "priority" in payload:
+                a["priority"] = payload["priority"]
+            return {"status": "success", "announcement": a}
+    raise HTTPException(status_code=404, detail="Announcement not found")
 
 # --- Driving Score Audit Log Endpoints ---
 SCORE_LOGS = []
@@ -135,6 +177,40 @@ async def get_all_score_logs():
     """
     return SCORE_LOGS
 
+def clean_plate_and_province(raw_plate: str, raw_prov: str = "กรุงเทพมหานคร"):
+    raw_plate = (raw_plate or "").strip()
+    raw_prov = (raw_prov or "กรุงเทพมหานคร").strip()
+    
+    parts = raw_plate.split()
+    if len(parts) >= 3:
+        plate_str = " ".join(parts[:-1])
+        prov_str = parts[-1]
+        return plate_str, prov_str
+    if raw_prov and raw_plate.endswith(raw_prov):
+        plate_str = raw_plate[:-len(raw_prov)].strip()
+        return plate_str, raw_prov
+    return raw_plate, raw_prov
+
+CAR_KEYWORDS = {"mazda", "toyota", "nissan", "honda civic", "honda cr-v", "honda hr-v", "benz", "bmw", "ford", "chevrolet", "mg", "subaru", "hyundai", "kia", "isuzu", "mitsubishi", "volvo", "audi", "tesla", "porsche", "byd", "haval", "ora", "camry", "civic", "altis", "city", "accord", "mazda2", "mazda3", "cx-5", "cx-30", "car", "รถยนต์"}
+
+def format_vehicle_detail(v_type: str, brand: str, model: str, color: str):
+    combined = f"{v_type} {brand} {model}".lower()
+    is_car = v_type == "car" or any(kw in combined for kw in CAR_KEYWORDS)
+    clean_type = "Car" if is_car else "Motorcycle"
+    clean_model = (model or "").replace("🛵", "").replace("🚗", "").replace("รถจักรยานยนต์", "").replace("รถยนต์", "").replace("Motorcycle", "").replace("Car", "").strip()
+    clean_brand = (brand or "").strip()
+    clean_color = (color or "").strip()
+    
+    parts = [clean_type]
+    if clean_brand:
+        parts.append(clean_brand)
+    if clean_model:
+        parts.append(clean_model)
+    res = " ".join(parts).strip()
+    if clean_color and clean_color not in res:
+        res += f" ({clean_color})"
+    return res
+
 @router.get("/all-vehicles")
 async def get_all_registered_vehicles():
     """
@@ -146,10 +222,24 @@ async def get_all_registered_vehicles():
     if registered_vehicles_collection is not None:
         docs = list(registered_vehicles_collection.find({}, {"_id": 0}))
         for d in docs:
+            p_str, prov_str = clean_plate_and_province(d.get("plate", ""), d.get("province", "กรุงเทพมหานคร"))
+            raw_type = d.get("vehicle_type", d.get("type", "motorcycle"))
+            brand = d.get("brand", "")
+            model = d.get("model", "Vehicle")
+            color = d.get("color", "")
+            
+            combined = f"{raw_type} {brand} {model}".lower()
+            v_type = "car" if (raw_type == "car" or any(kw in combined for kw in CAR_KEYWORDS)) else "motorcycle"
+            full_detail = format_vehicle_detail(v_type, brand, model, color)
+
             vehicles.append({
-                "plate": d.get("plate", ""),
-                "province": "กรุงเทพมหานคร",
-                "vehicle": d.get("model", "Vehicle"),
+                "plate": p_str,
+                "province": prov_str,
+                "vehicle_type": v_type,
+                "brand": brand,
+                "model": model,
+                "color": color,
+                "vehicle": full_detail,
                 "owner": d.get("user_email", "").split("@")[0].capitalize(),
                 "ownerEmail": d.get("user_email", ""),
                 "id": "STU-" + d.get("user_email", "0000")[:4],
@@ -164,12 +254,25 @@ async def get_all_registered_vehicles():
             u_name = u.get("name", u.get("email", "").split("@")[0])
             u_email = u.get("email", "")
             for v in u.get("vehicles", []):
+                p_str, prov_str = clean_plate_and_province(v.get("plate", ""), v.get("province", "กรุงเทพมหานคร"))
+                raw_type = v.get("type", "motorcycle")
+                brand = v.get("brand", "")
+                model = v.get("model", "")
+                color = v.get("color", "")
+                combined = f"{raw_type} {brand} {model}".lower()
+                v_type = "car" if (raw_type == "car" or any(kw in combined for kw in CAR_KEYWORDS)) else "motorcycle"
+                full_detail = format_vehicle_detail(v_type, brand, model, color)
+
                 # Avoid duplicate plates
-                if not any(veh["plate"] == v.get("plate") for veh in vehicles):
+                if not any(veh["plate"] == p_str for veh in vehicles):
                     vehicles.append({
-                        "plate": v.get("plate", ""),
-                        "province": v.get("province", "กรุงเทพมหานคร"),
-                        "vehicle": f"{'🛵' if v.get('type')=='motorcycle' else '🚗'} {v.get('brand','')} {v.get('model','')}".strip(),
+                        "plate": p_str,
+                        "province": prov_str,
+                        "vehicle_type": v_type,
+                        "brand": brand,
+                        "model": model,
+                        "color": color,
+                        "vehicle": full_detail,
                         "owner": u_name,
                         "ownerEmail": u_email,
                         "id": u.get("student_id", f"6507{len(vehicles)+1:04d}"),
@@ -178,6 +281,71 @@ async def get_all_registered_vehicles():
                     })
                     
     return vehicles
+
+@router.put("/update-vehicle")
+async def update_registered_vehicle(payload: dict):
+    """
+    Admin website endpoint: Update registered vehicle details in MongoDB (users_collection & registered_vehicles_collection).
+    """
+    old_email = payload.get("old_email", "").strip().lower()
+    old_plate = payload.get("old_plate", "").strip()
+    
+    new_email = payload.get("user_email", old_email).strip().lower()
+    new_plate = payload.get("plate", old_plate).strip()
+    new_vtype = payload.get("vehicle_type", "motorcycle").strip()
+    new_brand = payload.get("brand", "").strip()
+    new_model = payload.get("model", "").strip()
+    new_color = payload.get("color", "").strip()
+    new_owner = payload.get("owner", "").strip()
+    new_role = payload.get("role", "").strip().lower()
+    new_province = payload.get("province", "กรุงเทพมหานคร").strip()
+
+    from database import registered_vehicles_collection, users_collection
+
+    if registered_vehicles_collection is not None:
+        registered_vehicles_collection.update_one(
+            {"plate": old_plate},
+            {"$set": {
+                "user_email": new_email,
+                "role": new_role or "student",
+                "plate": new_plate,
+                "vehicle_type": new_vtype,
+                "brand": new_brand,
+                "model": new_model,
+                "color": new_color,
+                "province": new_province
+            }}
+        )
+
+    if users_collection is not None:
+        user_doc = users_collection.find_one({"email": old_email})
+        if user_doc:
+            user_vehs = user_doc.get("vehicles", [])
+            updated = False
+            for v in user_vehs:
+                if v.get("plate") == old_plate:
+                    v["plate"] = new_plate
+                    v["type"] = new_vtype
+                    v["brand"] = new_brand
+                    v["model"] = new_model
+                    v["color"] = new_color
+                    v["province"] = new_province
+                    updated = True
+            
+            update_fields = {}
+            if updated:
+                update_fields["vehicles"] = user_vehs
+            if new_owner:
+                update_fields["name"] = new_owner
+            if new_role:
+                update_fields["role"] = new_role
+            if new_email and new_email != old_email:
+                update_fields["email"] = new_email
+                
+            if update_fields:
+                users_collection.update_one({"_id": user_doc["_id"]}, {"$set": update_fields})
+
+    return {"status": "success", "message": "Vehicle details updated successfully"}
 
 @router.get("/public-users")
 async def get_public_users_scores():

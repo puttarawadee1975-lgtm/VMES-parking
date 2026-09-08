@@ -7,13 +7,15 @@ import InspectionTable from './components/InspectionTable';
 import VehiclesTable from './components/VehiclesTable';
 import ScoresTable from './components/ScoresTable';
 import AnalyticsCharts from './components/AnalyticsCharts';
+import AnnouncementsTable from './components/AnnouncementsTable';
+import ParkingOccupancyView from './components/ParkingOccupancyView';
 
 const INITIAL_VEHICLES = [
-  { plate: '1กข 1234', province: 'กรุงเทพมหานคร', vehicle: '🛵 Honda PCX 160 (Black)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Thanaphat S.', id: '65070042', role: 'Student', score: 98, ownerEmail: '65070042@student.university.ac.th' },
-  { plate: '3กฮ 5678', province: 'กรุงเทพมหานคร', vehicle: '🛵 Yamaha Grand Filano (Gray)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Main Entrance)', owner: 'Nattapong K.', id: '65070118', role: 'Student', score: 80, ownerEmail: '65070118@student.university.ac.th' },
-  { plate: '9กข 9999', province: 'สมุทรปราการ', vehicle: '🚗 Toyota Camry (White)', helmet: 'N/A (Automobile)', isViolation: false, gate: 'Gate 2 (East Entrance)', owner: 'Dr. Somchai P.', id: 'SEC-01', role: 'Staff', score: 100, ownerEmail: 'somchai@university.ac.th' },
-  { plate: '2กข 4321', province: 'นนทบุรี', vehicle: '🛵 Vespa Sprint 150 (White)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Chayanan T.', id: '65070244', role: 'Student', score: 100, ownerEmail: '65070244@student.university.ac.th' },
-  { plate: '5กษ 8888', province: 'กรุงเทพมหานคร', vehicle: '🚗 Honda Civic (Black)', helmet: 'N/A (Automobile)', isViolation: false, gate: 'Gate 2 (East Entrance)', owner: 'Pattarapon M.', id: '65070399', role: 'Student', score: 95, ownerEmail: '65070399@student.university.ac.th' }
+  { plate: '1กข 1234', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'Honda', model: 'PCX 160', color: 'Black', vehicle: 'Motorcycle Honda PCX 160 (Black)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Thanaphat S.', id: '65070042', role: 'Student', score: 98, ownerEmail: '65070042@student.university.ac.th' },
+  { plate: '3กฮ 5678', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'Yamaha', model: 'Grand Filano', color: 'Gray', vehicle: 'Motorcycle Yamaha Grand Filano (Gray)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Main Entrance)', owner: 'Nattapong K.', id: '65070118', role: 'Student', score: 80, ownerEmail: '65070118@student.university.ac.th' },
+  { plate: '9กข 9999', province: 'สมุทรปราการ', vehicle_type: 'car', brand: 'Toyota', model: 'Camry', color: 'White', vehicle: 'Car Toyota Camry (White)', helmet: 'N/A (Automobile)', isViolation: false, gate: 'Gate 2 (East Entrance)', owner: 'Dr. Somchai P.', id: 'SEC-01', role: 'Staff', score: 100, ownerEmail: 'somchai@university.ac.th' },
+  { plate: '2กข 4321', province: 'นนทบุรี', vehicle_type: 'motorcycle', brand: 'Vespa', model: 'Sprint 150', color: 'White', vehicle: 'Motorcycle Vespa Sprint 150 (White)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Chayanan T.', id: '65070244', role: 'Student', score: 100, ownerEmail: '65070244@student.university.ac.th' },
+  { plate: '5กษ 8888', province: 'กรุงเทพมหานคร', vehicle_type: 'car', brand: 'Honda', model: 'Civic', color: 'Black', vehicle: 'Car Honda Civic (Black)', helmet: 'N/A (Automobile)', isViolation: false, gate: 'Gate 2 (East Entrance)', owner: 'Pattarapon M.', id: '65070399', role: 'Student', score: 95, ownerEmail: '65070399@student.university.ac.th' }
 ];
 
 export default function App() {
@@ -40,12 +42,23 @@ export default function App() {
             const isV = item.violation || false;
             const hText = item.vehicle_type === 'car' ? 'N/A (Automobile)' : (item.helmet_detected ? 'Pass (Worn)' : 'NO HELMET');
             const gateName = item.gate_type ? (item.gate_type.includes('Gate') ? item.gate_type : `Gate 1 (${item.gate_type})`) : 'Gate 1 (Main Entrance)';
+            let rawP = (item.license_plate || 'Unregistered').trim();
+            let rawProv = (item.province || 'กรุงเทพมหานคร').trim();
+            const parts = rawP.split(/\s+/);
+            if (parts.length >= 3) {
+              rawP = parts.slice(0, -1).join(' ');
+              rawProv = parts[parts.length - 1];
+            } else if (rawProv && rawP.endsWith(rawProv)) {
+              rawP = rawP.slice(0, -rawProv.length).trim();
+            }
+
             return {
               id: item.id,
               time: timeStr,
-              plate: item.license_plate || 'Unregistered',
-              province: item.province || 'กรุงเทพมหานคร',
-              vehicle: `${item.vehicle_type === 'car' ? '🚗 Car' : '🛵 Motorcycle'}`,
+              plate: rawP,
+              province: rawProv,
+              vehicle: `${item.vehicle_type === 'car' ? 'Car' : 'Motorcycle'}`,
+              owner: item.matched_user || 'Guest / Unregistered',
               owner: item.matched_user || 'Guest / Unregistered',
               helmet: hText,
               isViolation: isV,
@@ -113,7 +126,8 @@ export default function App() {
 
     // Trigger actual backend API call
     try {
-      const isCar = item.vehicle.includes('🚗') || item.vehicle.toLowerCase().includes('camry') || item.vehicle.toLowerCase().includes('civic');
+      const combinedVehicleStr = (item.vehicle || '') + ' ' + (item.brand || '') + ' ' + (item.model || '');
+      const isCar = item.vehicle_type === 'car' || item.vehicle?.includes('🚗') || /car|รถยนต์|mazda|toyota|camry|civic|altis|benz|bmw|accord|nissan/i.test(combinedVehicleStr);
       const payload = {
         license_plate: item.plate,
         vehicle_type: isCar ? 'car' : 'motorcycle',
@@ -188,8 +202,9 @@ export default function App() {
     'vehicles': { title: 'Registered Vehicles & Campus Passes', subtitle: 'Manage student & staff approved license plates and 1-plate policy rules' },
     'safety-scores': { title: 'Driver Safety Scores & Audit Console', subtitle: '100-point scale enforcement, violation penalties, and score restorations' },
     'violations': { title: 'Helmet Violation Audit Logs', subtitle: 'Comprehensive AI detection history for campus motorcycle safety rules' },
-    'parking-map': { title: 'Campus Parking Zone & Spot Inspection', subtitle: 'VEMS Building Zone A, B, C floor occupancy & pillar spots' },
-    'analytics': { title: 'Analytics & Traffic Intelligence', subtitle: 'Peak hours traffic distribution, compliance rates, and gate throughput' }
+    'parking-map': { title: 'VEMS Building Occupancy & Capacity Monitor', subtitle: 'Real-time building parking availability, load percentage, and floor specifications' },
+    'analytics': { title: 'Analytics & Traffic Intelligence', subtitle: 'Peak hours traffic distribution, compliance rates, and gate throughput' },
+    'announcements': { title: 'Campus Announcements Management', subtitle: 'Broadcast real-time notices, safety updates, and maintenance alerts to mobile users' }
   };
 
   const currentMeta = titles[activeTab] || titles['overview'];
@@ -270,10 +285,10 @@ export default function App() {
             </div>
             <div className="table-container">
               {logs.filter(l => l.isViolation).length === 0 ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                  <i className="ri-shield-check-line" style={{ fontSize: 36, color: '#10b981', display: 'block', marginBottom: 12 }}></i>
-                  <div style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: 4 }}>No Helmet Violations Detected</div>
-                  <div style={{ fontSize: 13 }}>All motorcycle riders scanned at campus gates were wearing helmets.</div>
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
+                  <i className="ri-shield-check-line" style={{ fontSize: 36, color: '#059669', display: 'block', marginBottom: 12 }}></i>
+                  <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>No Helmet Violations Detected</div>
+                  <div style={{ fontSize: 13, color: '#64748b' }}>All motorcycle riders scanned at campus gates were wearing helmets.</div>
                 </div>
               ) : (
                 <table className="table">
@@ -291,12 +306,12 @@ export default function App() {
                   <tbody>
                     {logs.filter(l => l.isViolation).map((item, i) => (
                       <tr key={i}>
-                        <td style={{ fontWeight: 700, color: '#ef4444' }}>LOG-V{String(i + 1).padStart(3, '0')}</td>
-                        <td style={{ fontWeight: 600, color: '#38bdf8' }}>{item.time}</td>
-                        <td><span className="plate-tag">{item.plate} {item.province}</span></td>
+                        <td style={{ fontWeight: 700, color: '#dc2626' }}>LOG-V{String(i + 1).padStart(3, '0')}</td>
+                        <td style={{ fontWeight: 600, color: '#2563eb' }}>{item.time}</td>
+                        <td><span className="plate-tag">{item.plate} {item.province && !item.plate.includes(item.province) ? item.province : ''}</span></td>
                         <td>
-                          <div style={{ fontWeight: 600, color: '#f8fafc' }}>{item.owner}</div>
-                          <div style={{ fontSize: 11, color: '#94a3b8' }}>{item.vehicle}</div>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.owner}</div>
+                          <div style={{ fontSize: 11, color: '#64748b' }}>{item.vehicle}</div>
                         </td>
                         <td>{item.gate}</td>
                         <td>
@@ -319,38 +334,15 @@ export default function App() {
         )}
 
         {activeTab === 'parking-map' && (
-          <div className="card">
-            <div className="card-header">
-              <div className="card-header-title">
-                <i className="ri-map-pin-2-line"></i>
-                <span>VEMS Building Campus Parking Map & Pillars</span>
-              </div>
-            </div>
-
-            <div className="zone-grid" style={{ marginTop: 16 }}>
-              <div className="zone-card active">
-                <div className="zone-title">Zone A (Ground Floor - Cars)</div>
-                <div className="zone-count">{Math.min(6, parkingOccupancy.occupied)} / 6 Occupied</div>
-                <div className="progress-bar">
-                  <div className="progress-fill warning" style={{ width: `${Math.min(100, (parkingOccupancy.occupied / 6) * 100)}%` }}></div>
-                </div>
-              </div>
-              <div className="zone-card">
-                <div className="zone-title">Zone B (Floor 1 - Motorcycles)</div>
-                <div className="zone-count">4 / 6 Occupied</div>
-                <div className="progress-bar"><div className="progress-fill success" style={{ width: '66.6%' }}></div></div>
-              </div>
-              <div className="zone-card">
-                <div className="zone-title">Zone C (Floor 2 - Staff & Cars)</div>
-                <div className="zone-count">2 / 6 Occupied</div>
-                <div className="progress-bar"><div className="progress-fill success" style={{ width: '33.3%' }}></div></div>
-              </div>
-            </div>
-          </div>
+          <ParkingOccupancyView parkingOccupancy={parkingOccupancy} logs={logs} />
         )}
 
         {activeTab === 'analytics' && (
           <AnalyticsCharts />
+        )}
+
+        {activeTab === 'announcements' && (
+          <AnnouncementsTable />
         )}
       </main>
     </div>
