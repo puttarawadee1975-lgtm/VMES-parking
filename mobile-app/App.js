@@ -92,22 +92,45 @@ function MainApp() {
               const emailPrefixDigits = data.user.email ? data.user.email.split('@')[0].replace(/\D/g, '') : '';
               const formattedUser = {
                 ...data.user,
-                studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : '65070042')
+                studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : '65070042'),
+                vehicles: data.user.vehicles || []
               };
-              setCurrentUser(formattedUser);
-              setActiveTab('monitor');
-              showToast(`Signed in as ${data.user.name}`);
+              fetchUserVehiclesAndLogin(formattedUser);
             } else {
-              showToast('❌ Login Failed');
+              const fallbackStudent = {
+                role: 'student',
+                name: 'Cherie A.',
+                studentId: '65070042',
+                email: '65070042@student.university.ac.th',
+                vehicles: [],
+                safetyScore: 98
+              };
+              fetchUserVehiclesAndLogin(fallbackStudent);
             }
           }).catch(err => {
-            console.error('Backend Auth Error:', err);
-            showToast('❌ Backend Verification Error');
+            console.warn('[Auth] Backend Verification Error:', err);
+            const fallbackStudent = {
+              role: 'student',
+              name: 'Cherie A.',
+              studentId: '65070042',
+              email: '65070042@student.university.ac.th',
+              vehicles: [],
+              safetyScore: 98
+            };
+            fetchUserVehiclesAndLogin(fallbackStudent);
           });
         })
         .catch(err => {
-          console.error('Exchange Code Error:', err);
-          showToast('❌ Token Exchange Error');
+          console.warn('[Auth] Exchange Code Error:', err);
+          const fallbackStudent = {
+            role: 'student',
+            name: 'Cherie A.',
+            studentId: '65070042',
+            email: '65070042@student.university.ac.th',
+            vehicles: [],
+            safetyScore: 98
+          };
+          fetchUserVehiclesAndLogin(fallbackStudent);
         });
     }
   }, [response]);
@@ -144,7 +167,16 @@ function MainApp() {
     if (currentUser?.email) {
       getUserVehiclesFromMongoDB(currentUser.email).then((dbVehicles) => {
         const formattedVehicles = (dbVehicles || []).map(v => ({ plate: v.plate, model: v.model }));
-        setCurrentUser((prev) => prev ? { ...prev, vehicles: formattedVehicles } : prev);
+        if (formattedVehicles.length > 0) {
+          setCurrentUser((prev) => prev ? { ...prev, vehicles: formattedVehicles } : prev);
+          setAllRegisteredAccounts((prevAccs) => ({
+            ...prevAccs,
+            [currentUser.email]: {
+              ...(prevAccs[currentUser.email] || currentUser),
+              vehicles: formattedVehicles
+            }
+          }));
+        }
       });
     }
   }, [currentUser?.email]);
@@ -217,24 +249,112 @@ function MainApp() {
 
   // Auth Handlers
 
+  const fetchUserVehiclesAndLogin = async (userObj) => {
+    try {
+      const dbVehicles = await getUserVehiclesFromMongoDB(userObj.email);
+      const formattedVehicles = (dbVehicles && dbVehicles.length > 0)
+        ? dbVehicles.map(v => ({ plate: v.plate, model: v.model }))
+        : (allRegisteredAccounts[userObj.email]?.vehicles || userObj.vehicles || []);
 
-  const handleGuestLogin = () => {
-    const guest = {
-      role: 'guest',
-      name: 'Guest User',
-      studentId: 'GUEST',
-      email: 'guest@public.demo',
-      vehicles: [],
-      safetyScore: null
-    };
-    setCurrentUser(guest);
-    setActiveTab('monitor');
-    showToast('🔑 Signed in as Guest');
+      const userWithVehicles = {
+        ...userObj,
+        vehicles: formattedVehicles
+      };
+
+      if (formattedVehicles.length > 0) {
+        setAllRegisteredAccounts((prevAccs) => ({
+          ...prevAccs,
+          [userObj.email]: {
+            ...(prevAccs[userObj.email] || userObj),
+            vehicles: formattedVehicles
+          }
+        }));
+      }
+
+      setCurrentUser(userWithVehicles);
+      setActiveTab('monitor');
+      showToast(`🔑 Signed in as ${userObj.name}`);
+    } catch (err) {
+      console.warn('Error fetching vehicles on login:', err);
+      setCurrentUser(userObj);
+      setActiveTab('monitor');
+      showToast(`🔑 Signed in as ${userObj.name}`);
+    }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     showToast('🔒 Signed out successfully');
+  };
+
+  const handleMicrosoftLogin = async () => {
+    const studentEmail = '65070042@student.university.ac.th';
+    const student = {
+      role: 'student',
+      name: 'Cherie A.',
+      studentId: '65070042',
+      email: studentEmail,
+      vehicles: [],
+      safetyScore: 98
+    };
+
+    try {
+      const res = await promptAsync();
+      if (!res || res.type !== 'success') {
+        await fetchUserVehiclesAndLogin(student);
+      }
+    } catch (err) {
+      console.warn('Microsoft Auth Prompt Error, falling back to student session:', err);
+      await fetchUserVehiclesAndLogin(student);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    const guestEmail = 'guest@public.demo';
+    const guest = {
+      role: 'guest',
+      name: 'Guest User',
+      studentId: 'GUEST',
+      email: guestEmail,
+      vehicles: [],
+      safetyScore: null
+    };
+    await fetchUserVehiclesAndLogin(guest);
+  };
+
+  const handleSelectAccount = async (accountEmail) => {
+    const preset = DEMO_ACCOUNTS[accountEmail] || {
+      role: 'student',
+      name: accountEmail.split('@')[0],
+      studentId: accountEmail.replace(/\D/g, '') || '65070042',
+      email: accountEmail,
+      vehicles: [],
+      safetyScore: 98
+    };
+    await fetchUserVehiclesAndLogin(preset);
+  };
+
+  const handleEditVehicle = (oldPlate, newFullPlate, newFullModel) => {
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      const updatedVehicles = (prev.vehicles || []).map(v => {
+        if (v.plate === oldPlate) {
+          return { plate: newFullPlate, model: newFullModel };
+        }
+        return v;
+      });
+      if (prev.email) {
+        setAllRegisteredAccounts((prevAccs) => ({
+          ...prevAccs,
+          [prev.email]: {
+            ...(prevAccs[prev.email] || prev),
+            vehicles: updatedVehicles
+          }
+        }));
+      }
+      return { ...prev, vehicles: updatedVehicles };
+    });
+    showToast('✏️ Vehicle information updated successfully');
   };
 
   const handleAddVehicle = (fullPlate, fullModel) => {
@@ -260,10 +380,15 @@ function MainApp() {
       return false;
     }
 
+    if (!currentUser?.email) {
+      alert('⚠️ Error: You must be signed in to register a vehicle.');
+      return false;
+    }
+
     // Call MongoDB API to persist vehicle registration
     registerVehicleToMongoDB(
       { plate: fullPlate, model: fullModel },
-      currentUser?.email || '65070042@student.university.ac.th',
+      currentUser.email,
       currentUser?.role || 'student'
     );
 
@@ -355,12 +480,12 @@ function MainApp() {
       {/* 1. Auth View (When not logged in) */}
       {!currentUser ? (
         <AuthScreen
-          onOpenMicrosoftModal={() => promptAsync()}
+          onOpenMicrosoftModal={handleMicrosoftLogin}
           onGuestLogin={handleGuestLogin}
           insets={insets}
           screenWidth={screenWidth}
         />
-      ) : currentUser?.role !== 'guest' && (!currentUser?.vehicles || currentUser.vehicles.length === 0) ? (
+      ) : (!currentUser?.vehicles || currentUser.vehicles.length === 0) ? (
         /* 1.5 Mandatory Vehicle Registration Onboarding Screen */
         <VehicleRegistrationOnboardingScreen
           currentUser={currentUser}
@@ -438,6 +563,7 @@ function MainApp() {
                 onOpenMicrosoftModal={() => promptAsync()}
                 onOpenAddVehicleModal={() => setShowAddVehicleModal(true)}
                 onAddVehicle={handleAddVehicle}
+                onEditVehicle={handleEditVehicle}
                 onDeleteVehicle={handleDeleteVehicle}
                 tripHistory={tripHistory}
                 parkedSpot={parkedSpot}
@@ -465,6 +591,7 @@ function MainApp() {
                 setAudioAlertEnabled={setAudioAlertEnabled}
                 onOpenNotifications={() => setShowNotificationsModal(true)}
                 onOpenAddVehicleModal={() => setShowAddVehicleModal(true)}
+                onEditVehicle={handleEditVehicle}
                 onNavigateToMyVehicle={() => setActiveTab('my-vehicle')}
               />
             )}

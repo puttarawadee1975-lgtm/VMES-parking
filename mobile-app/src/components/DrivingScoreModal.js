@@ -46,7 +46,7 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
               id: item.id || idx,
               date: `${dateStr}, ${timeStr}`,
               type: 'reward',
-              title: item.vehicle_type === 'car' ? 'Car Gate Access (Approved)' : 'Safe Driving (Helmet Worn)',
+              title: item.vehicle_type === 'car' ? 'Car Gate Access (Pass)' : 'Safe Driving (Helmet Worn)',
               points: '+0',
               gate: item.gate_type || 'Gate 1 (Main Entrance)'
             };

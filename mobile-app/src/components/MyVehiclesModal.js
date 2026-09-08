@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,17 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDisplayPlate } from '../utils/provinceHelper';
+import EditVehicleModal from './EditVehicleModal';
 
 export default function MyVehiclesModal({
   visible,
   onClose,
   currentUser,
   onOpenAddVehicle,
-  onRemoveVehicle
+  onEditVehicle
 }) {
+  const [editingVehicle, setEditingVehicle] = useState(null);
+
   if (!visible) return null;
 
   const vehicles = currentUser?.vehicles || [];
@@ -104,7 +107,7 @@ export default function MyVehiclesModal({
           }}>
             <Ionicons name="information-circle" size={20} color="#2563eb" style={{ marginRight: 10 }} />
             <Text style={{ fontSize: 12, color: '#1e40af', flex: 1, lineHeight: 18 }}>
-              Policy: Students can register 1 vehicle per account only.
+              Policy: Students can register 1 vehicle per account only. Click on any vehicle to edit details.
             </Text>
           </View>
 
@@ -151,18 +154,25 @@ export default function MyVehiclesModal({
             vehicles.map((v, i) => {
               const isCar = v.model?.includes('🚗');
               return (
-                <View
+                <TouchableOpacity
                   key={i}
+                  activeOpacity={0.8}
+                  onPress={() => setEditingVehicle(v)}
                   style={{
                     backgroundColor: '#ffffff',
                     borderWidth: 1,
-                    borderColor: '#e2e8f0',
+                    borderColor: '#cbd5e1',
                     borderRadius: 16,
                     padding: 16,
                     marginBottom: 12,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
+                    shadowColor: '#64748b',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 4,
+                    elevation: 1
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}>
@@ -170,40 +180,58 @@ export default function MyVehiclesModal({
                       width: 44,
                       height: 44,
                       borderRadius: 14,
-                      backgroundColor: isCar ? '#eff6ff' : '#fef3c7',
+                      backgroundColor: '#f1f5f9',
+                      borderWidth: 1,
+                      borderColor: '#e2e8f0',
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginRight: 12
                     }}>
-                      <Text style={{ fontSize: 22 }}>{isCar ? '🚗' : '🛵'}</Text>
+                      <Ionicons
+                        name={isCar ? "car-outline" : "bicycle-outline"}
+                        size={22}
+                        color="#64748b"
+                      />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>{formatDisplayPlate(v.plate)}</Text>
                       <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                        {v.model?.replace(/^[🛵🚗]\s*/, '') || 'Registered Vehicle'}
+                        {v.model?.replace(/^[🛵🚗?❓\s]+/, '') || 'Registered Vehicle'}
                       </Text>
                     </View>
                   </View>
 
                   <View style={{
-                    backgroundColor: '#dcfce7',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#eff6ff',
+                    borderColor: '#bfdbfe',
                     borderWidth: 1,
-                    borderColor: '#86efac',
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: 8
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 10
                   }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#15803d', textTransform: 'uppercase' }}>
-                      Approved
+                    <Ionicons name="create-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563eb' }}>
+                      Edit
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
-
-
         </ScrollView>
+
+        <EditVehicleModal
+          visible={Boolean(editingVehicle)}
+          vehicle={editingVehicle}
+          onClose={() => setEditingVehicle(null)}
+          onSave={(oldPlate, newFullPlate, newFullModel) => {
+            if (onEditVehicle) {
+              onEditVehicle(oldPlate, newFullPlate, newFullModel);
+            }
+          }}
+        />
       </SafeAreaView>
     </Modal>
   );

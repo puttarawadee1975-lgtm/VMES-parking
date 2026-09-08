@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import ParkingLocationCard from '../components/ParkingLocationCard';
 import { toThaiProvince, formatDisplayPlate } from '../utils/provinceHelper';
 import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
 import DrivingScoreModal from '../components/DrivingScoreModal';
+import EditVehicleModal from '../components/EditVehicleModal';
 
 export default function MyVehicleScreen({
   currentUser,
   onOpenMicrosoftModal,
   onOpenAddVehicleModal,
   onAddVehicle,
+  onEditVehicle,
   onDeleteVehicle,
   tripHistory = [],
   parkedSpot,
@@ -25,6 +27,7 @@ export default function MyVehicleScreen({
   const [newColor, setNewColor] = useState('');
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
 
   const isGuest = currentUser?.role === 'guest';
   const isStudent = currentUser?.role === 'student';
@@ -413,26 +416,32 @@ export default function MyVehicleScreen({
             </View>
           ) : (
             currentUser.vehicles.map((v, i) => (
-              <View key={i} className="flex-row items-center p-3.5 bg-slate-50 rounded-xl border border-slate-200 mb-2 justify-between">
+              <TouchableOpacity
+                key={i}
+                activeOpacity={0.8}
+                onPress={() => setEditingVehicle(v)}
+                className="flex-row items-center p-3.5 bg-slate-50 rounded-xl border border-slate-200 mb-2 justify-between active:bg-blue-50/50"
+              >
                 <View className="flex-row items-center flex-1 mr-2">
-                  <Text className="text-2xl">{v.model?.includes('🚗') ? '🚗' : '🛵'}</Text>
-                  <View className="ml-3 flex-1">
+                  <View className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 items-center justify-center mr-3">
+                    {v.model?.includes('🚗') ? (
+                      <Ionicons name="car-outline" size={20} color="#64748b" />
+                    ) : (
+                      <FontAwesome5 name="motorcycle" size={16} color="#64748b" />
+                    )}
+                  </View>
+                  <View className="flex-1">
                     <Text className="text-slate-900 font-bold text-xs">{formatDisplayPlate(v.plate)}</Text>
-                    <Text className="text-slate-500 text-[10px] mt-0.5">{v.model?.replace(/^[🛵🚗]\s*/, '')}</Text>
+                    <Text className="text-slate-500 text-[10px] mt-0.5">{v.model?.replace(/^[🛵🚗?❓\s]+/, '')}</Text>
                   </View>
                 </View>
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-emerald-700 text-[10px] font-bold uppercase bg-emerald-100 py-1 px-2.5 rounded-md">Approved</Text>
-                  {onDeleteVehicle && (
-                    <TouchableOpacity
-                      onPress={() => onDeleteVehicle(v.plate)}
-                      className="p-1.5 bg-red-50 rounded-lg border border-red-100 active:bg-red-100"
-                    >
-                      <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                    </TouchableOpacity>
-                  )}
+                  <View className="flex-row items-center px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+                    <Ionicons name="create-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
+                    <Text className="text-blue-700 font-bold text-[11px]">Edit</Text>
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -478,7 +487,13 @@ export default function MyVehicleScreen({
                   {/* Trip Header: Date, Vehicle, and Plate */}
                   <View className="flex-row justify-between items-center pb-2.5 border-b border-slate-200/80">
                     <View className="flex-row items-center flex-1 mr-2">
-                      <Text className="text-base mr-2">{isMotorcycle ? '🛵' : '🚗'}</Text>
+                      <View className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 items-center justify-center mr-2.5">
+                        {isMotorcycle ? (
+                          <FontAwesome5 name="motorcycle" size={14} color="#64748b" />
+                        ) : (
+                          <Ionicons name="car-outline" size={16} color="#64748b" />
+                        )}
+                      </View>
                       <View className="flex-1">
                         <View className="flex-row items-center">
                           <Text className="text-slate-900 font-bold text-xs mr-2">{formatDisplayPlate(trip.plate)}</Text>
@@ -577,6 +592,17 @@ export default function MyVehicleScreen({
         visible={showDrivingScoreModal}
         onClose={() => setShowDrivingScoreModal(false)}
         currentUser={currentUser}
+      />
+
+      <EditVehicleModal
+        visible={Boolean(editingVehicle)}
+        vehicle={editingVehicle}
+        onClose={() => setEditingVehicle(null)}
+        onSave={(oldPlate, newFullPlate, newFullModel) => {
+          if (onEditVehicle) {
+            onEditVehicle(oldPlate, newFullPlate, newFullModel);
+          }
+        }}
       />
     </View>
   );

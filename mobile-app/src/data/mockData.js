@@ -5,7 +5,9 @@ export const DEMO_ACCOUNTS = {
     name: 'Cherie A.',
     studentId: '65070042',
     email: '65070042@student.university.ac.th',
-    vehicles: [],
+    vehicles: [
+      { plate: 'กข 3363 อำนาจเจริญ', model: '🚗 Mazda Mazda2 (Red)' }
+    ],
     safetyScore: 98
   },
   'thanawat.p@student.university.ac.th': {
@@ -13,7 +15,9 @@ export const DEMO_ACCOUNTS = {
     name: 'Thanawat Pongpanich',
     studentId: '64010589',
     email: 'thanawat.p@student.university.ac.th',
-    vehicles: [],
+    vehicles: [
+      { plate: '2EF 5519 Chiang Mai', model: '🛵 Yamaha Aerox (Blue)' }
+    ],
     safetyScore: 92
   },
   'security.gate1@university.ac.th': {

@@ -8,7 +8,7 @@ import {
   ScrollView,
   ActivityIndicator
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { getGateDetectionsHistory } from '../services/api';
 
 export default function GateHistoryModal({
@@ -45,7 +45,7 @@ export default function GateHistoryModal({
               type: 'violation',
               title: 'No Helmet Detected',
               penalty: -10,
-              details: `Rider (${item.matched_user || 'Unregistered'}) entered campus without wearing a safety helmet.`,
+              details: `${item.matched_user || 'Unregistered'} entered campus without wearing a safety helmet.`,
               plate: item.license_plate,
               gate: gateName,
               time: `${dateStr}, ${timeStr}`
@@ -197,8 +197,12 @@ export default function GateHistoryModal({
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', marginBottom: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isCar ? '#eff6ff' : '#ecfdf5', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                          <Text style={{ fontSize: 16 }}>{isCar ? '🚗' : '🛵'}</Text>
+                        <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                          {isCar ? (
+                            <Ionicons name="car-outline" size={18} color="#64748b" />
+                          ) : (
+                            <FontAwesome5 name="motorcycle" size={15} color="#64748b" />
+                          )}
                         </View>
                         <View>
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>

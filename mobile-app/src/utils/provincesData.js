@@ -1,7 +1,7 @@
 export const THAI_PROVINCES = [
-  { id: '1', en: 'Bangkok', th: 'กรุงเทพมหานคร', label: 'Bangkok (กรุงเทพมหานคร)' },
   { id: '2', en: 'Amnat Charoen', th: 'อำนาจเจริญ', label: 'Amnat Charoen (อำนาจเจริญ)' },
   { id: '3', en: 'Ang Thong', th: 'อ่างทอง', label: 'Ang Thong (อ่างทอง)' },
+  { id: '1', en: 'Bangkok', th: 'กรุงเทพมหานคร', label: 'Bangkok (กรุงเทพมหานคร)' },
   { id: '4', en: 'Bueng Kan', th: 'บึงกาฬ', label: 'Bueng Kan (บึงกาฬ)' },
   { id: '5', en: 'Buri Ram', th: 'บุรีรัมย์', label: 'Buri Ram (บุรีรัมย์)' },
   { id: '6', en: 'Chachoengsao', th: 'ฉะเชิงเทรา', label: 'Chachoengsao (ฉะเชิงเทรา)' },

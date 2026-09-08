@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,50 +8,96 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
-  SafeAreaView
+  SafeAreaView,
+  Alert
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { toThaiProvince, formatDisplayPlate } from '../utils/provinceHelper';
-import LicensePlateScannerModal from './LicensePlateScannerModal';
+import { formatDisplayPlate } from '../utils/provinceHelper';
 import ProvincePickerModal from './ProvincePickerModal';
 
-export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
-  const [vehicleType, setVehicleType] = useState(null); // null | 'motorcycle' | 'car'
-  const [newPlate, setNewPlate] = useState('');
-  const [newProvince, setNewProvince] = useState('');
+export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) {
+  const [vehicleType, setVehicleType] = useState('motorcycle'); // 'motorcycle' | 'car'
+  const [plateNumber, setPlateNumber] = useState('');
+  const [province, setProvince] = useState('');
   const [showProvinceModal, setShowProvinceModal] = useState(false);
-  const [newBrand, setNewBrand] = useState('');
-  const [newModel, setNewModel] = useState('');
-  const [newColor, setNewColor] = useState('');
-  const [showScannerModal, setShowScannerModal] = useState(false);
+  const [brand, setBrand] = useState('');
+  const [modelName, setModelName] = useState('');
+  const [color, setColor] = useState('');
 
-  const handleSubmit = () => {
-    if (!newPlate.trim() || !newProvince.trim() || !newBrand.trim() || !newModel.trim() || !newColor.trim()) {
-      alert('Please fill in all required vehicle information fields.');
+  useEffect(() => {
+    if (vehicle) {
+      // 1. Determine vehicle type
+      const isCar = (vehicle.model || '').includes('🚗');
+      setVehicleType(isCar ? 'car' : 'motorcycle');
+
+      // 2. Parse plate number and province
+      const rawPlate = (vehicle.plate || '').trim();
+      const parts = rawPlate.split(' ');
+      if (parts.length >= 2) {
+        setPlateNumber(parts[0]);
+        setProvince(parts.slice(1).join(' '));
+      } else {
+        setPlateNumber(rawPlate);
+        setProvince('');
+      }
+
+      // 3. Parse brand, model, and color from vehicle.model e.g. "🛵 Honda PCX 160 (Black)"
+      const cleanModelStr = (vehicle.model || '').replace(/^[🛵🚗?❓\s]+/, '').trim();
+      
+      // Extract color inside parentheses e.g. "(Black)"
+      const colorMatch = cleanModelStr.match(/\(([^)]+)\)$/);
+      let extractedColor = '';
+      let modelWithoutColor = cleanModelStr;
+      if (colorMatch) {
+        extractedColor = colorMatch[1];
+        modelWithoutColor = cleanModelStr.replace(/\s*\([^)]+\)$/, '').trim();
+      }
+      setColor(extractedColor);
+
+      // Split brand and model
+      const modelParts = modelWithoutColor.split(' ');
+      if (modelParts.length >= 2) {
+        setBrand(modelParts[0]);
+        setModelName(modelParts.slice(1).join(' '));
+      } else {
+        setBrand(modelWithoutColor);
+        setModelName('');
+      }
+    }
+  }, [vehicle, visible]);
+
+  const handleSave = () => {
+    if (!plateNumber.trim()) {
+      Alert.alert('Required Field', 'Please enter your license plate number.');
       return;
     }
 
-    // License Plate Format Regex (Supports standard formats e.g. 1AB 1234, 3CD 5678, 99-9999)
-    const plateRegex = /^([0-9]{1,2}[\u0E00-\u0E7Fa-zA-Z]{1,2}\s?[0-9]{1,4}|[\u0E00-\u0E7Fa-zA-Z]{1,3}\s?[0-9]{1,4}|[0-9]{2}-[0-9]{4}|[\u0E00-\u0E7Fa-zA-Z0-9\s-]+)$/;
-    if (!plateRegex.test(newPlate.trim())) {
-      alert('Invalid License Plate Format.\nPlease enter a valid license plate (e.g. 1AB 1234, 3CD 5678).');
+    if (!province.trim()) {
+      Alert.alert('Required Field', 'Please select your province / city.');
       return;
     }
+
+    if (!brand.trim()) {
+      Alert.alert('Required Field', 'Please enter vehicle brand.');
+      return;
+    }
+
+    if (!modelName.trim()) {
+      Alert.alert('Required Field', 'Please enter vehicle model.');
+      return;
+    }
+
+    if (!color.trim()) {
+      Alert.alert('Required Field', 'Please enter vehicle color.');
+      return;
+    }
+
     const icon = vehicleType === 'car' ? '🚗' : '🛵';
-    const fullPlate = formatDisplayPlate(`${newPlate.trim().toUpperCase()} ${newProvince}`);
-    const fullModel = `${icon} ${newBrand.trim()} ${newModel.trim()} (${newColor.trim()})`;
+    const newFullPlate = formatDisplayPlate(`${plateNumber.trim()} ${province}`);
+    const newFullModel = `${icon} ${brand.trim()} ${modelName.trim()} (${color.trim()})`.trim();
 
-    const success = onAdd(fullPlate, fullModel);
-    if (success !== false) {
-      setNewPlate('');
-      setNewProvince('');
-      setNewBrand('');
-      setNewModel('');
-      setNewColor('');
-      onClose();
-    }
+    onSave(vehicle?.plate, newFullPlate, newFullModel);
+    onClose();
   };
 
   return (
@@ -80,7 +126,8 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
             }}
           >
             <View>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>Register Vehicle</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>Edit Vehicle Information</Text>
+              <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Update your vehicle details for smart gate access</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={{ padding: 8, borderRadius: 20, backgroundColor: '#f1f5f9' }}>
               <Ionicons name="close" size={20} color="#64748b" />
@@ -95,7 +142,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
           >
             <View style={{ gap: 16, maxWidth: 540, width: '100%', alignSelf: 'center' }}>
 
-              {/* 1. Vehicle Type (Motorcycle / Car) - First */}
+              {/* 1. Vehicle Type (Motorcycle / Car) */}
               <View>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 8 }}>
                   Vehicle Type <Text style={{ color: '#ef4444' }}>*</Text>
@@ -147,30 +194,15 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                 </View>
               </View>
 
-              {/* 2. License Plate */}
+              {/* 2. License Plate Number */}
               <View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>
-                    License Plate <Text style={{ color: '#ef4444' }}>*</Text>
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (!vehicleType) {
-                        alert('Please select vehicle type first.');
-                        return;
-                      }
-                      setShowScannerModal(true);
-                    }}
-                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', borderContent: '#bfdbfe', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
-                  >
-                    <Ionicons name="camera-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Scan with Camera</Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
+                  License Plate Number <Text style={{ color: '#ef4444' }}>*</Text>
+                </Text>
                 <TextInput
-                  value={newPlate}
-                  onChangeText={setNewPlate}
-                  placeholder="e.g. 1กข 1234, 3กฮ 5678"
+                  value={plateNumber}
+                  onChangeText={setPlateNumber}
+                  placeholder="e.g. 1กข 1234 or 3กฮ 5678"
                   placeholderTextColor="#94a3b8"
                   autoCapitalize="characters"
                   style={{
@@ -187,7 +219,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                 />
               </View>
 
-              {/* 3. Province */}
+              {/* 3. Province Selection */}
               <View>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
                   Province / City <Text style={{ color: '#ef4444' }}>*</Text>
@@ -207,8 +239,8 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                     justifyContent: 'space-between'
                   }}
                 >
-                  <Text style={{ color: newProvince ? '#0f172a' : '#94a3b8', fontSize: 14, fontWeight: '700', flex: 1, marginRight: 8 }} numberOfLines={1}>
-                    {newProvince || 'Select Province / City'}
+                  <Text style={{ color: province ? '#0f172a' : '#94a3b8', fontSize: 14, fontWeight: '700', flex: 1, marginRight: 8 }} numberOfLines={1}>
+                    {province || 'Select Province / City'}
                   </Text>
                   <Ionicons name="chevron-down" size={18} color="#64748b" />
                 </TouchableOpacity>
@@ -220,9 +252,9 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                   Brand <Text style={{ color: '#ef4444' }}>*</Text>
                 </Text>
                 <TextInput
-                  value={newBrand}
-                  onChangeText={setNewBrand}
-                  placeholder={vehicleType === 'car' ? "e.g. Toyota, Honda, Mazda" : "e.g. Honda, Yamaha, Vespa"}
+                  value={brand}
+                  onChangeText={setBrand}
+                  placeholder="e.g. Honda, Yamaha, Vespa, Toyota"
                   placeholderTextColor="#94a3b8"
                   style={{
                     backgroundColor: '#ffffff',
@@ -232,7 +264,8 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                     paddingHorizontal: 16,
                     paddingVertical: 14,
                     color: '#0f172a',
-                    fontSize: 14
+                    fontSize: 14,
+                    fontWeight: '600'
                   }}
                 />
               </View>
@@ -243,9 +276,9 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                   Model <Text style={{ color: '#ef4444' }}>*</Text>
                 </Text>
                 <TextInput
-                  value={newModel}
-                  onChangeText={setNewModel}
-                  placeholder={vehicleType === 'car' ? "e.g. Camry, Civic" : "e.g. Click 160, Wave 125i"}
+                  value={modelName}
+                  onChangeText={setModelName}
+                  placeholder="e.g. PCX 160, Click 160, Civic, Yaris"
                   placeholderTextColor="#94a3b8"
                   style={{
                     backgroundColor: '#ffffff',
@@ -255,7 +288,8 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                     paddingHorizontal: 16,
                     paddingVertical: 14,
                     color: '#0f172a',
-                    fontSize: 14
+                    fontSize: 14,
+                    fontWeight: '600'
                   }}
                 />
               </View>
@@ -266,9 +300,9 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                   Color <Text style={{ color: '#ef4444' }}>*</Text>
                 </Text>
                 <TextInput
-                  value={newColor}
-                  onChangeText={setNewColor}
-                  placeholder="e.g. White, Black, Matte Gray"
+                  value={color}
+                  onChangeText={setColor}
+                  placeholder="e.g. Black, White, Red, Blue, Matte Gray"
                   placeholderTextColor="#94a3b8"
                   style={{
                     backgroundColor: '#ffffff',
@@ -278,59 +312,62 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                     paddingHorizontal: 16,
                     paddingVertical: 14,
                     color: '#0f172a',
-                    fontSize: 14
+                    fontSize: 14,
+                    fontWeight: '600'
                   }}
                 />
               </View>
 
-              {/* Rule Policy note */}
-              <View style={{ backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="information-circle" size={18} color="#2563eb" style={{ marginRight: 8 }} />
-                <Text style={{ fontSize: 11, color: '#1d4ed8', fontWeight: '600', flex: 1, lineHeight: 16 }}>
-                  Policy: 1 license plate can only be registered to 1 university account.
-                </Text>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={{ flexDirection: 'row', gap: 12, paddingTop: 12 }}>
+              {/* Submit Buttons */}
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
                 <TouchableOpacity
                   onPress={onClose}
                   activeOpacity={0.8}
-                  style={{ flex: 1, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#cbd5e1', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 14,
+                    borderRadius: 16,
+                    backgroundColor: '#f1f5f9',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
                 >
                   <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569' }}>Cancel</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={handleSubmit}
+                  onPress={handleSave}
                   activeOpacity={0.85}
-                  style={{ flex: 1, backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 16, alignItems: 'center', shadowColor: '#2563eb', shadowOpacity: 0.25, shadowRadius: 8, elevation: 2 }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 14,
+                    borderRadius: 16,
+                    backgroundColor: '#2563eb',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: '#2563eb',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 8,
+                    elevation: 4
+                  }}
                 >
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#ffffff' }}>Register Vehicle</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#ffffff' }}>Save Changes</Text>
                 </TouchableOpacity>
               </View>
+
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Province Picker Modal */}
+        <ProvincePickerModal
+          visible={showProvinceModal}
+          onClose={() => setShowProvinceModal(false)}
+          onSelect={(selected) => setProvince(selected)}
+          selectedProvince={province}
+        />
       </SafeAreaView>
-
-      <LicensePlateScannerModal
-        visible={showScannerModal}
-        onClose={() => setShowScannerModal(false)}
-        vehicleType={vehicleType}
-        onScanSuccess={(scannedPlate, scannedProvince) => {
-          setNewPlate(scannedPlate);
-          setNewProvince(scannedProvince);
-        }}
-      />
-
-      <ProvincePickerModal
-        visible={showProvinceModal}
-        onClose={() => setShowProvinceModal(false)}
-        onSelect={(prov) => setNewProvince(prov)}
-        selectedProvince={newProvince}
-      />
     </Modal>
   );
 }
-

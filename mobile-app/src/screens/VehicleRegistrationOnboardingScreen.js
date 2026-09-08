@@ -22,7 +22,7 @@ export default function VehicleRegistrationOnboardingScreen({
   onSkipToGuest
 }) {
   const [plateNumber, setPlateNumber] = useState('');
-  const [province, setProvince] = useState('Bangkok (กรุงเทพมหานคร)');
+  const [province, setProvince] = useState('');
   const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [vehicleType, setVehicleType] = useState(null); // null | 'motorcycle' | 'car'
@@ -39,6 +39,11 @@ export default function VehicleRegistrationOnboardingScreen({
 
     if (!plateNumber.trim()) {
       Alert.alert('Required Field', 'Please enter your license plate number.');
+      return;
+    }
+
+    if (!province.trim()) {
+      Alert.alert('Required Field', 'Please select your province / city.');
       return;
     }
 
@@ -254,7 +259,7 @@ export default function VehicleRegistrationOnboardingScreen({
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }} numberOfLines={1}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: province ? '#0f172a' : '#94a3b8' }} numberOfLines={1}>
                     {province || 'Select Province / City'}
                   </Text>
                 </View>

@@ -137,9 +137,11 @@ async def register_vehicle_in_mongodb(data: VehicleRegisterCreate):
     """
     Save registered vehicle info to MongoDB (registered_vehicles collection).
     """
+    if not data.user_email:
+        raise HTTPException(status_code=400, detail="user_email is required for vehicle registration")
     now = datetime.now(timezone.utc)
     doc = {
-        "user_email": data.user_email or "65070042@student.university.ac.th",
+        "user_email": data.user_email,
         "role": data.role or "student",
         "plate": data.plate,
         "model": data.model,
@@ -155,22 +157,24 @@ async def register_vehicle_in_mongodb(data: VehicleRegisterCreate):
     return {"status": "success", "message": "Vehicle registered in MongoDB", "vehicle": doc}
 
 @router.get("/user-vehicles")
-async def get_user_vehicles_from_mongodb(user_email: str = "65070042@student.university.ac.th"):
+async def get_user_vehicles_from_mongodb(user_email: str = ""):
     """
     Retrieve all registered vehicles for a user from MongoDB.
     """
+    if not user_email:
+        return []
     if registered_vehicles_collection is not None:
         vehicles = list(registered_vehicles_collection.find({"user_email": user_email}, {"_id": 0}))
         return vehicles
     return []
 
 @router.delete("/delete-vehicle")
-async def delete_vehicle_from_mongodb(user_email: str = "65070042@student.university.ac.th", plate: str = ""):
+async def delete_vehicle_from_mongodb(user_email: str = "", plate: str = ""):
     """
     Delete a registered vehicle for a user from MongoDB.
     """
-    if registered_vehicles_collection is not None and plate:
+    if registered_vehicles_collection is not None and user_email and plate:
         registered_vehicles_collection.delete_one({"user_email": user_email, "plate": plate})
         return {"status": "success", "message": f"Vehicle {plate} deleted from MongoDB"}
-    return {"status": "error", "message": "Vehicle plate missing or DB unavailable"}
+    return {"status": "error", "message": "Vehicle plate or user_email missing or DB unavailable"}
 

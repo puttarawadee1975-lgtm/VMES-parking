@@ -155,11 +155,11 @@ export default function NotificationsModal({
 
                       {/* Content */}
                       <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                          <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', flex: 1, marginRight: 6 }} numberOfLines={1}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', flex: 1, marginRight: 8, lineHeight: 21 }} numberOfLines={isExpanded ? undefined : 1}>
                             {item.title}
                           </Text>
-                          <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '600' }}>{item.date}</Text>
+                          <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '600', marginTop: 2 }}>{item.date}</Text>
                         </View>
 
                         <Text style={{ fontSize: 13, color: '#475569', lineHeight: 19 }} numberOfLines={isExpanded ? undefined : 2}>

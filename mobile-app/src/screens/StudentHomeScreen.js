@@ -19,6 +19,21 @@ export default function StudentHomeScreen({
   const isGuest = currentUser?.role === 'guest';
   const hasPenalty = currentUser?.safetyScore !== null && currentUser?.safetyScore < 100;
   
+  // Date calculation for daily violation banner expiration
+  const todayDateObj = new Date();
+  const todayDateString = todayDateObj.toDateString();
+  const formattedTodayDate = todayDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  
+  // Check if violation date matches today (defaults to today if date not specified)
+  const violationDateObj = currentUser?.violationDate ? new Date(currentUser.violationDate) : new Date();
+  const isViolationToday = violationDateObj.toDateString() === todayDateString;
+  const violationDateDisplay = isViolationToday 
+    ? `Today, ${formattedTodayDate}`
+    : violationDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  // Safety violation banner only shows if student has penalty AND violation occurred TODAY
+  const showViolationBanner = hasPenalty && !isGuest && isViolationToday;
+
   const [parkingZones, setParkingZones] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,8 +121,8 @@ export default function StudentHomeScreen({
         )}
       </View>
 
-      {/* 2. Penalty Notification Banner (Only shows if safetyScore < 100) */}
-      {hasPenalty && !isGuest && (
+      {/* 2. Penalty Notification Banner (Only shows if safetyScore < 100 AND violation is from TODAY) */}
+      {showViolationBanner && (
         <TouchableOpacity 
           onPress={() => setShowDrivingScoreModal(true)}
           activeOpacity={0.85}
@@ -121,7 +136,16 @@ export default function StudentHomeScreen({
               </Text>
               <Ionicons name="chevron-forward" size={16} color="#dc2626" />
             </View>
-            <Text className="text-red-700 text-xs">
+            
+            {/* Date Badge */}
+            <View className="flex-row items-center mb-1.5 bg-red-100/80 self-start px-2 py-0.5 rounded-md border border-red-200">
+              <Ionicons name="calendar-outline" size={12} color="#b91c1c" style={{ marginRight: 4 }} />
+              <Text className="text-red-800 text-[11px] font-bold">
+                Date: {violationDateDisplay}
+              </Text>
+            </View>
+
+            <Text className="text-red-700 text-xs leading-relaxed">
               Your driving safety score is {currentUser.safetyScore}/100. Points were deducted due to a recent "No Helmet" detection. Click to view score details.
             </Text>
           </View>
@@ -149,7 +173,7 @@ export default function StudentHomeScreen({
               </View>
               <View>
                 <Text className="text-slate-900 font-bold text-sm">Official Notices</Text>
-                <Text className="text-slate-400 text-[10px]">Campus updates configured via Admin Website</Text>
+                <Text className="text-slate-400 text-[10px]">Campus updates configured</Text>
               </View>
             </View>
           </View>

@@ -184,7 +184,8 @@ export const clearSpotInMongoDB = async (userEmail = '65070042@student.universit
 };
 
 // 9. Register Vehicle to MongoDB
-export const registerVehicleToMongoDB = async (vehicleData, userEmail = '65070042@student.university.ac.th', role = 'student') => {
+export const registerVehicleToMongoDB = async (vehicleData, userEmail, role = 'student') => {
+  if (!userEmail) return null;
   try {
     const res = await fetch(`${API_BASE_URL}/parking/register-vehicle`, {
       method: 'POST',
@@ -205,7 +206,8 @@ export const registerVehicleToMongoDB = async (vehicleData, userEmail = '6507004
 };
 
 // 10. Delete Vehicle from MongoDB
-export const deleteVehicleFromMongoDB = async (plate, userEmail = '65070042@student.university.ac.th') => {
+export const deleteVehicleFromMongoDB = async (plate, userEmail) => {
+  if (!userEmail) return null;
   try {
     const res = await fetch(`${API_BASE_URL}/parking/delete-vehicle?user_email=${encodeURIComponent(userEmail)}&plate=${encodeURIComponent(plate)}`, {
       method: 'DELETE',
@@ -220,7 +222,8 @@ export const deleteVehicleFromMongoDB = async (plate, userEmail = '65070042@stud
 };
 
 // 11. Fetch User Vehicles from MongoDB
-export const getUserVehiclesFromMongoDB = async (userEmail = '65070042@student.university.ac.th') => {
+export const getUserVehiclesFromMongoDB = async (userEmail) => {
+  if (!userEmail) return [];
   try {
     const res = await fetch(`${API_BASE_URL}/parking/user-vehicles?user_email=${encodeURIComponent(userEmail)}`, {
       method: 'GET',

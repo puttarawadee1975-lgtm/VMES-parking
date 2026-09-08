@@ -2,7 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function AuthScreen({ onOpenMicrosoftModal, onGuestLogin, insets, screenWidth }) {
+export default function AuthScreen({
+  onOpenMicrosoftModal,
+  onGuestLogin,
+  insets,
+  screenWidth
+}) {
   return (
     <View
       style={{
@@ -27,6 +32,7 @@ export default function AuthScreen({ onOpenMicrosoftModal, onGuestLogin, insets,
       </View>
 
       <View className="space-y-3 max-w-sm mx-auto w-full">
+        {/* Microsoft Sign In */}
         <TouchableOpacity
           onPress={onOpenMicrosoftModal}
           className="flex-row bg-white border border-slate-200 p-4 rounded-2xl items-center justify-center shadow-sm active:opacity-80"
@@ -41,6 +47,7 @@ export default function AuthScreen({ onOpenMicrosoftModal, onGuestLogin, insets,
           <View className="flex-1 h-[1px] bg-slate-200" />
         </View>
 
+        {/* Continue as Guest */}
         <TouchableOpacity
           onPress={onGuestLogin}
           className="bg-blue-600 p-4 rounded-2xl items-center justify-center shadow-md shadow-blue-500/25 active:opacity-90"

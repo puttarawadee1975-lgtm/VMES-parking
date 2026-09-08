@@ -25,6 +25,7 @@ export default function AccountScreen({
   setAudioAlertEnabled = () => { },
   onOpenNotifications,
   onOpenAddVehicleModal,
+  onEditVehicle,
   onNavigateToMyVehicle
 }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -229,6 +230,7 @@ export default function AccountScreen({
                 setShowMyVehiclesModal(false);
                 if (onOpenAddVehicleModal) onOpenAddVehicleModal();
               }}
+              onEditVehicle={onEditVehicle}
             />
 
             {/* Gate History & Violations Modal */}
