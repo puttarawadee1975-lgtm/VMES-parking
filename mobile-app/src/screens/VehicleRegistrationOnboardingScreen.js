@@ -256,7 +256,13 @@ export default function VehicleRegistrationOnboardingScreen({
               <TextInput
                 value={model}
                 onChangeText={setModel}
-                placeholder="e.g. Honda PCX 160, Yamaha Grand Filano"
+                placeholder={
+                  vehicleType === 'car'
+                    ? "e.g. Toyota Camry, Honda Civic"
+                    : vehicleType === 'motorcycle'
+                    ? "e.g. Honda PCX 160, Yamaha Grand Filano"
+                    : "e.g. Toyota Camry, Honda PCX 160"
+                }
                 placeholderTextColor="#94a3b8"
                 style={{
                   backgroundColor: '#f8fafc',
