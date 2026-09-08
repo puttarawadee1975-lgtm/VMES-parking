@@ -132,6 +132,100 @@ const PROVINCE_MAP = {
   'narathiwat': 'Narathiwat'
 };
 
+const ENGLISH_TO_THAI_MAP = {
+  'bangkok': 'กรุงเทพมหานคร',
+  'bkk': 'กรุงเทพมหานคร',
+  'amnat charoen': 'อำนาจเจริญ',
+  'ang thong': 'อ่างทอง',
+  'bueng kan': 'บึงกาฬ',
+  'buri ram': 'บุรีรัมย์',
+  'buriram': 'บุรีรัมย์',
+  'chachoengsao': 'ฉะเชิงเทรา',
+  'chai nat': 'ชัยนาท',
+  'chainat': 'ชัยนาท',
+  'chaiyaphum': 'ชัยภูมิ',
+  'chanthaburi': 'จันทบุรี',
+  'chiang mai': 'เชียงใหม่',
+  'chiangmai': 'เชียงใหม่',
+  'chiang rai': 'เชียงราย',
+  'chiangrai': 'เชียงราย',
+  'chon buri': 'ชลบุรี',
+  'chonburi': 'ชลบุรี',
+  'chumphon': 'ชุมพร',
+  'kalasin': 'กาฬสินธุ์',
+  'kamphaeng phet': 'กำแพงเพชร',
+  'kanchanaburi': 'กาญจนบุรี',
+  'khon kaen': 'ขอนแก่น',
+  'khonkaen': 'ขอนแก่น',
+  'krabi': 'กระบี่',
+  'lampang': 'ลำปาง',
+  'lamphun': 'ลำพูน',
+  'loei': 'เลย',
+  'lop buri': 'ลพบุรี',
+  'lopburi': 'ลพบุรี',
+  'mae hong son': 'แม่ฮ่องสอน',
+  'maha sarakham': 'มหาสารคาม',
+  'mukdahan': 'มุกดาหาร',
+  'nakhon nayok': 'นครนายก',
+  'nakhon pathom': 'นครปฐม',
+  'nakhon phanom': 'นครพนม',
+  'nakhon ratchasima': 'นครราชสีมา',
+  'korat': 'นครราชสีมา',
+  'nakhon sawan': 'นครสวรรค์',
+  'nakhon si thammarat': 'นครศรีธรรมราช',
+  'nan': 'น่าน',
+  'narathiwat': 'นราธิวาส',
+  'nong bua lam phu': 'หนองบัวลำภู',
+  'nong khai': 'หนองคาย',
+  'nonthaburi': 'นนทบุรี',
+  'pathum thani': 'ปทุมธานี',
+  'pathumthani': 'ปทุมธานี',
+  'pattani': 'ปัตตานี',
+  'phang nga': 'พังงา',
+  'phatthalung': 'พัทลุง',
+  'phayao': 'พะเยา',
+  'phetchabun': 'เพชรบูรณ์',
+  'phetchaburi': 'เพชรบุรี',
+  'phichit': 'พิจิตร',
+  'phitsanulok': 'พิษณุโลก',
+  'phra nakhon si ayutthaya': 'พระนครศรีอยุธยา',
+  'ayutthaya': 'พระนครศรีอยุธยา',
+  'phrae': 'แพร่',
+  'phuket': 'ภูเก็ต',
+  'prachin buri': 'ปราจีนบุรี',
+  'prachuap khiri khan': 'ประจวบคีรีขันธ์',
+  'ranong': 'ระนอง',
+  'ratchaburi': 'ราชบุรี',
+  'rayong': 'ระยอง',
+  'roi et': 'ร้อยเอ็ด',
+  'sa kaeo': 'สระแก้ว',
+  'sakon nakhon': 'สกลนคร',
+  'samut prakan': 'สมุทรปราการ',
+  'samutprakarn': 'สมุทรปราการ',
+  'samut sakhon': 'สมุทรสาคร',
+  'samut songkhram': 'สมุทรสงคราม',
+  'saraburi': 'สระบุรี',
+  'satun': 'สตูล',
+  'sing buri': 'สิงห์บุรี',
+  'si sa ket': 'ศรีสะเกษ',
+  'songkhla': 'สงขลา',
+  'sukhothai': 'สุโขทัย',
+  'suphan buri': 'สุพรรณบุรี',
+  'surat thani': 'สุราษฎร์ธานี',
+  'surin': 'สุรินทร์',
+  'tak': 'ตาก',
+  'trang': 'ตรัง',
+  'trat': 'ตราด',
+  'ubon ratchathani': 'อุบลราชธานี',
+  'ubon': 'อุบลราชธานี',
+  'udon thani': 'อุดรธานี',
+  'udon': 'อุดรธานี',
+  'uthai thani': 'อุทัยธานี',
+  'uttaradit': 'อุตรดิตถ์',
+  'yala': 'ยะลา',
+  'yasothon': 'ยโสธร'
+};
+
 /**
  * Normalizes and converts an English or alternative province name to clean Title Case.
  */
@@ -142,4 +236,34 @@ export function toThaiProvince(input) {
     return PROVINCE_MAP[trimmed];
   }
   return input.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
+/**
+ * Formats a full license plate string to strictly use Thai province names without English parentheses or English names.
+ * Example: "2ขก 3363 Bangkok (กรุงเทพมหานคร)" -> "2ขก 3363 กรุงเทพมหานคร"
+ * Example: "2ขก 3363 Bangkok" -> "2ขก 3363 กรุงเทพมหานคร"
+ */
+export function formatDisplayPlate(plateStr) {
+  if (!plateStr || typeof plateStr !== 'string') return '';
+  let str = plateStr.trim();
+
+  // If format contains parentheses like "Bangkok (กรุงเทพมหานคร)", extract Thai inside parentheses
+  if (str.includes('(') && str.includes(')')) {
+    const thaiMatch = str.match(/\(([\u0E00-\u0E7F\s]+)\)/);
+    if (thaiMatch && thaiMatch[1]) {
+      const thaiProv = thaiMatch[1].trim();
+      str = str.replace(/\s+[a-zA-Z\s,.-]+\s*\([\u0E00-\u0E7F\s]+\)/g, ` ${thaiProv}`);
+      return str.trim();
+    }
+  }
+
+  // Otherwise, replace English province words with Thai province equivalents
+  for (const [enKey, thVal] of Object.entries(ENGLISH_TO_THAI_MAP)) {
+    const regex = new RegExp(`\\b${enKey}\\b`, 'gi');
+    if (regex.test(str)) {
+      str = str.replace(regex, thVal);
+    }
+  }
+
+  return str.trim();
 }

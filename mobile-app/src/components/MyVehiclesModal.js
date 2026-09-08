@@ -8,6 +8,7 @@ import {
   SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatDisplayPlate } from '../utils/provinceHelper';
 
 export default function MyVehiclesModal({
   visible,
@@ -177,7 +178,7 @@ export default function MyVehiclesModal({
                       <Text style={{ fontSize: 22 }}>{isCar ? '🚗' : '🛵'}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>{v.plate}</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>{formatDisplayPlate(v.plate)}</Text>
                       <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
                         {v.model?.replace(/^[🛵🚗]\s*/, '') || 'Registered Vehicle'}
                       </Text>

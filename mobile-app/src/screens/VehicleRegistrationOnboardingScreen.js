@@ -13,6 +13,7 @@ import {
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import ProvincePickerModal from '../components/ProvincePickerModal';
 import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
+import { formatDisplayPlate } from '../utils/provinceHelper';
 
 export default function VehicleRegistrationOnboardingScreen({
   currentUser,
@@ -58,7 +59,7 @@ export default function VehicleRegistrationOnboardingScreen({
 
     setIsSubmitting(true);
     const icon = vehicleType === 'car' ? '🚗' : '🛵';
-    const fullPlate = `${plateNumber.trim()} ${province}`.trim();
+    const fullPlate = formatDisplayPlate(`${plateNumber.trim()} ${province}`);
     const fullModel = `${icon} ${brand.trim()} ${model.trim()} (${color.trim()})`.trim();
 
     const success = onRegisterVehicle(fullPlate, fullModel);

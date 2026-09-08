@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ParkingLocationCard from '../components/ParkingLocationCard';
-import { toThaiProvince } from '../utils/provinceHelper';
+import { toThaiProvince, formatDisplayPlate } from '../utils/provinceHelper';
 import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
 import DrivingScoreModal from '../components/DrivingScoreModal';
 
@@ -417,7 +417,7 @@ export default function MyVehicleScreen({
                 <View className="flex-row items-center flex-1 mr-2">
                   <Text className="text-2xl">{v.model?.includes('🚗') ? '🚗' : '🛵'}</Text>
                   <View className="ml-3 flex-1">
-                    <Text className="text-slate-900 font-bold text-xs">{v.plate}</Text>
+                    <Text className="text-slate-900 font-bold text-xs">{formatDisplayPlate(v.plate)}</Text>
                     <Text className="text-slate-500 text-[10px] mt-0.5">{v.model?.replace(/^[🛵🚗]\s*/, '')}</Text>
                   </View>
                 </View>
@@ -481,7 +481,7 @@ export default function MyVehicleScreen({
                       <Text className="text-base mr-2">{isMotorcycle ? '🛵' : '🚗'}</Text>
                       <View className="flex-1">
                         <View className="flex-row items-center">
-                          <Text className="text-slate-900 font-bold text-xs mr-2">{trip.plate}</Text>
+                          <Text className="text-slate-900 font-bold text-xs mr-2">{formatDisplayPlate(trip.plate)}</Text>
                           <View className="bg-slate-200/80 px-2 py-0.5 rounded">
                             <Text className="text-slate-600 text-[9px] font-bold">
                               {isMotorcycle ? 'Motorcycle' : 'Automobile'}

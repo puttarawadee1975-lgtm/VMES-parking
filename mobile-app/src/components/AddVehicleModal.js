@@ -13,7 +13,7 @@ import {
   SafeAreaView
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { toThaiProvince } from '../utils/provinceHelper';
+import { toThaiProvince, formatDisplayPlate } from '../utils/provinceHelper';
 import LicensePlateScannerModal from './LicensePlateScannerModal';
 import ProvincePickerModal from './ProvincePickerModal';
 
@@ -40,8 +40,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
       return;
     }
     const icon = vehicleType === 'car' ? '🚗' : '🛵';
-    const thaiProvince = toThaiProvince(newProvince.trim());
-    const fullPlate = `${newPlate.trim().toUpperCase()} ${thaiProvince}`;
+    const fullPlate = formatDisplayPlate(`${newPlate.trim().toUpperCase()} ${newProvince}`);
     const fullModel = `${icon} ${newBrand.trim()} ${newModel.trim()} (${newColor.trim()})`;
 
     const success = onAdd(fullPlate, fullModel);
