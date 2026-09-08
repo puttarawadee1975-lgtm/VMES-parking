@@ -10,7 +10,7 @@ import {
   Platform,
   Alert
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import ProvincePickerModal from '../components/ProvincePickerModal';
 import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
 
@@ -150,7 +150,7 @@ export default function VehicleRegistrationOnboardingScreen({
                     borderColor: vehicleType === 'motorcycle' ? '#2563eb' : '#e2e8f0'
                   }}
                 >
-                  <Ionicons name="bicycle-outline" size={18} color={vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 6 }} />
+                  <FontAwesome5 name="motorcycle" size={16} color={vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 6 }} />
                   <Text style={{ fontSize: 13, fontWeight: '700', color: vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b' }}>
                     Motorcycle
                   </Text>

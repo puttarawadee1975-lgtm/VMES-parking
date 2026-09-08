@@ -12,7 +12,7 @@ import {
   Keyboard,
   SafeAreaView
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { toThaiProvince } from '../utils/provinceHelper';
 import LicensePlateScannerModal from './LicensePlateScannerModal';
 import ProvincePickerModal from './ProvincePickerModal';
@@ -118,7 +118,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                       justifyContent: 'center'
                     }}
                   >
-                    <Ionicons name="bicycle-outline" size={20} color={vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 8 }} />
+                    <FontAwesome5 name="motorcycle" size={18} color={vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 8 }} />
                     <Text style={{ fontSize: 13, fontWeight: '700', color: vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b' }}>
                       Motorcycle
                     </Text>
