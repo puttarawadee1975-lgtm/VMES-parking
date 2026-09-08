@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProvincePickerModal from '../components/ProvincePickerModal';
+import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
 
 export default function VehicleRegistrationOnboardingScreen({
   currentUser,
@@ -22,6 +23,7 @@ export default function VehicleRegistrationOnboardingScreen({
   const [plateNumber, setPlateNumber] = useState('');
   const [province, setProvince] = useState('Bangkok (กรุงเทพมหานคร)');
   const [showProvinceModal, setShowProvinceModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
   const [vehicleType, setVehicleType] = useState('motorcycle'); // 'motorcycle' or 'car'
   const [model, setModel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -174,9 +176,18 @@ export default function VehicleRegistrationOnboardingScreen({
 
             {/* License Plate Input */}
             <View>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                License Plate Number:
-              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569' }}>
+                  License Plate Number:
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowScannerModal(true)}
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
+                >
+                  <Ionicons name="camera-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Scan Plate with Camera</Text>
+                </TouchableOpacity>
+              </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 14, paddingHorizontal: 14 }}>
                 <Ionicons name="card-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
                 <TextInput
@@ -268,6 +279,18 @@ export default function VehicleRegistrationOnboardingScreen({
         onClose={() => setShowProvinceModal(false)}
         onSelect={(prov) => setProvince(prov)}
         selectedProvince={province}
+      />
+
+      <LicensePlateScannerModal
+        visible={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        vehicleType={vehicleType}
+        onScanSuccess={(scannedPlate, scannedProvince) => {
+          setPlateNumber(scannedPlate);
+          if (scannedProvince) {
+            setProvince(`${scannedProvince} (${scannedProvince === 'Bangkok' ? 'กรุงเทพมหานคร' : scannedProvince})`);
+          }
+        }}
       />
     </SafeAreaView>
   );
