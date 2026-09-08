@@ -80,39 +80,48 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
       </div>
 
       <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Owner Name</th>
-              <th>Role / ID</th>
-              <th>License Plate</th>
-              <th>Vehicle Details</th>
-              <th>Safety Score</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((item, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight: 700, color: '#ffffff' }}>{item.owner}</td>
-                <td><span style={{ color: '#94a3b8' }}>{item.role} ({item.id})</span></td>
-                <td><span className="plate-tag">{item.plate} {item.province}</span></td>
-                <td>{item.vehicle}</td>
-                <td style={{ fontWeight: 900, color: item.score >= 90 ? '#10b981' : '#f59e0b' }}>
-                  {item.score}/100
-                </td>
-                <td><span className="badge badge-live">APPROVED</span></td>
-                <td>
-                  <button className="btn btn-secondary btn-sm" onClick={() => handleRevoke(item.plate, item.ownerEmail)}>
-                    Revoke
-                  </button>
-                </td>
+        {(!filtered || filtered.length === 0) ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
+            <i className="ri-car-line" style={{ fontSize: 36, color: '#38bdf8', display: 'block', marginBottom: 12 }}></i>
+            <div style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: 4 }}>No Registered Vehicles Found</div>
+            <div style={{ fontSize: 13 }}>There are no registered campus vehicles matching your filter in MongoDB.</div>
+          </div>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Owner Name</th>
+                <th>Role / ID</th>
+                <th>License Plate</th>
+                <th>Vehicle Details</th>
+                <th>Safety Score</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((item, i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 700, color: '#ffffff' }}>{item.owner}</td>
+                  <td><span style={{ color: '#94a3b8' }}>{item.role} ({item.id})</span></td>
+                  <td><span className="plate-tag">{item.plate} {item.province}</span></td>
+                  <td>{item.vehicle}</td>
+                  <td style={{ fontWeight: 900, color: item.score >= 90 ? '#10b981' : '#f59e0b' }}>
+                    {item.score}/100
+                  </td>
+                  <td><span className="badge badge-live">APPROVED</span></td>
+                  <td>
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleRevoke(item.plate, item.ownerEmail)}>
+                      Revoke
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
 
       {showModal && (
         <div style={{

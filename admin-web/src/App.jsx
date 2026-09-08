@@ -82,25 +82,19 @@ export default function App() {
     }
 
     try {
-      // 3. Fetch Vehicles from Backend
+      // 3. Fetch Vehicles from Backend (Exact MongoDB Registered Vehicles)
       const resVeh = await fetch('http://localhost:8000/admin/all-vehicles');
       if (resVeh.ok) {
         const backendVehicles = await resVeh.json();
-        if (Array.isArray(backendVehicles) && backendVehicles.length > 0) {
-          // Merge with initial defaults to keep rich list
-          const combined = [...backendVehicles];
-          INITIAL_VEHICLES.forEach(initV => {
-            if (!combined.some(c => c.plate === initV.plate)) {
-              combined.push(initV);
-            }
-          });
-          setVehicles(combined);
+        if (Array.isArray(backendVehicles)) {
+          setVehicles(backendVehicles);
         }
       }
     } catch (e) {
       console.log('Backend connection notice (vehicles):', e.message);
     }
   }, []);
+
 
   useEffect(() => {
     fetchBackendData();

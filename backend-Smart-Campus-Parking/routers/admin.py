@@ -138,46 +138,77 @@ async def get_all_score_logs():
 @router.get("/all-vehicles")
 async def get_all_registered_vehicles():
     """
-    Admin website endpoint: Get list of all registered vehicles.
+    Admin website endpoint: Get list of all registered vehicles directly from MongoDB.
     """
     from database import registered_vehicles_collection, users_collection
     vehicles = []
     
+    # 1. Pull from registered_vehicles collection
     if registered_vehicles_collection is not None:
         docs = list(registered_vehicles_collection.find({}, {"_id": 0}))
         for d in docs:
+            email = d.get("user_email", "guest@smartcampus.ac.th")
+            # Look up driving score from user doc
+            user_score = 100
+            user_name = email.split("@")[0].capitalize()
+            if users_collection is not None:
+                udoc = users_collection.find_one({"email": email})
+                if udoc:
+                    user_score = udoc.get("driving_score", 100)
+                    user_name = udoc.get("name", user_name)
+
             vehicles.append({
                 "plate": d.get("plate", ""),
-                "province": "กรุงเทพมหานคร",
-                "vehicle": d.get("model", "Vehicle"),
-                "owner": d.get("user_email", "").split("@")[0].capitalize(),
-                "ownerEmail": d.get("user_email", ""),
-                "id": "STU-" + d.get("user_email", "0000")[:4],
+                "province": d.get("province", "กรุงเทพมหานคร"),
+                "vehicle": d.get("model", "Motorcycle"),
+                "owner": user_name,
+                "ownerEmail": email,
+                "id": f"STU-{email[:4]}",
                 "role": d.get("role", "Student").capitalize(),
-                "score": 100
+                "score": user_score
             })
             
+    # 2. Pull from users collection vehicles array
     if users_collection is not None:
         u_docs = list(users_collection.find({}, {"_id": 0}))
         for u in u_docs:
             u_score = u.get("driving_score", 100)
             u_name = u.get("name", u.get("email", "").split("@")[0])
             u_email = u.get("email", "")
+            u_role = u.get("role", "student").capitalize()
+            u_id = u.get("id", u.get("student_id", "6610001"))
+            
+            # Check user license_plate field if present
+            lp = u.get("license_plate")
+            if lp and lp != "-" and not any(veh["plate"] == lp for veh in vehicles):
+                vehicles.append({
+                    "plate": lp,
+                    "province": "กรุงเทพมหานคร",
+                    "vehicle": "🛵 Honda PCX 160",
+                    "owner": u_name,
+                    "ownerEmail": u_email,
+                    "id": u_id,
+                    "role": u_role,
+                    "score": u_score
+                })
+
             for v in u.get("vehicles", []):
-                # Avoid duplicate plates
-                if not any(veh["plate"] == v.get("plate") for veh in vehicles):
+                v_plate = v.get("plate", "")
+                if v_plate and not any(veh["plate"] == v_plate for veh in vehicles):
+                    v_type = v.get("type", "motorcycle")
                     vehicles.append({
-                        "plate": v.get("plate", ""),
+                        "plate": v_plate,
                         "province": v.get("province", "กรุงเทพมหานคร"),
-                        "vehicle": f"{'🛵' if v.get('type')=='motorcycle' else '🚗'} {v.get('brand','')} {v.get('model','')}".strip(),
+                        "vehicle": f"{'🛵' if v_type=='motorcycle' else '🚗'} {v.get('brand','')} {v.get('model','')}".strip() or ("🛵 Motorcycle" if v_type=="motorcycle" else "🚗 Car"),
                         "owner": u_name,
                         "ownerEmail": u_email,
-                        "id": u.get("student_id", f"6507{len(vehicles)+1:04d}"),
-                        "role": u.get("role", "Student").capitalize(),
+                        "id": u_id,
+                        "role": u_role,
                         "score": u_score
                     })
                     
     return vehicles
+
 
 @router.get("/public-users")
 async def get_public_users_scores():

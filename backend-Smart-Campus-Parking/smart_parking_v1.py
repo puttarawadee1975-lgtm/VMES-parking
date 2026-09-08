@@ -6,17 +6,29 @@ from collections import Counter
 from ultralytics import YOLO
 from PIL import Image, ImageDraw, ImageFont
 
+import sys
+
 # Load OCR and helmet model
 reader = easyocr.Reader(['th', 'en'])
 helmet_model = YOLO("helmet_model.pt")
 
-cap = cv2.VideoCapture(0)
+# Allow passing camera index via command line argument (e.g. python smart_parking_v1.py 1)
+cam_index = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+
+print(f"Attempting to open camera index {cam_index}...")
+cap = cv2.VideoCapture(cam_index)
+
+# Fallback to index 0 if specified index fails
+if not cap.isOpened() and cam_index != 0:
+    print(f"Camera index {cam_index} failed. Falling back to camera index 0...")
+    cam_index = 0
+    cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
 
-print("Smart Parking v1 started")
+print(f"Smart Parking v1 started using camera index {cam_index}")
 print("Press q to quit")
 
 # Helmet stability

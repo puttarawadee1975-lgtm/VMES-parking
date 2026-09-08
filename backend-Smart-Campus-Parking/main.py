@@ -1,4 +1,11 @@
+import os
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
+from database import client, DB_NAME
+from routers import auth, qr, parking, officer, admin, detection
 
 load_dotenv()
 

@@ -1,28 +1,53 @@
-# Dependencies
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
 node_modules/
-**/node_modules/
 .npm-cache/
 
-# Expo & Mobile
+# Expo
 .expo/
-**/mobile-app/.expo/
 dist/
-**/dist/
 web-build/
 expo-env.d.ts
 
-# Python & Backend
-__pycache__/
-**/__pycache__/
-*.pyc
-venv/
-**/venv/
-backend-Smart-Campus-Parking/data/db/
-backend-Smart-Campus-Parking/data/*.log
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
 
-# OS & Config
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
 .DS_Store
 *.pem
+
+# local env files
 .env
 .env*.local
+__pycache__/
+*.pyc
+
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+# IDE configuration
 .claude/
+
+# DB data
+backend-Smart-Campus-Parking/data/db/
+backend-Smart-Campus-Parking/data/*.log

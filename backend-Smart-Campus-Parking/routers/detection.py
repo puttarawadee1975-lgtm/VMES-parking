@@ -1,3 +1,4 @@
+from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, status
 from database import detection_logs_collection, users_collection, parking_status_collection

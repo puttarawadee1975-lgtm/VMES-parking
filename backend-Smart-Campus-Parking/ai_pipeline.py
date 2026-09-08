@@ -31,12 +31,22 @@ try:
 except Exception:
     vehicle_model = None
 
-# Video Capture (Camera 0 or RTSP URL)
-VIDEO_SOURCE = int(os.getenv("VIDEO_SOURCE", "0"))
-cap = cv2.VideoCapture(VIDEO_SOURCE)
+# Video Capture (Camera 1 or 0 or CLI arg)
+if len(sys.argv) > 1:
+    cam_index = int(sys.argv[1])
+else:
+    cam_index = int(os.getenv("VIDEO_SOURCE", "1"))
+
+print(f"[AI PIPELINE] Opening video source camera index: {cam_index}")
+cap = cv2.VideoCapture(cam_index)
+
+if not cap.isOpened() and cam_index != 0:
+    print(f"[AI PIPELINE WARNING] Camera index {cam_index} failed. Falling back to camera index 0...")
+    cam_index = 0
+    cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
-    print(f"[AI PIPELINE ERROR] Cannot open video source: {VIDEO_SOURCE}", file=sys.stderr)
+    print(f"[AI PIPELINE ERROR] Cannot open video source: {cam_index}", file=sys.stderr)
     print("Please make sure a webcam is connected or specify a video file/stream.")
 
 # Thai Font for display
