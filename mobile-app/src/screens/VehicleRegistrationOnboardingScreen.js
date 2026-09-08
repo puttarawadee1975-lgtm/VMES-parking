@@ -25,7 +25,9 @@ export default function VehicleRegistrationOnboardingScreen({
   const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [vehicleType, setVehicleType] = useState(null); // null | 'motorcycle' | 'car'
+  const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
+  const [color, setColor] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFormSubmit = () => {
@@ -39,14 +41,25 @@ export default function VehicleRegistrationOnboardingScreen({
       return;
     }
 
+    if (!brand.trim()) {
+      Alert.alert('Required Field', 'Please enter your vehicle brand (e.g. Honda, Toyota).');
+      return;
+    }
+
     if (!model.trim()) {
-      Alert.alert('Required Field', 'Please enter your vehicle brand & model.');
+      Alert.alert('Required Field', 'Please enter your vehicle model (e.g. Civic, PCX 160).');
+      return;
+    }
+
+    if (!color.trim()) {
+      Alert.alert('Required Field', 'Please enter your vehicle color (e.g. Black, White, Red).');
       return;
     }
 
     setIsSubmitting(true);
+    const icon = vehicleType === 'car' ? '🚗' : '🛵';
     const fullPlate = `${plateNumber.trim()} ${province}`.trim();
-    const fullModel = `${vehicleType === 'motorcycle' ? '🛵' : '🚗'} ${model.trim()}`.trim();
+    const fullModel = `${icon} ${brand.trim()} ${model.trim()} (${color.trim()})`.trim();
 
     const success = onRegisterVehicle(fullPlate, fullModel);
     setIsSubmitting(false);
@@ -248,21 +261,75 @@ export default function VehicleRegistrationOnboardingScreen({
               </TouchableOpacity>
             </View>
 
-            {/* Make & Model */}
+            {/* Vehicle Brand */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
-                Vehicle Make & Model:
+                Vehicle Brand:
+              </Text>
+              <TextInput
+                value={brand}
+                onChangeText={setBrand}
+                placeholder={
+                  vehicleType === 'car'
+                    ? "e.g. Toyota, Honda, Mazda"
+                    : vehicleType === 'motorcycle'
+                    ? "e.g. Honda, Yamaha, Vespa"
+                    : "e.g. Toyota, Honda"
+                }
+                placeholderTextColor="#94a3b8"
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderWidth: 1,
+                  borderColor: '#cbd5e1',
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: '#0f172a'
+                }}
+              />
+            </View>
+
+            {/* Vehicle Model */}
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
+                Vehicle Model:
               </Text>
               <TextInput
                 value={model}
                 onChangeText={setModel}
                 placeholder={
                   vehicleType === 'car'
-                    ? "e.g. Toyota Camry, Honda Civic"
+                    ? "e.g. Camry, Civic, Mazda 3"
                     : vehicleType === 'motorcycle'
-                    ? "e.g. Honda PCX 160, Yamaha Grand Filano"
-                    : "e.g. Toyota Camry, Honda PCX 160"
+                    ? "e.g. PCX 160, Click 160, Grand Filano"
+                    : "e.g. Civic, PCX 160"
                 }
+                placeholderTextColor="#94a3b8"
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderWidth: 1,
+                  borderColor: '#cbd5e1',
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: '#0f172a'
+                }}
+              />
+            </View>
+
+            {/* Vehicle Color */}
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
+                Vehicle Color:
+              </Text>
+              <TextInput
+                value={color}
+                onChangeText={setColor}
+                placeholder="e.g. Black, White, Red, Blue, Silver"
                 placeholderTextColor="#94a3b8"
                 style={{
                   backgroundColor: '#f8fafc',
