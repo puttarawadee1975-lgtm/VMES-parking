@@ -87,18 +87,7 @@ export default function ParkingDetailsModal({
             </View>
           </View>
 
-          {/* Image / Floor Map Area (Blank Placeholder reserved for Admin Web) */}
-          <View style={{ backgroundColor: '#f1f5f9', borderRadius: 20, borderWidth: 1, borderColor: '#cbd5e1', borderStyle: 'dashed', padding: 24, marginBottom: 24, alignItems: 'center', justifyContent: 'center', minHeight: 180 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-              <Ionicons name="image-outline" size={24} color="#64748b" />
-            </View>
-            <Text style={{ color: '#475569', fontWeight: '700', fontSize: 13, marginBottom: 4, textAlign: 'center' }}>
-              Zone Map Image Placeholder
-            </Text>
-            <Text style={{ color: '#94a3b8', fontSize: 11, textAlign: 'center', paddingHorizontal: 20 }}>
-              Dynamic zone image configured via Admin Web Management Console
-            </Text>
-          </View>
+
 
           {/* Action Buttons */}
           <View style={{ gap: 12, marginBottom: 40 }}>

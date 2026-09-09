@@ -8,6 +8,8 @@ export default function AnnouncementsTable() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [priority, setPriority] = useState('normal'); // 'normal' | 'high'
+  const [targetAudience, setTargetAudience] = useState('all'); // 'all' | 'individual' | 'staff'
+  const [targetUser, setTargetUser] = useState(''); // email/student_id for individual
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -32,6 +34,8 @@ export default function AnnouncementsTable() {
     setTitle('');
     setContent('');
     setPriority('normal');
+    setTargetAudience('all');
+    setTargetUser('');
     setShowModal(true);
   };
 
@@ -40,6 +44,8 @@ export default function AnnouncementsTable() {
     setTitle(item.title);
     setContent(item.content);
     setPriority(item.priority || 'normal');
+    setTargetAudience(item.target_audience || 'all');
+    setTargetUser(item.target_user || '');
     setShowModal(true);
   };
 
@@ -57,7 +63,9 @@ export default function AnnouncementsTable() {
           body: JSON.stringify({
             title: title.trim(),
             content: content.trim(),
-            priority: priority
+            priority: priority,
+            target_audience: targetAudience,
+            target_user: targetAudience.startsWith('individual') ? targetUser.trim() : ''
           })
         });
       } else {
@@ -68,7 +76,9 @@ export default function AnnouncementsTable() {
           body: JSON.stringify({
             title: title.trim(),
             content: content.trim(),
-            priority: priority
+            priority: priority,
+            target_audience: targetAudience,
+            target_user: targetAudience.startsWith('individual') ? targetUser.trim() : ''
           })
         });
       }
@@ -76,6 +86,8 @@ export default function AnnouncementsTable() {
       setTitle('');
       setContent('');
       setPriority('normal');
+      setTargetAudience('all');
+      setTargetUser('');
       setEditingItem(null);
       fetchAnnouncements();
     } catch (err) {
@@ -127,6 +139,7 @@ export default function AnnouncementsTable() {
                 <th>Notice ID</th>
                 <th>Title & Topic</th>
                 <th>Announcement Content</th>
+                <th>Target Audience</th>
                 <th>Date Posted</th>
                 <th>Priority</th>
                 <th>Action</th>
@@ -135,9 +148,20 @@ export default function AnnouncementsTable() {
             <tbody>
               {announcements.map((item) => (
                 <tr key={item.id}>
-                  <td style={{ fontWeight: 700, color: '#2563eb' }}>{item.id}</td>
-                  <td style={{ fontWeight: 700, color: '#0f172a', width: '22%' }}>{item.title}</td>
-                  <td style={{ color: '#334155', lineHeight: 1.5, maxWidth: 360 }}>{item.content}</td>
+                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
+                  <td style={{ fontWeight: 700, color: '#0f172a', width: '20%' }}>{item.title}</td>
+                  <td style={{ color: '#0f172a', lineHeight: 1.5, maxWidth: 320 }}>{item.content}</td>
+                  <td style={{ color: '#0f172a', fontWeight: 600, fontSize: 12 }}>
+                    {item.target_audience === 'all' 
+                      ? 'All Campus Users'
+                      : item.target_audience === 'all_students'
+                      ? 'All Students'
+                      : item.target_audience === 'individual_staff' || item.target_audience === 'staff'
+                      ? `Specific Staff: ${item.target_user || ''}`
+                      : item.target_audience === 'individual_student' || item.target_audience === 'individual'
+                      ? `Specific Student: ${item.target_user || ''}`
+                      : 'All Campus Users'}
+                  </td>
                   <td style={{ color: '#64748b', fontSize: 12 }}>{item.date}</td>
                   <td>
                     <span className={`badge ${item.priority === 'high' ? 'badge-danger' : 'badge-live'}`}>
@@ -146,10 +170,10 @@ export default function AnnouncementsTable() {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn btn-secondary btn-sm" style={{ color: '#2563eb', border: '1px solid #bfdbfe', background: '#eff6ff' }} onClick={() => handleOpenEdit(item)}>
+                      <button className="btn btn-secondary btn-sm" style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc' }} onClick={() => handleOpenEdit(item)}>
                         <i className="ri-edit-line"></i> Edit
                       </button>
-                      <button className="btn btn-secondary btn-sm" style={{ color: '#dc2626', border: '1px solid #fca5a5', background: '#fef2f2' }} onClick={() => setDeleteConfirmItem(item)}>
+                      <button className="btn btn-secondary btn-sm" style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc' }} onClick={() => setDeleteConfirmItem(item)}>
                         <i className="ri-delete-bin-line"></i> Remove
                       </button>
                     </div>
@@ -167,13 +191,15 @@ export default function AnnouncementsTable() {
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
         }}>
-          <div className="card" style={{ width: 480, padding: 24, borderRadius: 20, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+          <div className="card" style={{ width: 500, padding: 24, borderRadius: 20, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, color: '#0f172a', marginBottom: 16, fontSize: 18, fontWeight: 800 }}>
               {editingItem ? 'Edit Campus Notice' : 'Post New Campus Notice'}
             </h3>
             <form onSubmit={handleSave}>
               <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Title</label>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
+                  Title <span style={{ color: '#dc2626' }}>*</span>
+                </label>
                 <input 
                   type="text"
                   required
@@ -185,7 +211,9 @@ export default function AnnouncementsTable() {
               </div>
 
               <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Announcement Content</label>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
+                  Announcement Content <span style={{ color: '#dc2626' }}>*</span>
+                </label>
                 <textarea 
                   required
                   rows={4}
@@ -195,6 +223,54 @@ export default function AnnouncementsTable() {
                   style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 500, fontFamily: 'inherit', resize: 'vertical' }}
                 />
               </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
+                  Target Audience / Recipient <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <select 
+                  value={targetAudience}
+                  onChange={e => setTargetAudience(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
+                >
+                  <option value="all">All Campus Users (Including Staff)</option>
+                  <option value="all_students">All Students</option>
+                  <option value="individual_staff">Specific Staff / Lecturer</option>
+                  <option value="individual_student">Specific Student</option>
+                </select>
+              </div>
+
+              {(targetAudience === 'individual_student' || targetAudience === 'individual') && (
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
+                    Student ID or Email <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="e.g. 65070042@student.university.ac.th or 65070042"
+                    value={targetUser}
+                    onChange={e => setTargetUser(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
+                  />
+                </div>
+              )}
+
+              {targetAudience === 'individual_staff' && (
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
+                    Staff / Lecturer ID or Email <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="e.g. staff.somchai@university.ac.th or STF-1024"
+                    value={targetUser}
+                    onChange={e => setTargetUser(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
+                  />
+                </div>
+              )}
 
               <div style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Priority Level</label>

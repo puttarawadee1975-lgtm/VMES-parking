@@ -45,8 +45,28 @@ export default function StudentHomeScreen({
       setParkingZones(data);
     }
     const anns = await getAnnouncements();
-    if (anns) {
-      setAnnouncements(anns);
+    if (anns && Array.isArray(anns)) {
+      const filteredAnns = anns.filter(ann => {
+        if (!ann.target_audience || ann.target_audience === 'all') return true;
+        if (ann.target_audience === 'all_students' && currentUser?.role === 'staff') return false;
+        if (ann.target_audience === 'individual_student' || ann.target_audience === 'individual_staff') {
+          const targetStr = (ann.target_user || '').toLowerCase().trim();
+          const userEmail = (currentUser?.email || '').toLowerCase();
+          const userName = (currentUser?.name || '').toLowerCase();
+          const studentId = (currentUser?.studentId || '').toLowerCase();
+          
+          if (targetStr && !userEmail.includes(targetStr) && !userName.includes(targetStr) && !studentId.includes(targetStr)) {
+            return false;
+          }
+        }
+        return true;
+      }).map(ann => ({
+        ...ann,
+        categoryLabel: ann.priority === 'high' ? 'HIGH PRIORITY' : 'NOTICE',
+        badgeBg: ann.priority === 'high' ? '#fef2f2' : '#eff6ff',
+        badgeColor: ann.priority === 'high' ? '#dc2626' : '#2563eb'
+      }));
+      setAnnouncements(filteredAnns);
     }
     setLoading(false);
   };

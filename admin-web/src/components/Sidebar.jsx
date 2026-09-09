@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilter }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -31,6 +31,16 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span className="badge badge-live">LIVE</span>
         </button>
         <button 
+          onClick={() => {
+            if (onClearViolationFilter) onClearViolationFilter();
+            setActiveTab('access-history');
+          }} 
+          className={`menu-item ${activeTab === 'access-history' ? 'active' : ''}`}
+        >
+          <i className="ri-history-line"></i>
+          <span>Gate Access & Violation History</span>
+        </button>
+        <button 
           onClick={() => setActiveTab('vehicles')} 
           className={`menu-item ${activeTab === 'vehicles' ? 'active' : ''}`}
         >
@@ -45,14 +55,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         >
           <i className="ri-speed-up-line"></i>
           <span>Driving Scores</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('violations')} 
-          className={`menu-item ${activeTab === 'violations' ? 'active' : ''}`}
-        >
-          <i className="ri-alarm-warning-line"></i>
-          <span>Helmet Violations</span>
-          <span className="badge badge-danger">3 New</span>
         </button>
 
         <div className="menu-label">Operations</div>

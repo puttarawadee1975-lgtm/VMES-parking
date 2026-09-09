@@ -9,10 +9,13 @@ import ScoresTable from './components/ScoresTable';
 import AnalyticsCharts from './components/AnalyticsCharts';
 import AnnouncementsTable from './components/AnnouncementsTable';
 import ParkingOccupancyView from './components/ParkingOccupancyView';
+import ViolationsTable from './components/ViolationsTable';
 
 const INITIAL_VEHICLES = [
   { plate: '1กข 1234', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'Honda', model: 'PCX 160', color: 'Black', vehicle: 'Motorcycle Honda PCX 160 (Black)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Thanaphat S.', id: '65070042', role: 'Student', score: 98, ownerEmail: '65070042@student.university.ac.th' },
-  { plate: '3กฮ 5678', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'Yamaha', model: 'Grand Filano', color: 'Gray', vehicle: 'Motorcycle Yamaha Grand Filano (Gray)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Main Entrance)', owner: 'Nattapong K.', id: '65070118', role: 'Student', score: 80, ownerEmail: '65070118@student.university.ac.th' },
+  { plate: '3กฮ 5678', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'Yamaha', model: 'Grand Filano', color: 'Gray', vehicle: 'Motorcycle Yamaha Grand Filano (Gray)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Main Entrance)', owner: 'Nattapong K.', id: '65070118', role: 'Student', score: 80, ownerEmail: '65070118@student.university.ac.th', lastViolationDate: '09/09/2026 • 09:15' },
+  { plate: '4กม 7777', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'GPX', model: 'Drone 150', color: 'Red', vehicle: 'Motorcycle GPX Drone 150 (Red)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Entry Gate)', owner: 'Kittisak W.', id: '65070512', role: 'Student', score: 50, ownerEmail: '65070512@student.university.ac.th', lastViolationDate: '08/09/2026 • 16:30' },
+  { plate: '7กต 3333', province: 'ชลบุรี', vehicle_type: 'motorcycle', brand: 'Honda', model: 'Click 160', color: 'Blue', vehicle: 'Motorcycle Honda Click 160 (Blue)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Entry Gate)', owner: 'Phatcharapol N.', id: '65070625', role: 'Student', score: 40, ownerEmail: '65070625@student.university.ac.th', lastViolationDate: '07/09/2026 • 14:10' },
   { plate: '9กข 9999', province: 'สมุทรปราการ', vehicle_type: 'car', brand: 'Toyota', model: 'Camry', color: 'White', vehicle: 'Car Toyota Camry (White)', helmet: 'N/A (Automobile)', isViolation: false, gate: 'Gate 2 (East Entrance)', owner: 'Dr. Somchai P.', id: 'SEC-01', role: 'Staff', score: 100, ownerEmail: 'somchai@university.ac.th' },
   { plate: '2กข 4321', province: 'นนทบุรี', vehicle_type: 'motorcycle', brand: 'Vespa', model: 'Sprint 150', color: 'White', vehicle: 'Motorcycle Vespa Sprint 150 (White)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Chayanan T.', id: '65070244', role: 'Student', score: 100, ownerEmail: '65070244@student.university.ac.th' },
   { plate: '5กษ 8888', province: 'กรุงเทพมหานคร', vehicle_type: 'car', brand: 'Honda', model: 'Civic', color: 'Black', vehicle: 'Car Honda Civic (Black)', helmet: 'N/A (Automobile)', isViolation: false, gate: 'Gate 2 (East Entrance)', owner: 'Pattarapon M.', id: '65070399', role: 'Student', score: 95, ownerEmail: '65070399@student.university.ac.th' }
@@ -20,6 +23,7 @@ const INITIAL_VEHICLES = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [violationUserFilter, setViolationUserFilter] = useState('');
   const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
   const [totalScans, setTotalScans] = useState(1284);
   const [violationsCount, setViolationsCount] = useState(146);
@@ -27,6 +31,11 @@ export default function App() {
   const [parkingOccupancy, setParkingOccupancy] = useState({ available: 12, occupied: 6, total: 18, rate: 33.3 });
 
   const [logs, setLogs] = useState([]);
+
+  const handleNavigateToViolations = (userName) => {
+    setViolationUserFilter(userName || '');
+    setActiveTab('access-history');
+  };
 
   // Fetch real data from Backend FastAPI
   const fetchBackendData = useCallback(async () => {
@@ -104,7 +113,12 @@ export default function App() {
       if (resVeh.ok) {
         const backendVehicles = await resVeh.json();
         if (Array.isArray(backendVehicles)) {
-          setVehicles(backendVehicles);
+          const existingPlates = new Set(backendVehicles.map(v => v.plate));
+          const combined = [
+            ...backendVehicles,
+            ...INITIAL_VEHICLES.filter(iv => !existingPlates.has(iv.plate))
+          ];
+          setVehicles(combined);
         }
       }
     } catch (e) {
@@ -199,9 +213,10 @@ export default function App() {
   const titles = {
     'overview': { title: 'Live Gate & Operations Overview', subtitle: 'Real-time AI License Plate Recognition & Campus Safety Monitor' },
     'live-camera': { title: 'AI Gate Camera Feed Surveillance Grid (ENTRY & EXIT)', subtitle: 'Multi-Gate Real-time CCTV Stream & Optical Character Recognition' },
+    'access-history': { title: 'Gate Access & Violation History Log', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
     'vehicles': { title: 'Registered Vehicles & Campus Passes', subtitle: 'Manage student & staff approved license plates and 1-plate policy rules' },
     'safety-scores': { title: 'Driver Safety Scores & Audit Console', subtitle: '100-point scale enforcement, violation penalties, and score restorations' },
-    'violations': { title: 'Helmet Violation Audit Logs', subtitle: 'Comprehensive AI detection history for campus motorcycle safety rules' },
+    'violations': { title: 'Gate Access & Violation History Log', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
     'parking-map': { title: 'VEMS Building Occupancy & Capacity Monitor', subtitle: 'Real-time building parking availability, load percentage, and floor specifications' },
     'analytics': { title: 'Analytics & Traffic Intelligence', subtitle: 'Peak hours traffic distribution, compliance rates, and gate throughput' },
     'announcements': { title: 'Campus Announcements Management', subtitle: 'Broadcast real-time notices, safety updates, and maintenance alerts to mobile users' }
@@ -211,13 +226,12 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onClearViolationFilter={() => setViolationUserFilter('')} />
 
       <main className="main-content">
         <Header 
           pageTitle={currentMeta.title} 
           pageSubtitle={currentMeta.subtitle}
-          onTriggerScan={() => handleTriggerScan('ENTRY')}
         />
 
         {activeTab === 'overview' && (
@@ -230,9 +244,18 @@ export default function App() {
             />
 
             <div style={{ marginTop: 16 }}>
-              <InspectionTable logs={logs} />
+              <InspectionTable logs={logs} isOverview={true} onViewAllHistory={() => { setViolationUserFilter(''); setActiveTab('access-history'); }} />
             </div>
           </div>
+        )}
+
+        {(activeTab === 'access-history' || activeTab === 'violations') && (
+          <InspectionTable 
+            logs={logs} 
+            isOverview={false} 
+            initialSearchQuery={violationUserFilter}
+            initialViolationFilter={violationUserFilter ? 'violations_only' : 'all'}
+          />
         )}
 
         {activeTab === 'live-camera' && (
@@ -240,21 +263,21 @@ export default function App() {
             <div className="card-header">
               <div className="card-header-title">
                 <i className="ri-camera-lens-line"></i>
-                <span>Multi-Gate Dual AI CCTV Surveillance (ENTRY & EXIT)</span>
+                <span>VMES CCTV Entry & Exit Gate</span>
               </div>
               <span className="text-muted text-xs">Live 2-Camera Grid Stream</span>
             </div>
 
             <div className="grid-2-col gap-16 mt-16" style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <CameraStream 
-                gateName="Gate 1 (Main Entrance - ENTRY)"
+                gateName="Gate 1 (Entry Gate)"
                 camId="CAM-01: ENTRY RAMP"
                 gateType="ENTRY"
                 currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]} 
                 onTriggerScan={() => handleTriggerScan('ENTRY')} 
               />
               <CameraStream 
-                gateName="Gate 2 (East Gate - EXIT)"
+                gateName="Gate 2 (Exit Gate)"
                 camId="CAM-02: EXIT RAMP"
                 gateType="EXIT"
                 currentDetection={logs.find(l => l.gate.includes('EXIT'))} 
@@ -269,68 +292,12 @@ export default function App() {
         )}
 
         {activeTab === 'safety-scores' && (
-          <ScoresTable vehicles={vehicles} onAdjustScore={handleAdjustScore} />
-        )}
-
-        {activeTab === 'violations' && (
-          <div className="card">
-            <div className="card-header">
-              <div className="card-header-title">
-                <i className="ri-alarm-warning-line" style={{ color: '#ef4444' }}></i>
-                <span>Helmet Violation Log & Audit Trail</span>
-              </div>
-              <span className="badge badge-danger" style={{ fontSize: 13, padding: '4px 12px' }}>
-                {logs.filter(l => l.isViolation).length} Total Violations Logged
-              </span>
-            </div>
-            <div className="table-container">
-              {logs.filter(l => l.isViolation).length === 0 ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
-                  <i className="ri-shield-check-line" style={{ fontSize: 36, color: '#059669', display: 'block', marginBottom: 12 }}></i>
-                  <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>No Helmet Violations Detected</div>
-                  <div style={{ fontSize: 13, color: '#64748b' }}>All motorcycle riders scanned at campus gates were wearing helmets.</div>
-                </div>
-              ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Incident ID</th>
-                      <th>Time</th>
-                      <th>Plate Number</th>
-                      <th>Rider / Owner</th>
-                      <th>Location Gate</th>
-                      <th>AI Violation Detail</th>
-                      <th>Penalty Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logs.filter(l => l.isViolation).map((item, i) => (
-                      <tr key={i}>
-                        <td style={{ fontWeight: 700, color: '#dc2626' }}>LOG-V{String(i + 1).padStart(3, '0')}</td>
-                        <td style={{ fontWeight: 600, color: '#2563eb' }}>{item.time}</td>
-                        <td><span className="plate-tag">{item.plate} {item.province && !item.plate.includes(item.province) ? item.province : ''}</span></td>
-                        <td>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.owner}</div>
-                          <div style={{ fontSize: 11, color: '#64748b' }}>{item.vehicle}</div>
-                        </td>
-                        <td>{item.gate}</td>
-                        <td>
-                          <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <i className="ri-close-circle-line"></i> No Helmet Worn
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ color: '#ef4444', fontWeight: 700, fontSize: 13 }}>
-                            -10 Safety Points
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
+          <ScoresTable 
+            vehicles={vehicles} 
+            logs={logs} 
+            onAdjustScore={handleAdjustScore} 
+            onViewViolations={handleNavigateToViolations}
+          />
         )}
 
         {activeTab === 'parking-map' && (

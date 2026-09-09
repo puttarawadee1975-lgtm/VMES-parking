@@ -1,4 +1,319 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { THAI_PROVINCES } from '../data/provincesData';
+
+const CAR_COLORS = [
+  { name: 'White', label: 'White (ขาว / บรอนซ์ขาว)', hex: '#ffffff' },
+  { name: 'Black', label: 'Black (ดำ / ดำเงา)', hex: '#0f172a' },
+  { name: 'Silver', label: 'Silver (บรอนซ์เงิน)', hex: '#cbd5e1' },
+  { name: 'Gray', label: 'Gray (เทา / เทาดำ)', hex: '#64748b' },
+  { name: 'Red', label: 'Red (แดง / แดงเมทัลลิก)', hex: '#dc2626' },
+  { name: 'Blue', label: 'Blue (น้ำเงิน / ฟ้า)', hex: '#2563eb' },
+  { name: 'Bronze', label: 'Bronze / Gold (บรอนซ์ทอง / น้ำตาล)', hex: '#d97706' },
+  { name: 'Green', label: 'Green (เขียว)', hex: '#059669' },
+  { name: 'Yellow', label: 'Yellow (เหลือง)', hex: '#eab308' },
+  { name: 'Orange', label: 'Orange (ส้ม)', hex: '#ea580c' }
+];
+
+const MOTORCYCLE_COLORS = [
+  { name: 'Black', label: 'Black (ดำ / ดำด้าน / ดำเงา)', hex: '#0f172a' },
+  { name: 'White', label: 'White (ขาว / ขาวมุก)', hex: '#ffffff' },
+  { name: 'Red', label: 'Red (แดง / แดงบรอนซ์)', hex: '#dc2626' },
+  { name: 'Blue', label: 'Blue (น้ำเงิน / ฟ้า)', hex: '#2563eb' },
+  { name: 'Gray', label: 'Gray (เทา / เทาแลมโบ)', hex: '#64748b' },
+  { name: 'Green', label: 'Green (เขียว / เขียวมะนาว)', hex: '#059669' },
+  { name: 'Yellow', label: 'Yellow (เหลือง)', hex: '#eab308' },
+  { name: 'Orange', label: 'Orange (ส้ม)', hex: '#ea580c' },
+  { name: 'Pink', label: 'Pink (ชมพู)', hex: '#ec4899' },
+  { name: 'Purple', label: 'Purple (ม่วง)', hex: '#9333ea' }
+];
+
+function SearchableColorSelect({ value, onChange, vehicleType = 'motorcycle' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    setSearchTerm(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const colorOptions = vehicleType === 'car' ? CAR_COLORS : MOTORCYCLE_COLORS;
+
+  const filteredColors = colorOptions.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <input 
+          type="text"
+          placeholder="Select color or type custom color..."
+          value={searchTerm}
+          onFocus={() => setIsOpen(true)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            onChange(e.target.value);
+            setIsOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onChange(searchTerm);
+              setIsOpen(false);
+            }
+          }}
+          style={{ 
+            width: '100%', 
+            padding: '10px 32px 10px 14px', 
+            background: '#f8fafc', 
+            border: '1px solid #cbd5e1', 
+            borderRadius: 10, 
+            color: '#0f172a', 
+            fontSize: 13, 
+            fontWeight: 600, 
+            outline: 'none' 
+          }}
+        />
+        <i 
+          className={isOpen ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}
+          onClick={() => setIsOpen(!isOpen)}
+          style={{
+            position: 'absolute',
+            right: 10,
+            color: '#64748b',
+            fontSize: 16,
+            cursor: 'pointer'
+          }}
+        />
+      </div>
+
+      {isOpen && (
+        <div style={{
+          position: 'absolute', 
+          top: '100%', 
+          left: 0, 
+          right: 0, 
+          marginTop: 4,
+          maxHeight: 200, 
+          overflowY: 'auto', 
+          background: '#ffffff',
+          border: '1px solid #cbd5e1', 
+          borderRadius: 10,
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)', 
+          zIndex: 10000
+        }}>
+          {filteredColors.length > 0 ? (
+            filteredColors.map(c => {
+              const isSelected = searchTerm.toLowerCase() === c.name.toLowerCase();
+              return (
+                <div 
+                  key={c.name}
+                  onClick={() => {
+                    setSearchTerm(c.name);
+                    onChange(c.name);
+                    setIsOpen(false);
+                  }}
+                  style={{
+                    padding: '8px 12px', 
+                    cursor: 'pointer', 
+                    fontSize: 13,
+                    borderBottom: '1px solid #f1f5f9', 
+                    color: '#0f172a',
+                    fontWeight: isSelected ? 700 : 500,
+                    background: isSelected ? '#eff6ff' : 'transparent',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = isSelected ? '#eff6ff' : 'transparent'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ 
+                      width: 14, 
+                      height: 14, 
+                      borderRadius: '50%', 
+                      background: c.hex, 
+                      border: '1px solid #cbd5e1',
+                      display: 'inline-block' 
+                    }} />
+                    <span style={{ fontWeight: 600, color: '#0f172a' }}>{c.label}</span>
+                  </div>
+                  {isSelected && <i className="ri-checkbox-circle-fill" style={{ color: '#2563eb', fontSize: 16 }}></i>}
+                </div>
+              );
+            })
+          ) : (
+            <div 
+              onClick={() => {
+                onChange(searchTerm);
+                setIsOpen(false);
+              }}
+              style={{ 
+                padding: '10px 12px', 
+                fontSize: 13, 
+                color: '#2563eb', 
+                fontWeight: 600, 
+                textAlign: 'left', 
+                cursor: 'pointer', 
+                background: '#eff6ff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <i className="ri-edit-box-line" style={{ fontSize: 16 }}></i>
+              <span>Use custom color: <strong style={{ color: '#0f172a' }}>"{searchTerm}"</strong></span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchableProvinceSelect({ value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    setSearchTerm(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredProvinces = THAI_PROVINCES.filter(p => 
+    p.th.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.en.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <input 
+          type="text"
+          placeholder="Type or select province (e.g. Bangkok / กรุงเทพ...)"
+          value={searchTerm}
+          onFocus={() => setIsOpen(true)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            onChange(e.target.value);
+            setIsOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onChange(searchTerm);
+              setIsOpen(false);
+            }
+          }}
+          style={{ 
+            width: '100%', 
+            padding: '10px 32px 10px 14px', 
+            background: '#f8fafc', 
+            border: '1px solid #cbd5e1', 
+            borderRadius: 10, 
+            color: '#0f172a', 
+            fontSize: 13, 
+            fontWeight: 600, 
+            outline: 'none' 
+          }}
+        />
+        <i 
+          className={isOpen ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}
+          onClick={() => setIsOpen(!isOpen)}
+          style={{
+            position: 'absolute',
+            right: 10,
+            color: '#64748b',
+            fontSize: 16,
+            cursor: 'pointer',
+            pointerEvents: 'auto'
+          }}
+        />
+      </div>
+
+      {isOpen && (
+        <div style={{
+          position: 'absolute', 
+          top: '100%', 
+          left: 0, 
+          right: 0, 
+          marginTop: 4,
+          maxHeight: 220, 
+          overflowY: 'auto', 
+          background: '#ffffff',
+          border: '1px solid #cbd5e1', 
+          borderRadius: 10,
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)', 
+          zIndex: 10000
+        }}>
+          {filteredProvinces.length > 0 ? (
+            filteredProvinces.map(p => {
+              const isSelected = searchTerm.toLowerCase() === p.th.toLowerCase() || 
+                                 searchTerm.toLowerCase() === p.en.toLowerCase() ||
+                                 searchTerm.toLowerCase() === (p.label || '').toLowerCase();
+              return (
+                <div 
+                  key={p.id}
+                  onClick={() => {
+                    setSearchTerm(p.th);
+                    onChange(p.th);
+                    setIsOpen(false);
+                  }}
+                  style={{
+                    padding: '9px 14px', 
+                    cursor: 'pointer', 
+                    fontSize: 13,
+                    borderBottom: '1px solid #f1f5f9', 
+                    color: '#0f172a',
+                    fontWeight: isSelected ? 700 : 500,
+                    background: isSelected ? '#eff6ff' : 'transparent',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = isSelected ? '#eff6ff' : 'transparent'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 700, color: '#0f172a' }}>{p.en}</span>
+                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>({p.th})</span>
+                  </div>
+                  {isSelected && <i className="ri-checkbox-circle-fill" style={{ color: '#2563eb', fontSize: 16 }}></i>}
+                </div>
+              );
+            })
+          ) : (
+            <div style={{ padding: 12, fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>
+              No province found for "{searchTerm}"
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
   const [search, setSearch] = useState('');
@@ -42,7 +357,11 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
     setEditingVehicle(v);
     setNewOwner(v.owner || '');
     setNewPlate(v.plate || '');
-    setNewProvince(v.province || 'Bangkok');
+    const matchedP = THAI_PROVINCES.find(p => 
+      p.th.toLowerCase() === (v.province || '').toLowerCase() || 
+      p.en.toLowerCase() === (v.province || '').toLowerCase()
+    );
+    setNewProvince(matchedP ? matchedP.th : (v.province || 'กรุงเทพมหานคร'));
     const combinedInfo = (v.vehicle_type || '') + ' ' + (v.vehicle || '') + ' ' + (v.brand || '') + ' ' + (v.model || '');
     const isCar = v.vehicle_type === 'car' || /car|รถยนต์|mazda|toyota|camry|civic|altis|benz|bmw|accord|nissan/i.test(combinedInfo);
     setNewVehicleType(isCar ? 'car' : 'motorcycle');
@@ -160,6 +479,25 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button 
+                type="button"
+                onClick={() => setSearch('')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontSize: 16
+                }}
+                title="Clear search"
+              >
+                <i className="ri-close-circle-fill"></i>
+              </button>
+            )}
           </div>
           <button className="btn btn-primary" onClick={handleOpenRegister}>
             <i className="ri-add-line"></i> Register Vehicle
@@ -178,14 +516,13 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
           <table className="table">
             <thead>
               <tr>
-                <th>User ID</th>
+                <th>Student ID</th>
                 <th>Name</th>
                 <th>Role</th>
                 <th>Vehicle Type</th>
                 <th>License Plate</th>
                 <th>Vehicle Details</th>
                 <th>Safety Score</th>
-                <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -200,22 +537,21 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
 
                 return (
                   <tr key={i}>
-                    <td style={{ fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{item.id}</td>
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
                     <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.owner}</td>
-                    <td style={{ color: '#475569', fontWeight: 600 }}>{item.role}</td>
-                    <td style={{ color: '#334155', fontWeight: 600 }}>{vTypeLabel}</td>
+                    <td style={{ color: '#0f172a', fontWeight: 600 }}>{item.role}</td>
+                    <td style={{ color: '#0f172a', fontWeight: 600 }}>{vTypeLabel}</td>
                     <td style={{ color: '#0f172a', fontWeight: 700 }}>{item.plate} {item.province && !item.plate.includes(item.province) ? item.province : ''}</td>
-                    <td style={{ color: '#334155', fontWeight: 500 }}>{detailsStr}</td>
-                    <td style={{ fontWeight: 900, color: item.score >= 90 ? '#059669' : '#d97706' }}>
+                    <td style={{ color: '#0f172a', fontWeight: 500 }}>{detailsStr}</td>
+                    <td style={{ fontWeight: 900, color: item.score <= 50 ? '#dc2626' : '#0f172a' }}>
                       {item.score}/100
                     </td>
-                    <td style={{ color: '#059669', fontWeight: 700 }}>Active</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-secondary btn-sm" style={{ color: '#2563eb', border: '1px solid #bfdbfe', background: '#eff6ff' }} onClick={() => handleOpenEdit(item)}>
+                        <button className="btn btn-secondary btn-sm" style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc' }} onClick={() => handleOpenEdit(item)}>
                           <i className="ri-edit-line"></i> Edit
                         </button>
-                        <button className="btn btn-secondary btn-sm" style={{ color: '#dc2626', border: '1px solid #fca5a5', background: '#fef2f2' }} onClick={() => setRevokeConfirmVehicle(item)}>
+                        <button className="btn btn-secondary btn-sm" style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc' }} onClick={() => setRevokeConfirmVehicle(item)}>
                           Revoke
                         </button>
                       </div>
@@ -278,12 +614,9 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Province</label>
-                  <input 
-                    type="text"
-                    placeholder="Bangkok"
+                  <SearchableProvinceSelect 
                     value={newProvince}
-                    onChange={e => setNewProvince(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
+                    onChange={setNewProvince}
                   />
                 </div>
               </div>
@@ -302,12 +635,10 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Vehicle Color</label>
-                  <input 
-                    type="text"
-                    placeholder="e.g. Black / White / Red"
+                  <SearchableColorSelect 
                     value={newColor}
-                    onChange={e => setNewColor(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
+                    onChange={setNewColor}
+                    vehicleType={newVehicleType}
                   />
                 </div>
               </div>

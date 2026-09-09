@@ -63,9 +63,8 @@ export default function VehicleRegistrationOnboardingScreen({
     }
 
     setIsSubmitting(true);
-    const icon = vehicleType === 'car' ? '🚗' : '🛵';
     const fullPlate = formatDisplayPlate(`${plateNumber.trim()} ${province}`);
-    const fullModel = `${icon} ${brand.trim()} ${model.trim()} (${color.trim()})`.trim();
+    const fullModel = `${brand.trim()} ${model.trim()} (${color.trim()})`.trim();
 
     const success = onRegisterVehicle(fullPlate, fullModel);
     setIsSubmitting(false);

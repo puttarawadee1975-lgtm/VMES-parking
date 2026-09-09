@@ -39,9 +39,8 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
       alert('Invalid License Plate Format.\nPlease enter a valid license plate (e.g. 1AB 1234, 3CD 5678).');
       return;
     }
-    const icon = vehicleType === 'car' ? '🚗' : '🛵';
     const fullPlate = formatDisplayPlate(`${newPlate.trim().toUpperCase()} ${newProvince}`);
-    const fullModel = `${icon} ${newBrand.trim()} ${newModel.trim()} (${newColor.trim()})`;
+    const fullModel = `${newBrand.trim()} ${newModel.trim()} (${newColor.trim()})`.trim();
 
     const success = onAdd(fullPlate, fullModel);
     if (success !== false) {

@@ -92,9 +92,8 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
       return;
     }
 
-    const icon = vehicleType === 'car' ? '🚗' : '🛵';
     const newFullPlate = formatDisplayPlate(`${plateNumber.trim()} ${province}`);
-    const newFullModel = `${icon} ${brand.trim()} ${modelName.trim()} (${color.trim()})`.trim();
+    const newFullModel = `${brand.trim()} ${modelName.trim()} (${color.trim()})`.trim();
 
     onSave(vehicle?.plate, newFullPlate, newFullModel);
     onClose();

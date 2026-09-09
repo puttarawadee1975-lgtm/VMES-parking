@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { getAnnouncements } from '../services/api';
+
 export default function NotificationsModal({
   visible,
   onClose,
@@ -16,8 +18,75 @@ export default function NotificationsModal({
 }) {
   const [selectedFilter, setSelectedFilter] = useState('ALL'); // 'ALL', 'SAFETY', 'ADMIN'
   const [expandedId, setExpandedId] = useState(null);
+  const [dynamicNotis, setDynamicNotis] = useState([]);
 
-  const notifications = [
+  React.useEffect(() => {
+    if (!visible) return;
+    const loadNotis = async () => {
+      try {
+        const anns = await getAnnouncements();
+        let notiList = [];
+        
+        // Add safety warning if student has penalty
+        if (currentUser?.safetyScore !== undefined && currentUser?.safetyScore < 100) {
+          notiList.push({
+            id: 'NOTI-SAFETY-01',
+            title: 'No Helmet Violation Detected',
+            type: 'warning',
+            category: 'Safety Alert',
+            message: `AI CCTV Gate 1 detected driving without a helmet on campus. Safety score: ${currentUser.safetyScore}/100.`,
+            date: currentUser.violationDate || 'Today',
+            location: 'Gate 1 (Main Entrance)',
+            plate: currentUser.plate || 'Campus Pass',
+            scoreDeducted: 10,
+            unread: true
+          });
+        }
+
+        if (Array.isArray(anns) && anns.length > 0) {
+          anns.forEach(ann => {
+            // Target audience filtering
+            let isTarget = true;
+            if (ann.target_audience === 'all_students' && currentUser?.role === 'staff') {
+              isTarget = false;
+            } else if (ann.target_audience === 'individual_student' || ann.target_audience === 'individual_staff') {
+              const targetStr = (ann.target_user || '').toLowerCase().trim();
+              const userEmail = (currentUser?.email || '').toLowerCase();
+              const userName = (currentUser?.name || '').toLowerCase();
+              const studentId = (currentUser?.studentId || '').toLowerCase();
+              
+              if (targetStr && !userEmail.includes(targetStr) && !userName.includes(targetStr) && !studentId.includes(targetStr)) {
+                isTarget = false;
+              }
+            }
+
+            if (isTarget) {
+              notiList.push({
+                id: `NOTI-${ann.id}`,
+                title: ann.title,
+                type: 'announcement',
+                category: 'Campus Notice',
+                message: ann.content,
+                date: ann.date || 'Today',
+                location: 'Campus Announcement',
+                plate: 'Official Notice',
+                scoreDeducted: 0,
+                unread: true
+              });
+            }
+          });
+        }
+
+        setDynamicNotis(notiList);
+      } catch (e) {
+        console.warn('Error loading notification announcements:', e);
+      }
+    };
+
+    loadNotis();
+  }, [visible, currentUser]);
+
+  const notifications = dynamicNotis.length > 0 ? dynamicNotis : [
     {
       id: 'NOTI-101',
       title: 'No Helmet Violation Detected',
@@ -69,7 +138,7 @@ export default function NotificationsModal({
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a', marginRight: 8 }}>Notifications</Text>
             <View style={{ backgroundColor: '#fee2e2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-              <Text style={{ color: '#dc2626', fontSize: 10, fontWeight: '800' }}>1 NEW</Text>
+              <Text style={{ color: '#dc2626', fontSize: 10, fontWeight: '800' }}>{notifications.length} NEW</Text>
             </View>
           </View>
           <TouchableOpacity onPress={onClose} style={{ padding: 8, backgroundColor: '#f1f5f9', borderRadius: 20 }}>

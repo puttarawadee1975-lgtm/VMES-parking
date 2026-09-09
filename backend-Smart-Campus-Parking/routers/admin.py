@@ -94,7 +94,9 @@ async def create_announcement(announcement: dict):
         "title": announcement.get("title", "Campus Notice"),
         "content": announcement.get("content", ""),
         "date": f"Today, {now_str}",
-        "priority": announcement.get("priority", "normal")
+        "priority": announcement.get("priority", "normal"),
+        "target_audience": announcement.get("target_audience", "all"),
+        "target_user": announcement.get("target_user", "")
     }
     MOCK_ANNOUNCEMENTS.insert(0, new_ann)
     return {"status": "success", "announcement": new_ann}
@@ -121,6 +123,10 @@ async def update_announcement(ann_id: str, payload: dict):
                 a["content"] = payload["content"]
             if "priority" in payload:
                 a["priority"] = payload["priority"]
+            if "target_audience" in payload:
+                a["target_audience"] = payload["target_audience"]
+            if "target_user" in payload:
+                a["target_user"] = payload["target_user"]
             return {"status": "success", "announcement": a}
     raise HTTPException(status_code=404, detail="Announcement not found")
 
