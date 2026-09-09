@@ -7,8 +7,8 @@ from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectio
 # Load environment variables
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME = os.getenv("DB_NAME", "Smart-Parking")
+MONGO_URI = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI") or "mongodb://localhost:27017"
+DB_NAME = os.getenv("DB_NAME") or os.getenv("MONGODB_DB") or "Smart-Parking"
 
 def get_database_client():
     """

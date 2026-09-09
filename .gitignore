@@ -51,3 +51,6 @@ __pycache__/
 # DB data
 backend-Smart-Campus-Parking/data/db/
 backend-Smart-Campus-Parking/data/*.log
+
+# Python virtual environments
+venv/
