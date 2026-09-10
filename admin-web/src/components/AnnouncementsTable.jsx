@@ -10,6 +10,12 @@ export default function AnnouncementsTable() {
   const [priority, setPriority] = useState('normal'); // 'normal' | 'high'
   const [targetAudience, setTargetAudience] = useState('all'); // 'all' | 'individual' | 'staff'
   const [targetUser, setTargetUser] = useState(''); // email/student_id for individual
+  const getDefaultExpireDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+  };
+  const [expireDate, setExpireDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -36,6 +42,7 @@ export default function AnnouncementsTable() {
     setPriority('normal');
     setTargetAudience('all');
     setTargetUser('');
+    setExpireDate(getDefaultExpireDate());
     setShowModal(true);
   };
 
@@ -46,40 +53,38 @@ export default function AnnouncementsTable() {
     setPriority(item.priority || 'normal');
     setTargetAudience(item.target_audience || 'all');
     setTargetUser(item.target_user || '');
+    setExpireDate(item.expire_date || getDefaultExpireDate());
     setShowModal(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !content.trim() || !expireDate) return;
 
     setSubmitting(true);
     try {
+      const payload = {
+        title: title.trim(),
+        content: content.trim(),
+        priority: priority,
+        target_audience: targetAudience,
+        target_user: targetAudience.startsWith('individual') ? targetUser.trim() : '',
+        expire_date: expireDate
+      };
+
       if (editingItem) {
         // Edit existing announcement
         await fetch(`http://localhost:8000/admin/announcements/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: title.trim(),
-            content: content.trim(),
-            priority: priority,
-            target_audience: targetAudience,
-            target_user: targetAudience.startsWith('individual') ? targetUser.trim() : ''
-          })
+          body: JSON.stringify(payload)
         });
       } else {
         // Post new announcement
         await fetch('http://localhost:8000/admin/announcements', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: title.trim(),
-            content: content.trim(),
-            priority: priority,
-            target_audience: targetAudience,
-            target_user: targetAudience.startsWith('individual') ? targetUser.trim() : ''
-          })
+          body: JSON.stringify(payload)
         });
       }
       setShowModal(false);
@@ -88,6 +93,7 @@ export default function AnnouncementsTable() {
       setPriority('normal');
       setTargetAudience('all');
       setTargetUser('');
+      setExpireDate('');
       setEditingItem(null);
       fetchAnnouncements();
     } catch (err) {
@@ -141,6 +147,7 @@ export default function AnnouncementsTable() {
                 <th>Announcement Content</th>
                 <th>Target Audience</th>
                 <th>Date Posted</th>
+                <th>Auto-Expire Date</th>
                 <th>Priority</th>
                 <th>Action</th>
               </tr>
@@ -163,6 +170,9 @@ export default function AnnouncementsTable() {
                       : 'All Campus Users'}
                   </td>
                   <td style={{ color: '#64748b', fontSize: 12 }}>{item.date}</td>
+                  <td style={{ color: '#d97706', fontWeight: 700, fontSize: 12 }}>
+                    {item.expire_date ? item.expire_date : '-'}
+                  </td>
                   <td>
                     <span className={`badge ${item.priority === 'high' ? 'badge-danger' : 'badge-live'}`}>
                       {item.priority === 'high' ? 'HIGH PRIORITY' : 'NORMAL'}
@@ -271,6 +281,22 @@ export default function AnnouncementsTable() {
                   />
                 </div>
               )}
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
+                  Auto-Expire Date <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input 
+                  type="date"
+                  required
+                  value={expireDate}
+                  onChange={e => setExpireDate(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
+                />
+                <span style={{ fontSize: 11, color: '#64748b', marginTop: 2, display: 'block' }}>
+                  Notice will automatically expire and unpublish after this date.
+                </span>
+              </div>
 
               <div style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Priority Level</label>

@@ -27,7 +27,19 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
   useEffect(() => {
     if (vehicle) {
       // 1. Determine vehicle type
-      const isCar = (vehicle.model || '').includes('🚗');
+      const modelStr = vehicle.model || '';
+      const isCarEmoji = modelStr.includes('🚗');
+      const isMotorcycleEmoji = modelStr.includes('🛵') || modelStr.includes('🏍️');
+      
+      let isCar = false;
+      if (isCarEmoji) {
+        isCar = true;
+      } else if (isMotorcycleEmoji) {
+        isCar = false;
+      } else {
+        const lower = modelStr.toLowerCase();
+        isCar = lower.includes('car') || lower.includes('civic') || lower.includes('camry') || lower.includes('mazda') || lower.includes('toyota') || lower.includes('benz') || lower.includes('bmw') || lower.includes('yaris') || lower.includes('accord');
+      }
       setVehicleType(isCar ? 'car' : 'motorcycle');
 
       // 2. Parse plate number and province
@@ -42,7 +54,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
       }
 
       // 3. Parse brand, model, and color from vehicle.model e.g. "🛵 Honda PCX 160 (Black)"
-      const cleanModelStr = (vehicle.model || '').replace(/^[🛵🚗?❓\s]+/, '').trim();
+      const cleanModelStr = (vehicle.model || '').replace(/^[🛵🏍️🚗?❓\s]+/, '').trim();
       
       // Extract color inside parentheses e.g. "(Black)"
       const colorMatch = cleanModelStr.match(/\(([^)]+)\)$/);
@@ -92,8 +104,9 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
       return;
     }
 
+    const icon = vehicleType === 'car' ? '🚗' : '🛵';
     const newFullPlate = formatDisplayPlate(`${plateNumber.trim()} ${province}`);
-    const newFullModel = `${brand.trim()} ${modelName.trim()} (${color.trim()})`.trim();
+    const newFullModel = `${icon} ${brand.trim()} ${modelName.trim()} (${color.trim()})`.trim();
 
     onSave(vehicle?.plate, newFullPlate, newFullModel);
     onClose();

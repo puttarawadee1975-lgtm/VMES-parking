@@ -37,14 +37,32 @@ async def ingest_detection_event(payload: DetectionLogCreate):
             matched_user = user_doc
             matched_user_name = f"{user_doc.get('name')} ({user_doc.get('email')})"
             
-            # Deduct driving score if violation occurred
+            # Deduct driving score if violation occurred (MAXIMUM ONCE PER DAY PER USER/VEHICLE)
             if is_violation:
-                current_score = user_doc.get("driving_score", 100)
-                new_score = max(0, current_score - 10)
-                users_collection.update_one(
-                    {"_id": user_doc["_id"]},
-                    {"$set": {"driving_score": new_score}}
-                )
+                today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+                
+                already_deducted_today = False
+                if detection_logs_collection is not None:
+                    existing_log = detection_logs_collection.find_one({
+                        "$or": [
+                            {"license_plate": payload.license_plate},
+                            {"matched_email": user_doc.get("email")}
+                        ],
+                        "violation": True,
+                        "timestamp": {"$gte": today_start, "$lte": today_end}
+                    })
+                    if existing_log:
+                        already_deducted_today = True
+
+                # Deduct points ONLY on the 1st violation detection of the day
+                if not already_deducted_today:
+                    current_score = user_doc.get("driving_score", 100)
+                    new_score = max(0, current_score - 10)
+                    users_collection.update_one(
+                        {"_id": user_doc["_id"]},
+                        {"$set": {"driving_score": new_score}}
+                    )
 
     # Insert into detection_logs collection
     log_doc = {
@@ -107,12 +125,18 @@ async def ingest_detection_event(payload: DetectionLogCreate):
 IN_MEMORY_DETECTIONS = []
 
 @router.get("", response_model=List[DetectionLogResponse])
-async def get_all_detections():
+async def get_all_detections(days: int = 30):
     """
-    Get recent AI detection logs for Admin Web Inspection Feed.
+    Get AI detection logs within the 30-day retention window for App & Admin Web.
     """
+    from datetime import timedelta
     if detection_logs_collection is not None:
-        docs = list(detection_logs_collection.find().sort("timestamp", -1).limit(50))
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        docs = list(detection_logs_collection.find({"timestamp": {"$gte": cutoff}}).sort("timestamp", -1).limit(200))
+        if not docs:
+            # Fallback to recent logs if database has less data
+            docs = list(detection_logs_collection.find().sort("timestamp", -1).limit(200))
+
         if docs:
             result = []
             for doc in docs:

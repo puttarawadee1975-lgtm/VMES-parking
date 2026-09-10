@@ -485,7 +485,7 @@ function MainApp() {
           insets={insets}
           screenWidth={screenWidth}
         />
-      ) : (!currentUser?.vehicles || currentUser.vehicles.length === 0) ? (
+      ) : (!currentUser?.vehicles || currentUser.vehicles.length === 0) && currentUser?.role !== 'guest' ? (
         /* 1.5 Mandatory Vehicle Registration Onboarding Screen */
         <VehicleRegistrationOnboardingScreen
           currentUser={currentUser}
@@ -503,15 +503,7 @@ function MainApp() {
             onOpenNotifications={() => setShowNotificationsModal(true)}
           />
 
-          {/* Guest Role Notification Banner */}
-          {currentUser?.role === 'guest' && (
-            <View className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex-row items-center">
-              <Ionicons name="lock-closed" size={16} color="#d97706" />
-              <Text className="text-amber-800 text-[11px] ml-2 flex-1">
-                Guest Mode: Vehicle plates hidden for privacy.
-              </Text>
-            </View>
-          )}
+
 
           {/* Active Tab Screen Content */}
           <ScrollView

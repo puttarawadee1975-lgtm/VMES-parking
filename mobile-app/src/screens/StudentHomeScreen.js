@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import ParkingLocationCard from '../components/ParkingLocationCard';
 import ParkingDetailsModal from '../components/ParkingDetailsModal';
 import DrivingScoreModal from '../components/DrivingScoreModal';
+import AnnouncementDetailModal from '../components/AnnouncementDetailModal';
+import AllAnnouncementsModal from '../components/AllAnnouncementsModal';
 import { getParkingStatus, getAnnouncements } from '../services/api';
 
 export default function StudentHomeScreen({
@@ -15,25 +17,10 @@ export default function StudentHomeScreen({
 }) {
   const [isDetailsModalVisible, setDetailsModalVisible] = useState(false);
   const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [showAllAnnouncementsModal, setShowAllAnnouncementsModal] = useState(false);
 
   const isGuest = currentUser?.role === 'guest';
-  const hasPenalty = currentUser?.safetyScore !== null && currentUser?.safetyScore < 100;
-  
-  // Date calculation for daily violation banner expiration
-  const todayDateObj = new Date();
-  const todayDateString = todayDateObj.toDateString();
-  const formattedTodayDate = todayDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  
-  // Check if violation date matches today (defaults to today if date not specified)
-  const violationDateObj = currentUser?.violationDate ? new Date(currentUser.violationDate) : new Date();
-  const isViolationToday = violationDateObj.toDateString() === todayDateString;
-  const violationDateDisplay = isViolationToday 
-    ? `Today, ${formattedTodayDate}`
-    : violationDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-
-  // Safety violation banner only shows if student has penalty AND violation occurred TODAY
-  const showViolationBanner = hasPenalty && !isGuest && isViolationToday;
-
   const [parkingZones, setParkingZones] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +41,7 @@ export default function StudentHomeScreen({
           const userEmail = (currentUser?.email || '').toLowerCase();
           const userName = (currentUser?.name || '').toLowerCase();
           const studentId = (currentUser?.studentId || '').toLowerCase();
-          
+
           if (targetStr && !userEmail.includes(targetStr) && !userName.includes(targetStr) && !studentId.includes(targetStr)) {
             return false;
           }
@@ -105,27 +92,27 @@ export default function StudentHomeScreen({
             return (
               <View className="bg-white border border-slate-200 py-8 px-4 rounded-3xl relative shadow-sm items-center justify-center">
                 {/* Refresh Icon (Top Right of Card) */}
-                <TouchableOpacity 
-                  onPress={fetchParkingData} 
+                <TouchableOpacity
+                  onPress={fetchParkingData}
                   disabled={loading}
                   className="absolute top-4 right-4 bg-slate-50 p-2 rounded-full border border-slate-100"
                 >
                   <Ionicons name="refresh" size={20} color={loading ? "#94a3b8" : "#3b82f6"} />
                 </TouchableOpacity>
-                
+
                 {/* Title */}
                 <Text className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-1">
-                  VEMS Building - Total Available
+                  VMES Building
                 </Text>
-                
+
                 {/* Huge Centered Number */}
-                <Text 
-                  style={{ fontSize: 72, lineHeight: 76 }} 
+                <Text
+                  style={{ fontSize: 72, lineHeight: 76 }}
                   className={`font-black tracking-tighter ${totalAvailable > 0 ? 'text-emerald-500' : 'text-red-500'}`}
                 >
                   {totalAvailable}
                 </Text>
-                
+
                 {/* Subtext */}
                 <Text className={`text-sm font-bold uppercase tracking-widest mt-2 ${totalAvailable > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {totalAvailable > 0 ? 'Total Spots Available' : 'Parking Full'}
@@ -141,37 +128,6 @@ export default function StudentHomeScreen({
         )}
       </View>
 
-      {/* 2. Penalty Notification Banner (Only shows if safetyScore < 100 AND violation is from TODAY) */}
-      {showViolationBanner && (
-        <TouchableOpacity 
-          onPress={() => setShowDrivingScoreModal(true)}
-          activeOpacity={0.85}
-          className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm flex-row items-start mt-2"
-        >
-          <Ionicons name="warning" size={24} color="#dc2626" style={{ marginTop: 2, marginRight: 12 }} />
-          <View className="flex-1">
-            <View className="flex-row justify-between items-center mb-1">
-              <Text className="text-red-800 font-bold text-sm">
-                Safety Violation Detected
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color="#dc2626" />
-            </View>
-            
-            {/* Date Badge */}
-            <View className="flex-row items-center mb-1.5 bg-red-100/80 self-start px-2 py-0.5 rounded-md border border-red-200">
-              <Ionicons name="calendar-outline" size={12} color="#b91c1c" style={{ marginRight: 4 }} />
-              <Text className="text-red-800 text-[11px] font-bold">
-                Date: {violationDateDisplay}
-              </Text>
-            </View>
-
-            <Text className="text-red-700 text-xs leading-relaxed">
-              Your driving safety score is {currentUser.safetyScore}/100. Points were deducted due to a recent "No Helmet" detection. Click to view score details.
-            </Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
       {/* 3. Where did you park? (Parking Location QR Card) */}
       <View className="mt-2">
         <ParkingLocationCard
@@ -183,45 +139,71 @@ export default function StudentHomeScreen({
 
       {/* 4. Announcements Section */}
       <View className="mt-4 space-y-2">
-        <Text className="text-xl font-bold text-slate-900 px-1">Announcement</Text>
-        
+        <View className="flex-row justify-between items-center px-1 mb-1">
+          <Text className="text-xl font-bold text-slate-900">Announcement</Text>
+          {announcements.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedAnnouncement(null);
+                setShowAllAnnouncementsModal(true);
+              }}
+              activeOpacity={0.6}
+              className="flex-row items-center py-1 px-1"
+            >
+              <Text className="text-slate-500 text-xs font-semibold mr-0.5">See All</Text>
+              <Ionicons name="chevron-forward" size={14} color="#64748b" />
+            </TouchableOpacity>
+          )}
+        </View>
+
         <View className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
-          <View className="flex-row items-center justify-between pb-2 border-b border-slate-100">
-            <View className="flex-row items-center">
-              <View className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 items-center justify-center mr-2.5">
-                <Ionicons name="megaphone" size={16} color="#d97706" />
-              </View>
-              <View>
-                <Text className="text-slate-900 font-bold text-sm">Official Notices</Text>
-                <Text className="text-slate-400 text-[10px]">Campus updates configured</Text>
-              </View>
-            </View>
-          </View>
 
           {announcements.length === 0 ? (
-            <Text className="text-slate-400 text-xs py-2 text-center">No announcements available</Text>
+            <Text className="text-slate-400 text-xs py-4 text-center font-medium">No announcements available at this time</Text>
           ) : (
-            announcements.map((ann) => (
-              <View key={ann.id} className="bg-slate-50 border border-slate-200/70 rounded-2xl p-3.5 space-y-1.5 mt-2">
-                <View className="flex-row justify-between items-center">
-                  <View className="flex-row items-center flex-1 mr-2">
-                    {ann.categoryLabel && (
-                      <View style={{ backgroundColor: ann.badgeBg || '#eff6ff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginRight: 8 }}>
-                        <Text style={{ color: ann.badgeColor || '#2563eb', fontSize: 9, fontWeight: '800', textTransform: 'uppercase' }}>
-                          {ann.categoryLabel}
-                        </Text>
-                      </View>
-                    )}
-                    <Text className="text-slate-900 font-bold text-xs flex-1" numberOfLines={1}>
+            <>
+              {announcements.slice(0, 2).map((ann) => (
+                <TouchableOpacity
+                  key={ann.id}
+                  onPress={() => {
+                    setSelectedAnnouncement(ann);
+                    setShowAllAnnouncementsModal(true);
+                  }}
+                  activeOpacity={0.75}
+                  className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 mt-2 active:bg-blue-50/50 shadow-sm"
+                >
+                  <View className="flex-row justify-between items-center mb-2">
+                    <Text className="text-slate-900 font-extrabold text-sm flex-1 mr-2" numberOfLines={1}>
                       {ann.title}
                     </Text>
+                    <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
                   </View>
-                  <Text className="text-slate-400 text-[10px]">{ann.date}</Text>
-                </View>
 
-                <Text className="text-slate-600 text-xs leading-relaxed mt-1">{ann.content}</Text>
-              </View>
-            ))
+                  <Text className="text-slate-600 text-xs leading-relaxed" numberOfLines={2}>
+                    {ann.content}
+                  </Text>
+
+                  <View className="flex-row justify-between items-center mt-3 pt-2 border-t border-slate-200/50">
+                    <Text className="text-slate-400 text-[10px] font-medium">{ann.date || 'Today'}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+
+              {announcements.length > 2 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedAnnouncement(null);
+                    setShowAllAnnouncementsModal(true);
+                  }}
+                  activeOpacity={0.7}
+                  className="pt-2.5 items-center justify-center border-t border-slate-100/80 mt-1"
+                >
+                  <Text className="text-slate-500 font-semibold text-xs">
+                    View All Announcements
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </View>
@@ -242,6 +224,17 @@ export default function StudentHomeScreen({
         visible={showDrivingScoreModal}
         onClose={() => setShowDrivingScoreModal(false)}
         currentUser={currentUser}
+      />
+
+      {/* All Announcements Modal (Handles both List view & Detail view smoothly with Back button) */}
+      <AllAnnouncementsModal
+        visible={showAllAnnouncementsModal}
+        onClose={() => {
+          setShowAllAnnouncementsModal(false);
+          setSelectedAnnouncement(null);
+        }}
+        announcements={announcements}
+        initialAnnouncement={selectedAnnouncement}
       />
     </View>
   );

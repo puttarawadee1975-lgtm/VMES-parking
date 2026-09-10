@@ -17,28 +17,26 @@ export default function Header({ insets, currentUser, onLogout, onOpenNotificati
           </View>
           <View>
             <Text className="text-slate-900 font-black text-base">AU Parking</Text>
-            <View className="flex-row items-center">
-              <View className="w-2 h-2 rounded-full bg-emerald-500 mr-1" />
-              <Text className="text-emerald-600 text-[10px] font-bold">System Online</Text>
-            </View>
           </View>
         </View>
 
         <View className="flex-row items-center">
-          {/* Notification Button */}
-          <TouchableOpacity
-            onPress={() => {
-              if (onOpenNotifications) onOpenNotifications();
-            }}
-            activeOpacity={0.6}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-9 h-9 bg-slate-100 rounded-full border border-slate-200 items-center justify-center mr-2 relative"
-          >
-            <View pointerEvents="none" className="items-center justify-center">
-              <Ionicons name="notifications-outline" size={19} color="#334155" />
-              <View className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
-            </View>
-          </TouchableOpacity>
+          {/* Notification Button (Hidden for Guest Users) */}
+          {currentUser?.role !== 'guest' && (
+            <TouchableOpacity
+              onPress={() => {
+                if (onOpenNotifications) onOpenNotifications();
+              }}
+              activeOpacity={0.6}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              className="w-9 h-9 bg-slate-100 rounded-full border border-slate-200 items-center justify-center mr-2 relative"
+            >
+              <View pointerEvents="none" className="items-center justify-center">
+                <Ionicons name="notifications-outline" size={19} color="#334155" />
+                <View className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
+              </View>
+            </TouchableOpacity>
+          )}
 
           {/* User Name Tag */}
           <View className="bg-slate-100 py-1.5 px-2.5 sm:px-3 rounded-full border border-slate-200 flex-row items-center max-w-[150px]">

@@ -52,7 +52,7 @@ export default function AdminHomeScreen({
         <View className="flex-row justify-between items-center p-3 bg-slate-900">
           <View className="flex-row items-center flex-1 pr-2">
             <View className="w-2.5 h-2.5 bg-red-500 rounded-full mr-2" />
-            <Text className="text-white font-bold text-xs" numberOfLines={1}>CCTV Gate 1 (Main Entrance)</Text>
+            <Text className="text-white font-bold text-xs" numberOfLines={1}>CCTV 1 (VMES Entry Gate)</Text>
           </View>
           <Text className="text-blue-200 text-[10px] bg-blue-900/60 py-0.5 px-2 rounded-md font-bold">AI Active</Text>
         </View>

@@ -26,32 +26,22 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
     try {
       const data = await getGateDetectionsHistory();
       if (Array.isArray(data) && data.length > 0) {
-        const transformed = data.map((item, idx) => {
-          const isV = item.violation || false;
-          const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
-          const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-          const dateStr = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
-          
-          if (isV) {
+        const transformed = data
+          .filter(item => item.violation)
+          .map((item, idx) => {
+            const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
+            const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+            
             return {
               id: item.id || idx,
               date: `${dateStr}, ${timeStr}`,
               type: 'violation',
               title: 'No Helmet Detected',
-              points: '-10',
-              gate: item.gate_type || 'Gate 1 (Main Entrance)'
+              points: '-10 pts',
+              gate: item.gate_type === 'EXIT' ? 'VMES Exit Gate' : (item.gate_type || 'VMES Entry Gate')
             };
-          } else {
-            return {
-              id: item.id || idx,
-              date: `${dateStr}, ${timeStr}`,
-              type: 'reward',
-              title: item.vehicle_type === 'car' ? 'Car Gate Access (Pass)' : 'Safe Driving (Helmet Worn)',
-              points: '+0',
-              gate: item.gate_type || 'Gate 1 (Main Entrance)'
-            };
-          }
-        });
+          });
         setLiveHistory(transformed);
       }
     } catch (e) {
@@ -64,7 +54,6 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
   if (!visible) return null;
 
   const score = currentUser?.safetyScore ?? currentUser?.driving_score ?? 100;
-  const isPerfect = score === 100;
   const isGood = score >= 80 && score < 100;
   const isWarning = score < 80;
 
@@ -88,11 +77,11 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
     statusDesc = 'Your score is low. Further violations may result in restricted access.';
   }
 
-  // Fallback History if offline
-  const defaultHistory = [
-    { id: 1, date: 'Today, 08:24 AM', type: 'violation', title: 'No Helmet Detected', points: '-10', gate: 'Gate 1 (Main Entrance)' },
-    { id: 2, date: 'Yesterday, 09:15 AM', type: 'reward', title: 'Safe Driving (Helmet Worn)', points: '+0', gate: 'Gate 2 (East Gate)' }
-  ];
+  const userHasDeduction = score < 100;
+
+  const defaultHistory = userHasDeduction ? [
+    { id: 'default-violation', date: 'Today, 10:10 AM', type: 'violation', title: 'No Helmet Detected', points: '-10 pts', gate: 'VMES Entry Gate' }
+  ] : [];
 
   const history = liveHistory.length > 0 ? liveHistory : defaultHistory;
 
@@ -100,7 +89,7 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
     <Modal
       visible={Boolean(visible)}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="overFullScreen"
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
@@ -171,82 +160,106 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
               </Text>
             </View>
 
-            {/* Policy Info */}
+            {/* Short & Clean Safety Notice Banner */}
             <View style={{
               backgroundColor: '#eff6ff',
               borderWidth: 1,
               borderColor: '#bfdbfe',
               borderRadius: 16,
-              padding: 16,
-              flexDirection: 'row'
+              padding: 14,
+              flexDirection: 'row',
+              alignItems: 'center'
             }}>
-              <Ionicons name="information-circle" size={20} color="#2563eb" style={{ marginRight: 10, marginTop: 2 }} />
+              <Ionicons name="shield-checkmark" size={22} color="#2563eb" style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1d4ed8', marginBottom: 4 }}>
-                  How is the score calculated?
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1d4ed8', marginBottom: 2 }}>
+                  Helmet Safety Policy
                 </Text>
-                <Text style={{ fontSize: 12, color: '#1e3a8a', lineHeight: 18 }}>
-                  All users start with 100 points. Points are deducted for safety violations (e.g. -10 for not wearing a helmet). A consistently low score may restrict campus parking privileges.
+                <Text style={{ fontSize: 12, color: '#1e3a8a', lineHeight: 17 }}>
+                  Please wear a helmet on campus. Riding without a helmet deducts <Text style={{ fontWeight: '700', color: '#dc2626' }}>10 points</Text>.
                 </Text>
               </View>
             </View>
 
-            {/* History List */}
-            <View>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a', marginTop: 8, marginBottom: 12 }}>
-                Recent Activity
-              </Text>
+            {/* Penalty History List (Only Deductions) */}
+            <View style={{ marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
+                  Penalty History
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748b' }}>
+                  {history.length} {history.length === 1 ? 'Violation' : 'Violations'}
+                </Text>
+              </View>
 
-              {history.map((item) => (
-                <View key={item.id} style={{
-                  flexDirection: 'row',
+              {history.length === 0 ? (
+                <View style={{
                   backgroundColor: '#ffffff',
-                  padding: 16,
-                  borderRadius: 16,
+                  borderRadius: 18,
+                  padding: 20,
+                  alignItems: 'center',
                   borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                  marginBottom: 12,
-                  alignItems: 'center'
+                  borderColor: '#e2e8f0'
                 }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: item.type === 'violation' ? '#fef2f2' : '#ecfdf5',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 12
-                  }}>
-                    <Ionicons 
-                      name={item.type === 'violation' ? "warning" : "checkmark-circle"} 
-                      size={20} 
-                      color={item.type === 'violation' ? "#ef4444" : "#10b981"} 
-                    />
-                  </View>
-
-                    <View style={{ flex: 1, marginRight: 8 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>{item.title}</Text>
-                      <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{item.date} • {item.gate}</Text>
+                  <Ionicons name="checkmark-circle-outline" size={36} color="#10b981" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginTop: 8 }}>
+                    Clean Driving Record
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                    No safety score deductions recorded
+                  </Text>
+                </View>
+              ) : (
+                history.map((item) => (
+                  <View
+                    key={item.id}
+                    style={{
+                      flexDirection: 'row',
+                      backgroundColor: '#ffffff',
+                      padding: 14,
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: '#fecaca',
+                      marginBottom: 10,
+                      alignItems: 'center'
+                    }}
+                  >
+                    <View style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 19,
+                      backgroundColor: '#fef2f2',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 12
+                    }}>
+                      <Ionicons name="warning-outline" size={20} color="#ef4444" />
                     </View>
 
-                  <View style={{
-                    backgroundColor: item.type === 'violation' ? '#fef2f2' : '#f8fafc',
-                    paddingHorizontal: 10,
-                    paddingVertical: 6,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: item.type === 'violation' ? '#fecaca' : '#e2e8f0'
-                  }}>
-                    <Text style={{ 
-                      fontSize: 14, 
-                      fontWeight: '800', 
-                      color: item.type === 'violation' ? '#ef4444' : '#64748b' 
+                    <View style={{ flex: 1, marginRight: 8 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>
+                        {item.title}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                        {item.date} • {item.gate}
+                      </Text>
+                    </View>
+
+                    <View style={{
+                      backgroundColor: '#fef2f2',
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#fecaca'
                     }}>
-                      {item.points}
-                    </Text>
+                      <Text style={{ fontSize: 13, fontWeight: '900', color: '#dc2626' }}>
+                        {item.points}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))}
+                ))
+              )}
             </View>
 
           </View>

@@ -40,7 +40,8 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
       return;
     }
     const fullPlate = formatDisplayPlate(`${newPlate.trim().toUpperCase()} ${newProvince}`);
-    const fullModel = `${newBrand.trim()} ${newModel.trim()} (${newColor.trim()})`.trim();
+    const icon = vehicleType === 'car' ? '🚗' : '🛵';
+    const fullModel = `${icon} ${newBrand.trim()} ${newModel.trim()} (${newColor.trim()})`.trim();
 
     const success = onAdd(fullPlate, fullModel);
     if (success !== false) {

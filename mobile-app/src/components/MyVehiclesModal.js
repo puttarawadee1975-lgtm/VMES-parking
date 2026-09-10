@@ -7,7 +7,7 @@ import {
   ScrollView,
   SafeAreaView
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { formatDisplayPlate } from '../utils/provinceHelper';
 import EditVehicleModal from './EditVehicleModal';
 
@@ -187,16 +187,16 @@ export default function MyVehiclesModal({
                       justifyContent: 'center',
                       marginRight: 12
                     }}>
-                      <Ionicons
-                        name={isCar ? "car-outline" : "bicycle-outline"}
-                        size={22}
-                        color="#64748b"
-                      />
+                      {isCar ? (
+                        <Ionicons name="car-outline" size={22} color="#64748b" />
+                      ) : (
+                        <FontAwesome5 name="motorcycle" size={18} color="#64748b" />
+                      )}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>{formatDisplayPlate(v.plate)}</Text>
                       <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                        {v.model?.replace(/^[🛵🚗?❓\s]+/, '') || 'Registered Vehicle'}
+                        {v.model?.replace(/^[🛵🏍️🚗?❓\s]+/, '') || 'Registered Vehicle'}
                       </Text>
                     </View>
                   </View>

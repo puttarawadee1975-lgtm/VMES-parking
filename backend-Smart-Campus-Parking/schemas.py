@@ -43,7 +43,7 @@ class DrivingScoreLogCreate(BaseModel):
     points_changed: int
     new_score: int
     reason: str
-    gate_name: Optional[str] = "Gate 1 (Main Entrance)"
+    gate_name: Optional[str] = "VMES Entry Gate"
     image_url: Optional[str] = None
     timestamp: Optional[datetime] = None
 

@@ -46,8 +46,8 @@ export default function ParkingLocationCard({
     <View className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm mb-4">
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center flex-1 mr-3">
-          <View className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200 items-center justify-center mr-3">
-            <Ionicons name="qr-code" size={22} color="#2563eb" />
+          <View className="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-200/80 items-center justify-center mr-3">
+            <Ionicons name="qr-code-outline" size={20} color="#64748b" />
           </View>
           <View className="flex-1">
             <Text className="text-slate-900 font-bold text-sm">Where did you park?</Text>

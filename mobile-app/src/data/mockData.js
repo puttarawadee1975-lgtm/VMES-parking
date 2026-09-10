@@ -6,7 +6,7 @@ export const DEMO_ACCOUNTS = {
     studentId: '65070042',
     email: '65070042@student.university.ac.th',
     vehicles: [
-      { plate: 'กข 3363 อำนาจเจริญ', model: 'Mazda Mazda2 (Red)' }
+      { plate: 'กข 3363 อำนาจเจริญ', model: '🚗 Mazda Mazda2 (Red)' }
     ],
     safetyScore: 98
   },
@@ -16,7 +16,7 @@ export const DEMO_ACCOUNTS = {
     studentId: '64010589',
     email: 'thanawat.p@student.university.ac.th',
     vehicles: [
-      { plate: '2EF 5519 Chiang Mai', model: 'Yamaha Aerox (Blue)' }
+      { plate: '2EF 5519 Chiang Mai', model: '🛵 Yamaha Aerox (Blue)' }
     ],
     safetyScore: 92
   },

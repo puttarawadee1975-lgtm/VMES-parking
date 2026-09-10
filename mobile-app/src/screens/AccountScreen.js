@@ -119,8 +119,8 @@ export default function AccountScreen({
         <View className="mt-2 space-y-3">
           <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">Overview</Text>
           <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={() => setShowDrivingScoreModal(true)}
               activeOpacity={0.7}
               className="flex-row items-center justify-between p-4 border-b border-slate-100 active:bg-slate-50"
@@ -137,7 +137,7 @@ export default function AccountScreen({
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowMyVehiclesModal(true)}
               activeOpacity={0.7}
               className="flex-row items-center justify-between p-4 active:bg-slate-50"
@@ -153,53 +153,55 @@ export default function AccountScreen({
                 <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
               </View>
             </TouchableOpacity>
-            
+
           </View>
         </View>
       )}
 
       {/* My Activity Section */}
-      {!isGuest && (
-        <View className="mt-2 space-y-3">
-          <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">My Activity</Text>
-          <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-            
+      <View className="mt-2 space-y-3">
+        <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">My Activity</Text>
+        <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+
+          {!isGuest && (
             <TouchableOpacity
               onPress={() => setShowGateHistoryModal(true)}
               activeOpacity={0.7}
               className="flex-row items-center justify-between p-4 border-b border-slate-100 active:bg-slate-50"
             >
-              <View className="flex-row items-center">
-                <View className="w-10 h-10 rounded-full bg-indigo-100 items-center justify-center mr-3">
-                  <Ionicons name="time-outline" size={20} color="#4f46e5" />
+              <View className="flex-row items-center flex-1 mr-2">
+                <View className="w-10 h-10 rounded-full bg-purple-100 items-center justify-center mr-3">
+                  <Ionicons name="time-outline" size={20} color="#7c3aed" />
                 </View>
                 <Text className="text-slate-700 font-semibold text-sm">Gate History & Violations</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
             </TouchableOpacity>
+          )}
 
-            <TouchableOpacity
-              onPress={() => setShowDetailsModal(true)}
-              activeOpacity={0.7}
-              className="p-4 flex-row items-center justify-between border-b border-slate-100 active:bg-slate-50"
-            >
-              <View className="flex-row items-center flex-1 mr-2">
-                <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center mr-3">
-                  <Ionicons name="location-outline" size={20} color="#d97706" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-slate-700 font-semibold text-sm">Saved Parking Spot</Text>
-                  <Text className="text-slate-400 text-xs mt-0.5" numberOfLines={1}>
-                    {parkedSpot ? `${parkedSpot.building} (${parkedSpot.pillar})` : 'Not saved yet • Click to view'}
-                  </Text>
-                </View>
+          <TouchableOpacity
+            onPress={() => setShowDetailsModal(true)}
+            activeOpacity={0.7}
+            className="p-4 flex-row items-center justify-between border-b border-slate-100 active:bg-slate-50"
+          >
+            <View className="flex-row items-center flex-1 mr-2">
+              <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center mr-3">
+                <Ionicons name="location-outline" size={20} color="#d97706" />
               </View>
-              <View className="flex-row items-center">
-                <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+              <View className="flex-1">
+                <Text className="text-slate-700 font-semibold text-sm">Saved Parking Spot</Text>
+                <Text className="text-slate-400 text-xs mt-0.5" numberOfLines={1}>
+                  {parkedSpot ? `${parkedSpot.building} (${parkedSpot.pillar})` : 'Not saved yet • Click to view'}
+                </Text>
               </View>
-            </TouchableOpacity>
+            </View>
+            <View className="flex-row items-center">
+              <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
+            </View>
+          </TouchableOpacity>
 
-            {/* Notifications Row */}
+          {/* Notifications Row */}
+          {!isGuest && (
             <TouchableOpacity
               onPress={onOpenNotifications}
               activeOpacity={0.7}
@@ -213,50 +215,49 @@ export default function AccountScreen({
               </View>
               <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
             </TouchableOpacity>
-
-            {/* Driving Score Detail Modal */}
-            <DrivingScoreModal
-              visible={showDrivingScoreModal}
-              onClose={() => setShowDrivingScoreModal(false)}
-              currentUser={currentUser}
-            />
-
-            {/* My Vehicles List Modal */}
-            <MyVehiclesModal
-              visible={showMyVehiclesModal}
-              onClose={() => setShowMyVehiclesModal(false)}
-              currentUser={currentUser}
-              onOpenAddVehicle={() => {
-                setShowMyVehiclesModal(false);
-                if (onOpenAddVehicleModal) onOpenAddVehicleModal();
-              }}
-              onEditVehicle={onEditVehicle}
-            />
-
-            {/* Gate History & Violations Modal */}
-            <GateHistoryModal
-              visible={showGateHistoryModal}
-              onClose={() => setShowGateHistoryModal(false)}
-              currentUser={currentUser}
-            />
-
-            {/* Modal Detail Window */}
-            <ParkingDetailsModal
-              visible={showDetailsModal}
-              onClose={() => setShowDetailsModal(false)}
-              parkedSpot={parkedSpot}
-              onOpenQRScanner={onOpenQRScanner}
-            />
-            
-          </View>
+          )}
         </View>
-      )}
+
+        {/* Driving Score Detail Modal */}
+        <DrivingScoreModal
+          visible={showDrivingScoreModal}
+          onClose={() => setShowDrivingScoreModal(false)}
+          currentUser={currentUser}
+        />
+
+        {/* My Vehicles List Modal */}
+        <MyVehiclesModal
+          visible={showMyVehiclesModal}
+          onClose={() => setShowMyVehiclesModal(false)}
+          currentUser={currentUser}
+          onOpenAddVehicle={() => {
+            setShowMyVehiclesModal(false);
+            if (onOpenAddVehicleModal) onOpenAddVehicleModal();
+          }}
+          onEditVehicle={onEditVehicle}
+        />
+
+        {/* Gate History & Violations Modal */}
+        <GateHistoryModal
+          visible={showGateHistoryModal}
+          onClose={() => setShowGateHistoryModal(false)}
+          currentUser={currentUser}
+        />
+
+        {/* Modal Detail Window */}
+        <ParkingDetailsModal
+          visible={showDetailsModal}
+          onClose={() => setShowDetailsModal(false)}
+          parkedSpot={parkedSpot}
+          onOpenQRScanner={onOpenQRScanner}
+        />
+      </View>
 
       {/* App Settings Section */}
       <View className="mt-2 space-y-3">
         <Text className="text-slate-500 font-bold text-xs uppercase tracking-wider px-2">App Settings</Text>
         <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-          
+
           <TouchableOpacity
             onPress={() => setShowSettingsModal(true)}
             activeOpacity={0.7}
@@ -282,7 +283,7 @@ export default function AccountScreen({
             confidencePlate={confidencePlate}
             setConfidencePlate={setConfidencePlate}
           />
-          
+
         </View>
       </View>
       <View className="pt-2 pb-6">

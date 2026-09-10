@@ -1,5 +1,5 @@
 from typing import List
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends, status
 from database import users_collection
 from schemas import UserResponse, UserCreate
@@ -23,28 +23,35 @@ async def list_all_users(
         users.append(
             UserResponse(
                 id=str(doc.get("_id")),
-                email=doc.get("email"),
+                email=doc.get("email", ""),
+                full_name=doc.get("full_name", ""),
                 role=doc.get("role", "student"),
-                name=doc.get("name", "Unknown"),
-                driving_score=doc.get("driving_score", 100),
-                vehicles=doc.get("vehicles", [])
+                license_plate=doc.get("license_plate", ""),
+                driving_score=doc.get("driving_score", 100)
             )
         )
     return users
 
-@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/users", response_model=UserResponse)
 async def create_or_update_user(
     user_data: UserCreate,
     current_user: dict = Depends(require_roles(["office"]))
 ):
     """
-    Office Role only: Register or update a user profile, role, or vehicle list.
+    Office Role only: Register or update a user manually from Admin Web.
     """
     if users_collection is None:
-        raise HTTPException(status_code=503, detail="Database not available")
+        raise HTTPException(status_code=500, detail="Database connection uninitialized")
 
-    doc = user_data.model_dump()
     existing = users_collection.find_one({"email": user_data.email.lower()})
+
+    doc = {
+        "email": user_data.email.lower(),
+        "full_name": user_data.full_name,
+        "role": user_data.role,
+        "license_plate": user_data.license_plate,
+        "driving_score": user_data.driving_score
+    }
 
     if existing:
         users_collection.update_one(
@@ -65,23 +72,28 @@ MOCK_ANNOUNCEMENTS = [
         "title": "Zone B Maintenance Notice",
         "content": "Zone B Floor 2 will be temporarily closed for sensor maintenance tomorrow from 09:00 AM to 02:00 PM. Please park at Zone A or Zone C.",
         "date": "Today, 09:00 AM",
-        "priority": "high"
+        "priority": "high",
+        "expire_date": "2026-12-31"
     },
     {
         "id": "ANN-02",
         "title": "Helmet Safety Policy Reminder",
         "content": "All motorcycle drivers must wear a safety helmet when entering university gates. AI CCTV cameras will deduct 10 safety points for non-compliance.",
         "date": "Yesterday",
-        "priority": "normal"
+        "priority": "normal",
+        "expire_date": "2026-12-31"
     }
 ]
 
 @router.get("/announcements")
 async def get_announcements():
     """
-    Public endpoint: Get all campus announcements set by Admin website.
+    Public endpoint: Get active campus announcements set by Admin website.
+    Filters out expired announcements automatically.
     """
-    return MOCK_ANNOUNCEMENTS
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    active = [a for a in MOCK_ANNOUNCEMENTS if not a.get("expire_date") or a.get("expire_date") >= today_str]
+    return active
 
 @router.post("/announcements")
 async def create_announcement(announcement: dict):
@@ -89,6 +101,7 @@ async def create_announcement(announcement: dict):
     Admin website endpoint: Post new campus announcement.
     """
     now_str = datetime.now().strftime("%H:%M")
+    default_expire = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
     new_ann = {
         "id": f"ANN-{len(MOCK_ANNOUNCEMENTS) + 1:02d}",
         "title": announcement.get("title", "Campus Notice"),
@@ -96,7 +109,8 @@ async def create_announcement(announcement: dict):
         "date": f"Today, {now_str}",
         "priority": announcement.get("priority", "normal"),
         "target_audience": announcement.get("target_audience", "all"),
-        "target_user": announcement.get("target_user", "")
+        "target_user": announcement.get("target_user", ""),
+        "expire_date": announcement.get("expire_date", default_expire)
     }
     MOCK_ANNOUNCEMENTS.insert(0, new_ann)
     return {"status": "success", "announcement": new_ann}
@@ -127,6 +141,8 @@ async def update_announcement(ann_id: str, payload: dict):
                 a["target_audience"] = payload["target_audience"]
             if "target_user" in payload:
                 a["target_user"] = payload["target_user"]
+            if "expire_date" in payload:
+                a["expire_date"] = payload["expire_date"]
             return {"status": "success", "announcement": a}
     raise HTTPException(status_code=404, detail="Announcement not found")
 
