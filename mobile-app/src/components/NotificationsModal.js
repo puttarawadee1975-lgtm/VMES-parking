@@ -111,7 +111,7 @@ export default function NotificationsModal({
       category: 'Admin Announcement',
       message: 'Zone B Floor 2 will be temporarily closed for sensor maintenance tomorrow from 09:00 AM to 02:00 PM. Please park at Zone A or Zone C.',
       date: 'Yesterday',
-      location: 'VEMS Building Zone B',
+      location: 'VMES Building Zone B',
       plate: 'System Announcement',
       scoreDeducted: 0,
       unread: false

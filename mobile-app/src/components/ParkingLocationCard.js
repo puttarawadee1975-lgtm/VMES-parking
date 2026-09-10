@@ -25,7 +25,7 @@ export default function ParkingLocationCard({
               My Parking Location ({zoneStr})
             </Text>
             <Text className="text-slate-900 font-extrabold text-base" numberOfLines={1}>
-              {(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VEMS Building' : parkedSpot.building}
+              {(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VMES Building' : parkedSpot.building}
             </Text>
             <Text className="text-blue-600 font-bold text-xs mt-0.5">
               Pillar {parkedSpot.pillar || 'G05-G09'} • {parkedSpot.savedDate || '28 June 2026'}
