@@ -93,7 +93,8 @@ function MainApp() {
               const formattedUser = {
                 ...data.user,
                 studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : '65070042'),
-                vehicles: data.user.vehicles || []
+                vehicles: data.user.vehicles || [],
+		safetyScore: data.user.driving_score ?? 100
               };
               fetchUserVehiclesAndLogin(formattedUser);
             } else {
@@ -103,7 +104,7 @@ function MainApp() {
                 studentId: '65070042',
                 email: '65070042@student.university.ac.th',
                 vehicles: [],
-                safetyScore: 98
+                safetyScore: 100
               };
               fetchUserVehiclesAndLogin(fallbackStudent);
             }
@@ -115,7 +116,7 @@ function MainApp() {
               studentId: '65070042',
               email: '65070042@student.university.ac.th',
               vehicles: [],
-              safetyScore: 98
+              safetyScore: 100
             };
             fetchUserVehiclesAndLogin(fallbackStudent);
           });
@@ -128,7 +129,7 @@ function MainApp() {
             studentId: '65070042',
             email: '65070042@student.university.ac.th',
             vehicles: [],
-            safetyScore: 98
+            safetyScore: 100
           };
           fetchUserVehiclesAndLogin(fallbackStudent);
         });
@@ -295,7 +296,7 @@ function MainApp() {
       studentId: '65070042',
       email: studentEmail,
       vehicles: [],
-      safetyScore: 98
+      safetyScore: 100
     };
 
     try {
@@ -329,7 +330,7 @@ function MainApp() {
       studentId: accountEmail.replace(/\D/g, '') || '65070042',
       email: accountEmail,
       vehicles: [],
-      safetyScore: 98
+      safetyScore: 100
     };
     await fetchUserVehiclesAndLogin(preset);
   };
