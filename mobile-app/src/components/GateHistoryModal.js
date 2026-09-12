@@ -39,7 +39,9 @@ export default function GateHistoryModal({
           const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
           const dateStr = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
           const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-          const gateName = item.gate_type === 'EXIT' ? 'VMES Exit Gate' : (item.gate_type || 'VMES Entry Gate');
+          const gateStr = String(item.gate_type || item.gate || '').toUpperCase();
+          const isExit = item.camera_id === 2 || gateStr.includes('EXIT');
+          const gateName = isExit ? 'Exit gate' : 'Entry gate';
 
           if (isV) {
             return {
@@ -62,9 +64,9 @@ export default function GateHistoryModal({
               vehicleType: item.vehicle_type,
               date: dateStr,
               entryTime: timeStr,
-              entryGate: item.entry_gate || 'VMES Entry Gate',
+              entryGate: 'Entry gate',
               exitTime: isParked ? 'Still On Campus' : (item.exit_time || 'Verified Pass'),
-              exitGate: isParked ? 'Pending Exit' : (item.exit_gate || 'VMES Exit Gate'),
+              exitGate: isParked ? 'Pending Exit' : 'Exit gate',
               status: isParked ? 'Parked' : 'Completed',
               helmet: item.vehicle_type === 'car' ? 'N/A' : (item.helmet_detected ? 'Pass (Worn)' : 'NO HELMET'),
               rawDate: dateObj

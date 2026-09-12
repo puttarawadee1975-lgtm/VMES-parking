@@ -6,7 +6,8 @@ import {
   Modal,
   ScrollView,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  TouchableWithoutFeedback
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getGateDetectionsHistory } from '../services/api';
@@ -33,13 +34,17 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
             const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
             const dateStr = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
             
+            const gateStr = String(item.gate_type || item.gate || '').toUpperCase();
+            const isExit = item.camera_id === 2 || gateStr.includes('EXIT');
+            const gateLabel = isExit ? 'Exit gate' : 'Entry gate';
+
             return {
               id: item.id || idx,
               date: `${dateStr}, ${timeStr}`,
               type: 'violation',
               title: 'No Helmet Detected',
               points: '-10 pts',
-              gate: item.gate_type === 'EXIT' ? 'VMES Exit Gate' : (item.gate_type || 'VMES Entry Gate')
+              gate: gateLabel
             };
           });
         setLiveHistory(transformed);
@@ -80,7 +85,7 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
   const userHasDeduction = score < 100;
 
   const defaultHistory = userHasDeduction ? [
-    { id: 'default-violation', date: 'Today, 10:10 AM', type: 'violation', title: 'No Helmet Detected', points: '-10 pts', gate: 'VMES Entry Gate' }
+    { id: 'default-violation', date: 'Today, 10:10 AM', type: 'violation', title: 'No Helmet Detected', points: '-10 pts', gate: 'Entry gate' }
   ] : [];
 
   const history = liveHistory.length > 0 ? liveHistory : defaultHistory;
@@ -89,7 +94,7 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
     <Modal
       visible={Boolean(visible)}
       animationType="slide"
-      presentationStyle="overFullScreen"
+      presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>

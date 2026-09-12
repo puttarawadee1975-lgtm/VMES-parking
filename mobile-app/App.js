@@ -434,9 +434,9 @@ function MainApp() {
     setParkedSpot(spotData);
     saveSpotToMongoDB(spotData, currentUser?.email || '65070042@student.university.ac.th');
     if (isUpdate) {
-      showToast(`🔄 Updated parking spot: ${spotData.zone} ${spotData.floor} (${spotData.pillar})`);
+      showToast(`🔄 Updated parking location: ${spotData.zone} ${spotData.floor} (${spotData.pillar})`);
     } else {
-      showToast(`📍 Saved parking spot: ${spotData.zone} ${spotData.floor} (${spotData.pillar})`);
+      showToast(`📍 Saved parking location: ${spotData.zone} ${spotData.floor} (${spotData.pillar})`);
     }
   };
 

@@ -18,6 +18,7 @@ export default function StudentHomeScreen({
   const [isDetailsModalVisible, setDetailsModalVisible] = useState(false);
   const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAllAnnouncementsModal, setShowAllAnnouncementsModal] = useState(false);
 
   const isGuest = currentUser?.role === 'guest';
@@ -167,7 +168,7 @@ export default function StudentHomeScreen({
                   key={ann.id}
                   onPress={() => {
                     setSelectedAnnouncement(ann);
-                    setShowAllAnnouncementsModal(true);
+                    setShowDetailModal(true);
                   }}
                   activeOpacity={0.75}
                   className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 mt-2 active:bg-blue-50/50 shadow-sm"
@@ -226,7 +227,14 @@ export default function StudentHomeScreen({
         currentUser={currentUser}
       />
 
-      {/* All Announcements Modal (Handles both List view & Detail view smoothly with Back button) */}
+      {/* Direct Pop-up Announcement Detail Modal */}
+      <AnnouncementDetailModal
+        visible={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        announcement={selectedAnnouncement}
+      />
+
+      {/* All Announcements Modal (Handles List view & Detail view) */}
       <AllAnnouncementsModal
         visible={showAllAnnouncementsModal}
         onClose={() => {

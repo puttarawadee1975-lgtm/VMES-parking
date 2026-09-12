@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, SafeAreaView, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ParkingDetailsModal({
@@ -10,6 +10,47 @@ export default function ParkingDetailsModal({
   onOpenQRScanner
 }) {
   const hasSpot = !!parkedSpot;
+  const [activeImageIndex, setActiveImageIndex] = React.useState(0);
+
+  // Extract list of images (only active when spot is saved)
+  const imageList = React.useMemo(() => {
+    if (!parkedSpot) return [];
+    if (Array.isArray(parkedSpot.images) && parkedSpot.images.length > 0) {
+      return parkedSpot.images;
+    }
+    if (Array.isArray(parkedSpot.imageUrls) && parkedSpot.imageUrls.length > 0) {
+      return parkedSpot.imageUrls;
+    }
+    if (typeof parkedSpot.imageUrl === 'string' && parkedSpot.imageUrl.trim()) {
+      const splitUrls = parkedSpot.imageUrl.split(',').map(url => url.trim()).filter(Boolean);
+      if (splitUrls.length > 1) return splitUrls;
+      if (splitUrls.length === 1) {
+        return [
+          splitUrls[0],
+          'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
+          'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
+        ];
+      }
+    }
+    // Default multi-angle photos for saved spot
+    return [
+      'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
+    ];
+  }, [parkedSpot]);
+
+  React.useEffect(() => {
+    setActiveImageIndex(0);
+  }, [parkedSpot]);
+
+  const handlePrevImage = () => {
+    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : imageList.length - 1));
+  };
+
+  const handleNextImage = () => {
+    setActiveImageIndex((prev) => (prev < imageList.length - 1 ? prev + 1 : 0));
+  };
 
   // Safe property fallbacks
   const pillar = hasSpot ? (parkedSpot.pillar || 'G05-G09') : '-';
@@ -68,7 +109,7 @@ export default function ParkingDetailsModal({
           </View>
 
           {/* Building & Date Details Card */}
-          <View style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 20, padding: 18, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
+          <View style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 20, padding: 18, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
               <Text style={{ color: '#64748b', fontWeight: '500', fontSize: 13 }}>Building</Text>
               <Text style={{ color: '#1e3a8a', fontWeight: '800', fontSize: 14 }}>{building}</Text>
@@ -87,11 +128,113 @@ export default function ParkingDetailsModal({
             </View>
           </View>
 
+          {/* Multi-Image Gallery Box (With Left/Right arrows & count badge) */}
+          <View style={{ marginBottom: 20 }}>
+            {imageList.length > 0 ? (
+              <View style={{ height: 210, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#cbd5e1', position: 'relative' }}>
+                <Image
+                  source={{ uri: imageList[activeImageIndex] }}
+                  style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                />
 
+                {/* Left & Right Arrow Navigation Buttons */}
+                {imageList.length > 1 && (
+                  <>
+                    <TouchableOpacity
+                      onPress={handlePrevImage}
+                      activeOpacity={0.75}
+                      style={{
+                        position: 'absolute',
+                        left: 12,
+                        top: '50%',
+                        transform: [{ translateY: -20 }],
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: 'rgba(255, 255, 255, 0.88)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1,
+                        borderColor: 'rgba(226, 232, 240, 0.9)',
+                        shadowColor: '#0f172a',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 6,
+                        elevation: 4
+                      }}
+                    >
+                      <Ionicons name="chevron-back" size={22} color="#0f172a" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={handleNextImage}
+                      activeOpacity={0.75}
+                      style={{
+                        position: 'absolute',
+                        right: 12,
+                        top: '50%',
+                        transform: [{ translateY: -20 }],
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: 'rgba(255, 255, 255, 0.88)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1,
+                        borderColor: 'rgba(226, 232, 240, 0.9)',
+                        shadowColor: '#0f172a',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 6,
+                        elevation: 4
+                      }}
+                    >
+                      <Ionicons name="chevron-forward" size={22} color="#0f172a" />
+                    </TouchableOpacity>
+
+                    {/* Pagination Dots Indicator */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        bottom: 12,
+                        alignSelf: 'center',
+                        backgroundColor: 'rgba(15, 23, 42, 0.55)',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      {imageList.map((_, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => setActiveImageIndex(idx)}
+                          activeOpacity={0.8}
+                          style={{
+                            width: idx === activeImageIndex ? 18 : 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: idx === activeImageIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.45)'
+                          }}
+                        />
+                      ))}
+                    </View>
+                  </>
+                )}
+              </View>
+            ) : (
+              <View style={{ height: 160, borderRadius: 20, backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#cbd5e1', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                <Ionicons name="image-outline" size={36} color="#94a3b8" style={{ marginBottom: 6 }} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748b' }}>Parking Location Image</Text>
+              </View>
+            )}
+          </View>
 
           {/* Action Buttons */}
           <View style={{ gap: 12, marginBottom: 40 }}>
-            {onOpenQRScanner && (
+            {onOpenQRScanner && !hasSpot && (
               <TouchableOpacity
                 onPress={() => {
                   onClose();
@@ -102,7 +245,7 @@ export default function ParkingDetailsModal({
               >
                 <Ionicons name="scan-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
                 <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14 }}>
-                  {hasSpot ? 'Scan to Update Spot' : 'Scan QR Code to Save Spot'}
+                  Scan QR Code to Save Spot
                 </Text>
               </TouchableOpacity>
             )}
@@ -114,10 +257,9 @@ export default function ParkingDetailsModal({
                   onExitBuilding();
                 }}
                 activeOpacity={0.85}
-                style={{ backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                style={{ backgroundColor: '#ffffff', borderWidth: 1.5, borderColor: '#ef4444', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Ionicons name="log-out-outline" size={18} color="#dc2626" style={{ marginRight: 8 }} />
-                <Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 14 }}>Exit Building (Clear Spot)</Text>
+                <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 14 }}>Exit Building</Text>
               </TouchableOpacity>
             )}
           </View>

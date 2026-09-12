@@ -189,10 +189,12 @@ export default function AccountScreen({
                 <Ionicons name="location-outline" size={20} color="#d97706" />
               </View>
               <View className="flex-1">
-                <Text className="text-slate-700 font-semibold text-sm">Saved Parking Spot</Text>
-                <Text className="text-slate-400 text-xs mt-0.5" numberOfLines={1}>
-                  {parkedSpot ? `${parkedSpot.building} (${parkedSpot.pillar})` : 'Not saved yet • Click to view'}
-                </Text>
+                <Text className="text-slate-700 font-semibold text-sm">My Parking Location</Text>
+                {parkedSpot && (
+                  <Text className="text-slate-400 text-xs mt-0.5" numberOfLines={1}>
+                    {`${parkedSpot.building} (${parkedSpot.pillar})`}
+                  </Text>
+                )}
               </View>
             </View>
             <View className="flex-row items-center">

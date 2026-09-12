@@ -6,7 +6,8 @@ import {
   Modal,
   ScrollView,
   Animated,
-  StatusBar
+  StatusBar,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -50,6 +51,47 @@ export default function ParkingQRModal({
   const [isScanning, setIsScanning] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
   const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
+  const [activeQRImageIndex, setActiveQRImageIndex] = useState(0);
+
+  const qrImageList = React.useMemo(() => {
+    if (scannedSpot) {
+      if (Array.isArray(scannedSpot.images) && scannedSpot.images.length > 0) {
+        return scannedSpot.images;
+      }
+      if (Array.isArray(scannedSpot.imageUrls) && scannedSpot.imageUrls.length > 0) {
+        return scannedSpot.imageUrls;
+      }
+      if (typeof scannedSpot.imageUrl === 'string' && scannedSpot.imageUrl.trim()) {
+        const splitUrls = scannedSpot.imageUrl.split(',').map(url => url.trim()).filter(Boolean);
+        if (splitUrls.length > 1) return splitUrls;
+        if (splitUrls.length === 1) {
+          return [
+            splitUrls[0],
+            'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
+          ];
+        }
+      }
+      return [
+        'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
+      ];
+    }
+    return [];
+  }, [scannedSpot]);
+
+  useEffect(() => {
+    setActiveQRImageIndex(0);
+  }, [scannedSpot]);
+
+  const handlePrevQRImage = () => {
+    setActiveQRImageIndex((prev) => (prev > 0 ? prev - 1 : qrImageList.length - 1));
+  };
+
+  const handleNextQRImage = () => {
+    setActiveQRImageIndex((prev) => (prev < qrImageList.length - 1 ? prev + 1 : 0));
+  };
 
   // Scan line laser animation
   const scanLineAnim = useRef(new Animated.Value(0)).current;
@@ -216,6 +258,110 @@ export default function ParkingQRModal({
                 <Text className="text-slate-400 text-xs font-semibold">Zone & Area:</Text>
                 <Text className="text-slate-200 font-bold text-xs">{scannedSpot.zone}</Text>
               </View>
+            </View>
+
+            {/* Parking Location Image Box (Only Image or Placeholder "Parking Location Image") */}
+            <View style={{ marginBottom: 16 }}>
+              {qrImageList.length > 0 ? (
+                <View style={{ height: 180, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', position: 'relative' }}>
+                  <Image
+                    source={{ uri: qrImageList[activeQRImageIndex] }}
+                    style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                  />
+
+                  {/* Left & Right Arrow Navigation Buttons (When multiple images exist) */}
+                  {qrImageList.length > 1 && (
+                    <>
+                      <TouchableOpacity
+                        onPress={handlePrevQRImage}
+                        activeOpacity={0.75}
+                        style={{
+                          position: 'absolute',
+                          left: 12,
+                          top: '50%',
+                          transform: [{ translateY: -18 }],
+                          width: 38,
+                          height: 38,
+                          borderRadius: 19,
+                          backgroundColor: 'rgba(255, 255, 255, 0.88)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: 1,
+                          borderColor: 'rgba(226, 232, 240, 0.9)',
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.15,
+                          shadowRadius: 4,
+                          elevation: 3
+                        }}
+                      >
+                        <Ionicons name="chevron-back" size={20} color="#0f172a" />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={handleNextQRImage}
+                        activeOpacity={0.75}
+                        style={{
+                          position: 'absolute',
+                          right: 12,
+                          top: '50%',
+                          transform: [{ translateY: -18 }],
+                          width: 38,
+                          height: 38,
+                          borderRadius: 19,
+                          backgroundColor: 'rgba(255, 255, 255, 0.88)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: 1,
+                          borderColor: 'rgba(226, 232, 240, 0.9)',
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.15,
+                          shadowRadius: 4,
+                          elevation: 3
+                        }}
+                      >
+                        <Ionicons name="chevron-forward" size={20} color="#0f172a" />
+                      </TouchableOpacity>
+
+                    {/* Pagination Dots Indicator */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        bottom: 12,
+                        alignSelf: 'center',
+                        backgroundColor: 'rgba(15, 23, 42, 0.55)',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      {qrImageList.map((_, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => setActiveQRImageIndex(idx)}
+                          activeOpacity={0.8}
+                          style={{
+                            width: idx === activeQRImageIndex ? 18 : 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: idx === activeQRImageIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.45)'
+                          }}
+                        />
+                      ))}
+                    </View>
+                    </>
+                  )}
+                </View>
+              ) : (
+                <View style={{ height: 140, borderRadius: 20, backgroundColor: '#0f172a', borderWidth: 1.5, borderColor: '#334155', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                  <Ionicons name="image-outline" size={32} color="#64748b" style={{ marginBottom: 6 }} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#94a3b8' }}>Parking Location Image</Text>
+                </View>
+              )}
             </View>
 
             {/* Surrounding Map Layout Graphic */}

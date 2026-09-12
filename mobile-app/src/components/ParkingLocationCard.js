@@ -22,7 +22,7 @@ export default function ParkingLocationCard({
           </View>
           <View className="flex-1">
             <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">
-              My Parking Spot ({zoneStr})
+              My Parking Location ({zoneStr})
             </Text>
             <Text className="text-slate-900 font-extrabold text-base" numberOfLines={1}>
               {(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VEMS Building' : parkedSpot.building}
