@@ -32,7 +32,7 @@ export default function KpiCards({ totalScans, violationsCount, availableSpots, 
         <div className="kpi-details">
           <span className="kpi-title">Available Parking Spots</span>
           <h3 className="kpi-value">{availableSpots}</h3>
-          <span className="kpi-sub text-muted">VEMS Building (18 Car Spots)</span>
+          <span className="kpi-sub text-muted">Campus Building (18 Car Spots)</span>
         </div>
       </div>
     </div>

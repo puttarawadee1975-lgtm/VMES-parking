@@ -1,69 +1,70 @@
 import React, { useState } from 'react';
 
 export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onViewViolations }) {
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [historyLogs, setHistoryLogs] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  // Score adjustment modal states
+  const [adjustTarget, setAdjustTarget] = useState(null);
+  const [adjustType, setAdjustType] = useState('add'); // 'add', 'deduct', 'set'
+  const [customPointsInput, setCustomPointsInput] = useState('10');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleOpenHistory = async (item) => {
-    setSelectedStudent(item);
-    setLoadingHistory(true);
-    try {
-      // 1. Fetch score adjustment audit logs from backend
-      const res = await fetch('http://localhost:8000/admin/score-logs');
-      let apiScoreLogs = [];
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          apiScoreLogs = data.filter(log => 
-            (log.user_email && item.ownerEmail && log.user_email.toLowerCase() === item.ownerEmail.toLowerCase()) ||
-            (log.owner && log.owner === item.owner)
-          );
-        }
-      }
+  const handleOpenAdjustModal = (item) => {
+    setAdjustTarget(item);
+    setAdjustType('add');
+    setCustomPointsInput('10');
+    setAdjustReason('');
+  };
 
-      // 2. Also map any live detection violations for this user/plate
-      const userDetectionLogs = (logs || []).filter(l => 
-        (l.owner && l.owner === item.owner) ||
-        (l.plate && item.plate && l.plate.includes(item.plate))
-      ).map((l, index) => ({
-        id: `DET-LOG-${index + 1}`,
-        timestamp: l.time || 'Today',
-        reason: l.isViolation ? 'AI Detection: Motorcycle No Helmet Violation' : 'AI Gate Inspection: Compliant',
-        points_changed: l.isViolation ? -10 : 0,
-        gate_name: l.gate || 'Gate 1 (Main Entrance)',
-        new_score: l.isViolation ? Math.max(0, item.score - 10) : item.score
-      }));
+  const handleSaveAdjustment = async () => {
+    if (!adjustTarget) return;
 
-      // Combine both sources
-      const combined = [...apiScoreLogs, ...userDetectionLogs];
-      
-      // If empty, create a default initial registration record
-      if (combined.length === 0) {
-        combined.push({
-          id: 'INIT-LOG-001',
-          timestamp: 'Initial Registration',
-          reason: 'Initial Safety Score Allocation',
-          points_changed: 0,
-          gate_name: 'System Admin',
-          new_score: 100
-        });
-      }
+    let change = 0;
+    const val = parseInt(customPointsInput, 10) || 0;
+    const currentScore = adjustTarget.score ?? 100;
 
-      setHistoryLogs(combined);
-    } catch (e) {
-      console.warn('Error fetching score history:', e);
-      setHistoryLogs([{
-        id: 'INIT-LOG-001',
-        timestamp: 'Initial Registration',
-        reason: 'Initial Safety Score Allocation (Default)',
-        points_changed: 0,
-        gate_name: 'System Admin',
-        new_score: item.score || 100
-      }]);
-    } finally {
-      setLoadingHistory(false);
+    if (adjustType === 'add') {
+      change = Math.abs(val);
+    } else if (adjustType === 'deduct') {
+      change = -Math.abs(val);
+    } else if (adjustType === 'set') {
+      const targetScore = Math.max(0, Math.min(100, val));
+      change = targetScore - currentScore;
     }
+
+    if (change === 0 && adjustType !== 'set') {
+      alert('Please enter a valid points value to add or deduct.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const defaultReason = change > 0 
+        ? 'Admin Score Restoration / Safety Bonus' 
+        : 'Admin Manual Penalty Adjustment';
+      const finalReason = adjustReason.trim() || defaultReason;
+
+      if (onAdjustScore) {
+        await onAdjustScore(adjustTarget.owner, change, finalReason);
+      }
+
+      setAdjustTarget(null);
+    } catch (e) {
+      console.error('Failed to save score adjustment:', e);
+      alert('Error updating score. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Compute live score preview for adjust modal
+  const getPreviewScore = () => {
+    if (!adjustTarget) return 100;
+    const cur = adjustTarget.score ?? 100;
+    const val = parseInt(customPointsInput, 10) || 0;
+    if (adjustType === 'add') return Math.min(100, cur + Math.abs(val));
+    if (adjustType === 'deduct') return Math.max(0, cur - Math.abs(val));
+    if (adjustType === 'set') return Math.max(0, Math.min(100, val));
+    return cur;
   };
 
   return (
@@ -81,9 +82,9 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
             <tr>
               <th>Student ID</th>
               <th>Name</th>
-              <th>Current Safety Score</th>
+              <th>Safety Score</th>
               <th>Last Violation</th>
-              <th>Actions</th>
+              <th style={{ textAlign: 'right', paddingRight: 24 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -91,29 +92,46 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
               <tr key={i}>
                 <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
                 <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.owner}</td>
-                <td style={{ fontWeight: 900, fontSize: '16px', color: item.score <= 50 ? '#dc2626' : '#0f172a' }}>
+                <td style={{ 
+                  fontWeight: 900, 
+                  fontSize: '15px', 
+                  color: item.score >= 80 ? '#059669' : (item.score >= 60 ? '#d97706' : '#dc2626') 
+                }}>
                   {item.score} / 100
                 </td>
                 <td>
                   {item.isViolation ? (
                     <div>
-                      <div style={{ fontWeight: 600, color: '#0f172a' }}>No Helmet (-10 pts)</div>
+                      <div style={{ fontWeight: 600, color: '#dc2626' }}>No Helmet (-10 pts)</div>
                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                        {item.lastViolationDate || item.time || '09/09/2026 • 09:15'}
+                        {item.lastViolationDate || item.time || 'Today'}
                       </div>
                     </div>
                   ) : (
-                    <span style={{ color: '#64748b', fontWeight: 500 }}>None (Compliant)</span>
+                    <span style={{ color: '#059669', fontWeight: 600, fontSize: 13 }}>
+                      Compliant (No Violations)
+                    </span>
                   )}
                 </td>
-                <td>
-                  <button 
-                    className="btn btn-secondary btn-sm" 
-                    style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc' }} 
-                    onClick={() => onViewViolations ? onViewViolations(item.owner) : handleOpenHistory(item)}
-                  >
-                    <i className="ri-search-line"></i> View Violations
-                  </button>
+                <td style={{ textAlign: 'right', paddingRight: 24 }}>
+                  <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                    <button 
+                      className="btn btn-secondary btn-sm" 
+                      style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 600, fontSize: 12, padding: '5px 11px', borderRadius: 8 }} 
+                      onClick={() => handleOpenAdjustModal(item)}
+                      title="Adjust / Edit Safety Score"
+                    >
+                      <i className="ri-sliders-line" style={{ color: '#2563eb' }}></i> Adjust Score
+                    </button>
+                    <button 
+                      className="btn btn-secondary btn-sm" 
+                      style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 600, fontSize: 12, padding: '5px 11px', borderRadius: 8 }} 
+                      onClick={() => onViewViolations && onViewViolations(item.owner || item.plate)}
+                      title="View Gate Access & Violation History"
+                    >
+                      <i className="ri-history-line" style={{ color: '#64748b' }}></i> History
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -121,111 +139,147 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
         </table>
       </div>
 
-      {/* Driver Score Audit History Modal */}
-      {selectedStudent && (
+
+
+      {/* Interactive Score Adjustment Modal */}
+      {adjustTarget && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
         }}>
-          <div className="card" style={{ width: 620, maxHeight: '85vh', padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column' }}>
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0, color: '#0f172a', fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <i className="ri-history-line" style={{ color: '#2563eb' }}></i>
-                  <span>Driver Score History</span>
-                </h3>
-                <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
-                  Comprehensive history of penalties, deductions, and restorations
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedStudent(null)}
-                style={{ background: 'none', border: 'none', fontSize: 20, color: '#94a3b8', cursor: 'pointer', padding: 4 }}
-              >
-                <i className="ri-close-line"></i>
-              </button>
+          <div className="card" style={{ width: 480, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: '#0f172a', fontSize: 18, fontWeight: 800 }}>
+                <span>Adjust Driver Safety Score</span>
+              </h3>
             </div>
 
-            {/* Student Info Profile Banner */}
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Target Student Header Card */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: 14, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{selectedStudent.owner}</div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{adjustTarget.owner}</div>
                 <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                  Student ID: <strong style={{ color: '#2563eb' }}>{selectedStudent.id}</strong> • Plate: <strong>{selectedStudent.plate}</strong>
+                  Student ID: <strong>{adjustTarget.id}</strong> • Plate: <strong>{adjustTarget.plate}</strong>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Current Score</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: selectedStudent.score >= 90 ? '#059669' : '#dc2626' }}>
-                  {selectedStudent.score} / 100
+                <div style={{ fontSize: 18, fontWeight: 900, color: adjustTarget.score >= 80 ? '#059669' : (adjustTarget.score >= 60 ? '#d97706' : '#dc2626') }}>
+                  {adjustTarget.score} / 100
                 </div>
               </div>
             </div>
 
-            {/* History Table Content */}
-            <div style={{ overflowY: 'auto', flex: 1, border: '1px solid #e2e8f0', borderRadius: 12 }}>
-              {loadingHistory ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-                  <i className="ri-loader-4-line spin" style={{ fontSize: 28, color: '#2563eb', display: 'block', marginBottom: 8 }}></i>
-                  Loading score audit logs...
-                </div>
-              ) : historyLogs.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-                  <i className="ri-shield-check-line" style={{ fontSize: 32, color: '#059669', display: 'block', marginBottom: 8 }}></i>
-                  No deduction or restoration logs recorded yet.
-                </div>
-              ) : (
-                <table className="table" style={{ margin: 0, fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ background: '#f1f5f9' }}>
-                      <th>Time / ID</th>
-                      <th>Reason / Action</th>
-                      <th>Location</th>
-                      <th>Change</th>
-                      <th>Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historyLogs.map((log, idx) => (
-                      <tr key={idx}>
-                        <td style={{ fontWeight: 600, color: '#475569', fontSize: 12 }}>
-                          {log.timestamp || log.time || 'N/A'}
-                        </td>
-                        <td style={{ fontWeight: 600, color: '#0f172a' }}>
-                          {log.reason}
-                        </td>
-                        <td style={{ color: '#64748b', fontSize: 12 }}>
-                          {log.gate_name || 'Gate 1'}
-                        </td>
-                        <td>
-                          <span className={`badge ${log.points_changed < 0 ? 'badge-danger' : (log.points_changed > 0 ? 'badge-live' : '')}`} style={{
-                            background: log.points_changed < 0 ? '#fef2f2' : (log.points_changed > 0 ? '#ecfdf5' : '#f1f5f9'),
-                            color: log.points_changed < 0 ? '#dc2626' : (log.points_changed > 0 ? '#059669' : '#64748b'),
-                            fontWeight: 700
-                          }}>
-                            {log.points_changed > 0 ? `+${log.points_changed}` : log.points_changed} pts
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 800, color: '#0f172a' }}>
-                          {log.new_score ?? 100}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+            {/* Action Type Selector Tabs */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => { setAdjustType('add'); setCustomPointsInput('10'); }}
+                style={{
+                  flex: 1, padding: '9px 6px', borderRadius: 10, fontWeight: 700, fontSize: 12,
+                  border: adjustType === 'add' ? '2px solid #059669' : '1px solid #cbd5e1',
+                  background: adjustType === 'add' ? '#ecfdf5' : '#ffffff',
+                  color: adjustType === 'add' ? '#059669' : '#64748b',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="ri-add-circle-line" style={{ marginRight: 4 }}></i> Add (+)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAdjustType('deduct'); setCustomPointsInput('10'); }}
+                style={{
+                  flex: 1, padding: '9px 6px', borderRadius: 10, fontWeight: 700, fontSize: 12,
+                  border: adjustType === 'deduct' ? '2px solid #dc2626' : '1px solid #cbd5e1',
+                  background: adjustType === 'deduct' ? '#fef2f2' : '#ffffff',
+                  color: adjustType === 'deduct' ? '#dc2626' : '#64748b',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="ri-indeterminate-circle-line" style={{ marginRight: 4 }}></i> Deduct (-)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAdjustType('set'); setCustomPointsInput('100'); }}
+                style={{
+                  flex: 1, padding: '9px 6px', borderRadius: 10, fontWeight: 700, fontSize: 12,
+                  border: adjustType === 'set' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                  background: adjustType === 'set' ? '#eff6ff' : '#ffffff',
+                  color: adjustType === 'set' ? '#2563eb' : '#64748b',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className="ri-equalizer-line" style={{ marginRight: 4 }}></i> Set Exact (=)
+              </button>
             </div>
 
-            {/* Modal Footer */}
-            <div style={{ marginTop: 16, textAlign: 'right' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setSelectedStudent(null)}
-                style={{ padding: '8px 18px', fontWeight: 600 }}
+            {/* Value Input Field & Live Score Preview */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                  {adjustType === 'add' ? 'Points to Add:' : (adjustType === 'deduct' ? 'Points to Deduct:' : 'Target Score Value (0 - 100):')}
+                </label>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#2563eb' }}>
+                  Preview: {adjustTarget.score} → <span style={{ color: getPreviewScore() >= 80 ? '#059669' : (getPreviewScore() >= 60 ? '#d97706' : '#dc2626'), fontSize: 14 }}>{getPreviewScore()} / 100</span>
+                </div>
+              </div>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={customPointsInput}
+                onChange={(e) => setCustomPointsInput(e.target.value)}
+                placeholder="Enter points value"
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1',
+                  fontSize: 15, fontWeight: 700, color: '#0f172a', outline: 'none'
+                }}
+              />
+            </div>
+
+            {/* Reason Field */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                Adjustment Note:
+              </label>
+              <input
+                type="text"
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="e.g. Approved appeal, Safety workshop completion..."
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1',
+                  fontSize: 13, color: '#0f172a', outline: 'none'
+                }}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setAdjustTarget(null)}
+                disabled={submitting}
+                style={{ padding: '9px 18px', fontWeight: 600 }}
               >
-                Close
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSaveAdjustment}
+                disabled={submitting}
+                style={{ background: '#2563eb', padding: '9px 20px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                {submitting ? (
+                  <>
+                    <i className="ri-loader-4-line spin"></i> Saving...
+                  </>
+                ) : (
+                  'Confirm'
+                )}
               </button>
             </div>
           </div>

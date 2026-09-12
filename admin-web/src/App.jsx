@@ -6,7 +6,6 @@ import CameraStream from './components/CameraStream';
 import InspectionTable from './components/InspectionTable';
 import VehiclesTable from './components/VehiclesTable';
 import ScoresTable from './components/ScoresTable';
-import AnalyticsCharts from './components/AnalyticsCharts';
 import AnnouncementsTable from './components/AnnouncementsTable';
 import ParkingOccupancyView from './components/ParkingOccupancyView';
 import ViolationsTable from './components/ViolationsTable';
@@ -179,10 +178,11 @@ export default function App() {
     }
   };
 
-  const handleAdjustScore = async (owner, change) => {
+  const handleAdjustScore = async (owner, change, customReason) => {
     const targetVeh = vehicles.find(v => v.owner === owner);
     const email = targetVeh?.ownerEmail || '65070042@student.university.ac.th';
-    const reason = change < 0 ? 'Admin Manual Deduction (No Helmet Violation)' : 'Admin Score Restoration';
+    const defaultReason = change < 0 ? 'Admin Manual Deduction' : 'Admin Score Restoration';
+    const reason = customReason || defaultReason;
 
     try {
       await fetch('http://localhost:8000/admin/adjust-score', {
@@ -192,8 +192,8 @@ export default function App() {
           user_email: email,
           points_changed: change,
           reason: reason,
-          gate_name: 'Gate 1 (Main Entrance)',
-          image_url: 'http://localhost:8000/snapshots/ev_violation_no_helmet.svg'
+          gate_name: 'System Admin',
+          image_url: ''
         })
       });
       fetchBackendData();
@@ -212,13 +212,12 @@ export default function App() {
 
   const titles = {
     'overview': { title: 'Live Gate & Operations Overview', subtitle: 'Real-time AI License Plate Recognition & Campus Safety Monitor' },
-    'live-camera': { title: 'AI Gate Camera Feed Surveillance Grid (ENTRY & EXIT)', subtitle: 'Multi-Gate Real-time CCTV Stream & Optical Character Recognition' },
+    'live-camera': { title: 'Gate Camera Feed Surveillance Grid (ENTRY & EXIT)', subtitle: 'Multi-Gate CCTV Stream & Optical Character Recognition' },
     'access-history': { title: 'Gate Access & Violation History Log', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
     'vehicles': { title: 'Registered Vehicles & Campus Passes', subtitle: 'Manage student & staff approved license plates and 1-plate policy rules' },
     'safety-scores': { title: 'Driver Safety Scores & Audit Console', subtitle: '100-point scale enforcement, violation penalties, and score restorations' },
     'violations': { title: 'Gate Access & Violation History Log', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
-    'parking-map': { title: 'VEMS Building Occupancy & Capacity Monitor', subtitle: 'Real-time building parking availability, load percentage, and floor specifications' },
-    'analytics': { title: 'Analytics & Traffic Intelligence', subtitle: 'Peak hours traffic distribution, compliance rates, and gate throughput' },
+    'parking-map': { title: 'Building Occupancy & Capacity Monitor', subtitle: 'Real-time building parking availability, load percentage, and floor specifications' },
     'announcements': { title: 'Campus Announcements Management', subtitle: 'Broadcast real-time notices, safety updates, and maintenance alerts to mobile users' }
   };
 
@@ -254,7 +253,7 @@ export default function App() {
             logs={logs} 
             isOverview={false} 
             initialSearchQuery={violationUserFilter}
-            initialViolationFilter={violationUserFilter ? 'violations_only' : 'all'}
+            initialViolationFilter={activeTab === 'violations' ? 'violations_only' : 'all'}
           />
         )}
 
@@ -265,7 +264,7 @@ export default function App() {
                 <i className="ri-camera-lens-line"></i>
                 <span>VMES CCTV Entry & Exit Gate</span>
               </div>
-              <span className="text-muted text-xs">Live 2-Camera Grid Stream</span>
+              <span className="text-muted text-xs">2-Camera Grid Stream</span>
             </div>
 
             <div className="grid-2-col gap-16 mt-16" style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -302,10 +301,6 @@ export default function App() {
 
         {activeTab === 'parking-map' && (
           <ParkingOccupancyView parkingOccupancy={parkingOccupancy} logs={logs} />
-        )}
-
-        {activeTab === 'analytics' && (
-          <AnalyticsCharts />
         )}
 
         {activeTab === 'announcements' && (

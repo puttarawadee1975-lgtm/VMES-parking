@@ -159,7 +159,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs }) {
             </div>
           </div>
           <div style={{ fontSize: 32, fontWeight: 800, color: '#0f172a', marginTop: 10 }}>{total} <span style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Car Spots</span></div>
-          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>VEMS Smart Building</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Smart Building</div>
         </div>
 
         <div className="kpi-card" style={{ background: '#ffffff', padding: 20, borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -196,61 +196,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs }) {
         </div>
       </div>
 
-      {/* Main Building Status Card */}
-      <div className="card" style={{ padding: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <i className="ri-building-line" style={{ color: '#2563eb' }}></i>
-              VEMS Building Live Occupancy Status
-            </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: 13, color: '#64748b' }}>
-              Real-time entry/exit barrier counting & AI Gate LPR synchronization
-            </p>
-          </div>
-          <span className={`badge ${statusInfo.badgeClass}`} style={{ fontSize: 13, padding: '6px 14px' }}>
-            ● {statusInfo.label}
-          </span>
-        </div>
 
-        {/* Big Progress Gauge Bar */}
-        <div style={{ background: '#f8fafc', padding: 20, borderRadius: 16, border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14, fontWeight: 700, color: '#334155' }}>
-            <span>Automobile Capacity Utilization (18 Car Spots)</span>
-            <span>{estCars} of {total} Car Spots Occupied ({carRate}%)</span>
-          </div>
-          <div style={{ height: 16, width: '100%', background: '#e2e8f0', borderRadius: 10, overflow: 'hidden', display: 'flex' }}>
-            <div style={{
-              width: `${carRate}%`,
-              background: carRate >= 85 ? 'linear-gradient(90deg, #ef4444, #dc2626)' : (carRate >= 50 ? 'linear-gradient(90deg, #f59e0b, #d97706)' : 'linear-gradient(90deg, #10b981, #059669)'),
-              transition: 'width 0.5s ease',
-              borderRadius: 10
-            }}></div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 20, paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                <i className="ri-car-line"></i>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Automobiles Parked in Building</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{estCars} Cars <span style={{ fontSize: 11, color: '#2563eb', fontWeight: 600 }}>(Occupying Car Capacity)</span></div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                <i className="ri-motorbike-line"></i>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Motorcycles Parked in Building</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{estMotos} Motorcycles <span style={{ fontSize: 11, color: '#9333ea', fontWeight: 600 }}>(Tracked Separately)</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Building Floor Specifications & Allocation Rules */}
       <div className="card" style={{ padding: 24 }}>

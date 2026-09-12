@@ -522,7 +522,6 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                 <th>Vehicle Type</th>
                 <th>License Plate</th>
                 <th>Vehicle Details</th>
-                <th>Safety Score</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -543,9 +542,6 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>{vTypeLabel}</td>
                     <td style={{ color: '#0f172a', fontWeight: 700 }}>{item.plate} {item.province && !item.plate.includes(item.province) ? item.province : ''}</td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{detailsStr}</td>
-                    <td style={{ fontWeight: 900, color: item.score <= 50 ? '#dc2626' : '#0f172a' }}>
-                      {item.score}/100
-                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-secondary btn-sm" style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc' }} onClick={() => handleOpenEdit(item)}>

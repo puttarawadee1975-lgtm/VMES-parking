@@ -209,12 +209,20 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
           <div className="card" style={{ width: 540, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
-                <h3 style={{ margin: 0, color: '#0f172a', fontSize: 17, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <i className="ri-camera-lens-line" style={{ color: '#dc2626' }}></i>
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: 17, fontWeight: 800 }}>
                   <span>CCTV Helmet Violation Evidence</span>
                 </h3>
                 <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                  {selectedSnapshot.gate || 'Gate 1'} • {selectedSnapshot.time || 'Today'}
+                  {(() => {
+                    let d = new Date();
+                    if (selectedSnapshot.rawDate) d = new Date(selectedSnapshot.rawDate);
+                    else if (selectedSnapshot.timestamp) d = new Date(selectedSnapshot.timestamp);
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    const dateStr = !isNaN(d.getTime()) ? `${day}/${month}/${year}` : new Date().toLocaleDateString('en-GB');
+                    return `${dateStr} • ${selectedSnapshot.time || ''}`;
+                  })()}
                 </div>
               </div>
               <button 
@@ -239,8 +247,11 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
 
             <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#991b1b' }}>Violation: No Helmet Worn</div>
-                <div style={{ fontSize: 12, color: '#b91c1c', marginTop: 2 }}>AI Camera Detection Confidence: 98.4%</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#991b1b' }}>
+                  Plate: {selectedSnapshot.plate} {selectedSnapshot.province && !selectedSnapshot.plate?.includes(selectedSnapshot.province) ? selectedSnapshot.province : ''}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#991b1b', marginTop: 2 }}>Gate: {selectedSnapshot.gate || 'Gate 1'}</div>
+                <div style={{ fontSize: 12, color: '#b91c1c', marginTop: 2 }}>Violation: No Helmet Worn (AI Confidence: 98.4%)</div>
               </div>
               <div style={{ fontSize: 16, fontWeight: 900, color: '#dc2626' }}>-10 pts</div>
             </div>

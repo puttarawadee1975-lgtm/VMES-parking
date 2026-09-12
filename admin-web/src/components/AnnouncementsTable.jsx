@@ -306,7 +306,7 @@ export default function AnnouncementsTable() {
                   style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
                 >
                   <option value="normal">Normal Notice</option>
-                  <option value="high">High Priority Alert</option>
+                  <option value="high">High Priority Alert (Pinned as first announcement)</option>
                 </select>
               </div>
 

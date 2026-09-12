@@ -20,7 +20,7 @@ export default function CameraStream({
           <span>{gateName}</span>
         </div>
         <div className="live-tag">
-          <span className={`dot ${isExit ? 'pulse-amber' : 'pulse-green'}`}></span> {gateType} LIVE 1080P
+          <span className={`dot ${isExit ? 'pulse-amber' : 'pulse-green'}`}></span> {gateType} 1080P
         </div>
       </div>
 

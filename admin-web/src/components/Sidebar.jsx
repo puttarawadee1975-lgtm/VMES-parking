@@ -27,8 +27,7 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
           className={`menu-item ${activeTab === 'live-camera' ? 'active' : ''}`}
         >
           <i className="ri-camera-lens-line"></i>
-          <span>AI Gate Camera</span>
-          <span className="badge badge-live">LIVE</span>
+          <span>Gate Camera</span>
         </button>
         <button 
           onClick={() => {
@@ -64,13 +63,6 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
         >
           <i className="ri-building-2-line"></i>
           <span>Building Occupancy</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('analytics')} 
-          className={`menu-item ${activeTab === 'analytics' ? 'active' : ''}`}
-        >
-          <i className="ri-bar-chart-box-line"></i>
-          <span>Analytics & Reports</span>
         </button>
         <button 
           onClick={() => setActiveTab('announcements')} 
