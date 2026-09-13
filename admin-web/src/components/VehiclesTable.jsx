@@ -396,7 +396,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
       const fullModelStr = `${newBrand} ${newModel}`.trim();
       if (editingVehicle) {
         // Edit existing vehicle
-        await fetch('http://localhost:8000/admin/update-vehicle', {
+        await fetch('https://smart-campus-parking-deploy.onrender.com/admin/update-vehicle', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -415,7 +415,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
         });
       } else {
         // Register new vehicle
-        await fetch('http://localhost:8000/parking/register-vehicle', {
+        await fetch('https://smart-campus-parking-deploy.onrender.com/parking/register-vehicle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -451,7 +451,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
     try {
       const plate = revokeConfirmVehicle.plate;
       const ownerEmail = revokeConfirmVehicle.ownerEmail || '65070042@student.university.ac.th';
-      await fetch(`http://localhost:8000/parking/delete-vehicle?user_email=${encodeURIComponent(ownerEmail)}&plate=${encodeURIComponent(plate)}`, {
+      await fetch(`https://smart-campus-parking-deploy.onrender.com/parking/delete-vehicle?user_email=${encodeURIComponent(ownerEmail)}&plate=${encodeURIComponent(plate)}`, {
         method: 'DELETE'
       });
       setRevokeConfirmVehicle(null);

@@ -30,7 +30,7 @@ export default function App() {
   const fetchBackendData = useCallback(async () => {
     try {
       // 1. Fetch Detections
-      const resDet = await fetch('http://localhost:8000/detections');
+      const resDet = await fetch('https://smart-campus-parking-deploy.onrender.com/detections');
       if (resDet.ok) {
         const dataDet = await resDet.json();
         if (Array.isArray(dataDet)) {
@@ -73,7 +73,7 @@ export default function App() {
 
     try {
       // 2. Fetch Analytics
-      const resAnalytics = await fetch('http://localhost:8000/admin/analytics');
+      const resAnalytics = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/analytics');
       if (resAnalytics.ok) {
         const analytics = await resAnalytics.json();
         setTotalScans(analytics.total_scans || 0);
@@ -85,7 +85,7 @@ export default function App() {
     
     try {
       // 3. Fetch Parking Status
-      const resPark = await fetch('http://localhost:8000/parking/status');
+      const resPark = await fetch('https://smart-campus-parking-deploy.onrender.com/parking/status');
       if (resPark.ok) {
         const zones = await resPark.json();
         if (Array.isArray(zones) && zones.length > 0) {
@@ -106,7 +106,7 @@ export default function App() {
 
     try {
       // 4. Fetch Vehicles from Backend (Exact MongoDB Registered Vehicles)
-      const resVeh = await fetch('http://localhost:8000/admin/all-vehicles');
+      const resVeh = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/all-vehicles');
       if (resVeh.ok) {
         const backendVehicles = await resVeh.json();
         if (Array.isArray(backendVehicles)) {
@@ -142,7 +142,7 @@ export default function App() {
         zone: 'Zone A'
       };
 
-      await fetch('http://localhost:8000/detections', {
+      await fetch('https://smart-campus-parking-deploy.onrender.com/detections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -162,7 +162,7 @@ export default function App() {
     const reason = customReason || defaultReason;
 
     try {
-      await fetch('http://localhost:8000/admin/adjust-score', {
+      await fetch('https://smart-campus-parking-deploy.onrender.com/admin/adjust-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
