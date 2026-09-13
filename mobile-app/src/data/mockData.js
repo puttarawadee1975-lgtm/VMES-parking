@@ -116,12 +116,12 @@ export function getEnglishFormattedTime(dateInput = new Date()) {
 // 1. Zone A Floor G
 // 2. Zone B Floor G
 // 3. Zone C Floor G
-// Building: VEMS Building
+// Building: VMES Building
 export const PRESET_ZONES = [
   {
     id: 'ZONE-A',
     zone: 'Zone A',
-    building: 'VEMS Building',
+    building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G05-G09',
     description: 'VIP Front Entrance Zone'
@@ -129,7 +129,7 @@ export const PRESET_ZONES = [
   {
     id: 'ZONE-B',
     zone: 'Zone B',
-    building: 'VEMS Building',
+    building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G06-G10',
     description: 'East Wing Zone'
@@ -137,7 +137,7 @@ export const PRESET_ZONES = [
   {
     id: 'ZONE-C',
     zone: 'Zone C',
-    building: 'VEMS Building',
+    building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G11-G15',
     description: 'West Wing Zone'

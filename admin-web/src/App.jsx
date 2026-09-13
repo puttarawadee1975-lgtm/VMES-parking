@@ -84,7 +84,7 @@ export default function App() {
     } catch (e) {
       console.log('Backend connection notice (detections):', e.message);
     }
-    
+
     try {
       // 2. Fetch Parking Status
       const resPark = await fetch('http://localhost:8000/parking/status');
@@ -154,7 +154,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       // Refresh state immediately after posting detection
       fetchBackendData();
     } catch (e) {
@@ -228,18 +228,18 @@ export default function App() {
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onClearViolationFilter={() => setViolationUserFilter('')} />
 
       <main className="main-content">
-        <Header 
-          pageTitle={currentMeta.title} 
+        <Header
+          pageTitle={currentMeta.title}
           pageSubtitle={currentMeta.subtitle}
         />
 
         {activeTab === 'overview' && (
           <div>
-            <KpiCards 
-              totalScans={totalScans} 
-              violationsCount={violationsCount} 
-              availableSpots={parkingOccupancy.available} 
-              occupiedRate={parkingOccupancy.rate} 
+            <KpiCards
+              totalScans={totalScans}
+              violationsCount={violationsCount}
+              availableSpots={parkingOccupancy.available}
+              occupiedRate={parkingOccupancy.rate}
             />
 
             <div style={{ marginTop: 16 }}>
@@ -249,9 +249,9 @@ export default function App() {
         )}
 
         {(activeTab === 'access-history' || activeTab === 'violations') && (
-          <InspectionTable 
-            logs={logs} 
-            isOverview={false} 
+          <InspectionTable
+            logs={logs}
+            isOverview={false}
             initialSearchQuery={violationUserFilter}
             initialViolationFilter={activeTab === 'violations' ? 'violations_only' : 'all'}
           />
@@ -268,19 +268,19 @@ export default function App() {
             </div>
 
             <div className="grid-2-col gap-16 mt-16" style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <CameraStream 
+              <CameraStream
                 gateName="Gate 1 (Entry Gate)"
                 camId="CAM-01: ENTRY RAMP"
                 gateType="ENTRY"
-                currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]} 
-                onTriggerScan={() => handleTriggerScan('ENTRY')} 
+                currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]}
+                onTriggerScan={() => handleTriggerScan('ENTRY')}
               />
-              <CameraStream 
+              <CameraStream
                 gateName="Gate 2 (Exit Gate)"
                 camId="CAM-02: EXIT RAMP"
                 gateType="EXIT"
-                currentDetection={logs.find(l => l.gate.includes('EXIT'))} 
-                onTriggerScan={() => handleTriggerScan('EXIT')} 
+                currentDetection={logs.find(l => l.gate.includes('EXIT'))}
+                onTriggerScan={() => handleTriggerScan('EXIT')}
               />
             </div>
           </div>
@@ -291,10 +291,10 @@ export default function App() {
         )}
 
         {activeTab === 'safety-scores' && (
-          <ScoresTable 
-            vehicles={vehicles} 
-            logs={logs} 
-            onAdjustScore={handleAdjustScore} 
+          <ScoresTable
+            vehicles={vehicles}
+            logs={logs}
+            onAdjustScore={handleAdjustScore}
             onViewViolations={handleNavigateToViolations}
           />
         )}

@@ -70,7 +70,7 @@ export default function QRScanScreen({
 
       setScannedSpotData({
         zone: spotData.zone || (spotData.building && spotData.building.startsWith('Zone') ? spotData.building : "Zone A"),
-        building: spotData.building || "VEMS Building",
+        building: (!spotData.building || spotData.building.startsWith('Zone')) ? "VMES Building" : spotData.building,
         floor: spotData.floor || "Floor G",
         pillar: spotData.pillar || "G05-G09",
         savedDate: getEnglishFormattedDate(now),

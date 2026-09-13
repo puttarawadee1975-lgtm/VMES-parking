@@ -1,17 +1,17 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends
 from database import parking_status_collection
-from schemas import ParkingStatusResponse, ParkingStatusUpdate
+from schemas import ParkingStatusResponse, ParkingStatusUpdate, SpotReservationCreate
 from auth import require_roles
 
 router = APIRouter(prefix="/parking", tags=["Parking Status"])
 
-# Mock default data if collection is empty (Total 18 slots across 3 zones for VEMS Building)
+# Mock default data if collection is empty (Total 18 slots across 3 zones for VMES Building)
 DEFAULT_ZONES = [
-    {"zone": "Zone A • Floor G (VEMS Building)", "total_slots": 6, "occupied_slots": 2},
-    {"zone": "Zone B • Floor G (VEMS Building)", "total_slots": 6, "occupied_slots": 1},
-    {"zone": "Zone C • Floor G (VEMS Building)", "total_slots": 6, "occupied_slots": 3},
+    {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 6, "occupied_slots": 2},
+    {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 6, "occupied_slots": 1},
+    {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 6, "occupied_slots": 3},
 ]
 
 @router.get("/status", response_model=List[ParkingStatusResponse])
@@ -91,7 +91,7 @@ async def save_user_parking_spot(data: SavedSpotCreate, user_email: str = "demo@
     doc = {
         "user_email": user_email,
         "zone": data.zone,
-        "building": data.building or "VEMS Building",
+        "building": data.building or "VMES Building",
         "floor": data.floor or "Floor G",
         "pillar": data.pillar,
         "savedDate": data.savedDate,
@@ -127,6 +127,44 @@ async def clear_user_parking_spot(user_email: str = "demo@student.ac.th"):
     if saved_spots_collection is not None:
         saved_spots_collection.delete_one({"user_email": user_email})
     return {"message": "Parking spot cleared successfully"}
+
+@router.post("/reserve-spot")
+async def reserve_parking_spot(data: SpotReservationCreate):
+    """
+    Pre-lock / Reserve a parking spot for a user for a duration of time.
+    """
+    now = datetime.now(timezone.utc)
+    locked_until = now + timedelta(minutes=data.durationMinutes)
+    doc = {
+        "user_email": data.user_email,
+        "zone": data.zone,
+        "building": data.building or "VMES Building",
+        "floor": data.floor or "Floor G",
+        "pillar": data.pillar,
+        "duration_minutes": data.durationMinutes,
+        "reserved_at": now.isoformat(),
+        "locked_until": locked_until.isoformat(),
+        "plate": data.plate,
+        "status": "Reserved & Locked"
+    }
+    
+    if saved_spots_collection is not None:
+        saved_spots_collection.update_one(
+            {"user_email": data.user_email},
+            {"$set": doc},
+            upsert=True
+        )
+    return doc
+
+@router.get("/reservations")
+async def get_all_spot_reservations():
+    """
+    Public / Admin endpoint: Get active reserved and locked parking spots.
+    """
+    if saved_spots_collection is not None:
+        results = list(saved_spots_collection.find({"status": "Reserved & Locked"}, {"_id": 0}))
+        return results
+    return []
 
 # --- Vehicle Registration MongoDB Endpoints ---
 from database import registered_vehicles_collection

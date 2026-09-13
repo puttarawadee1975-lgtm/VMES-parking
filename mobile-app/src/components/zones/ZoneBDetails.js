@@ -10,7 +10,7 @@ export default function ZoneBDetails({ parkedSpot }) {
       <View className="flex-row justify-between items-center mb-3">
         <View className="flex-row items-center">
           <Ionicons name="map" size={16} color="#f472b6" style={{ marginRight: 6 }} />
-          <Text className="text-white font-bold text-xs">Zone B • Floor G (VEMS Building)</Text>
+          <Text className="text-white font-bold text-xs">Zone B • Floor G (VMES Building)</Text>
         </View>
         <Text className="text-pink-400 font-bold text-[10px]">{parkedSpot.floor || 'Floor G'}</Text>
       </View>
@@ -45,7 +45,7 @@ export default function ZoneBDetails({ parkedSpot }) {
         </View>
       </View>
       <Text className="text-slate-400 text-[9px] text-center mt-3">
-        Zone B • Floor G • VEMS Building (East Wing Zone)
+        Zone B • Floor G • VMES Building (East Wing Zone)
       </Text>
     </View>
   );

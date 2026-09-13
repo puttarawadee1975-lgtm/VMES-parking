@@ -13,27 +13,27 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { getEnglishFormattedDate, getEnglishFormattedTime, PRESET_ZONES } from '../data/mockData';
 
-// Predefined Zone QR presets (VEMS Building, Floor G)
+// Predefined Zone QR presets (VMES Building, Floor G)
 const PRESET_PILLARS = [
   {
-    id: 'QR-VEMS-GA',
-    building: 'VEMS Building',
+    id: 'QR-VMES-GA',
+    building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G05-G09',
     zone: 'Zone A',
     nearestExit: 'Main Entrance Gate 1',
   },
   {
-    id: 'QR-VEMS-GB',
-    building: 'VEMS Building',
+    id: 'QR-VMES-GB',
+    building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G06-G10',
     zone: 'Zone B',
     nearestExit: 'East Exit Walkway',
   },
   {
-    id: 'QR-VEMS-GC',
-    building: 'VEMS Building',
+    id: 'QR-VMES-GC',
+    building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G11-G15',
     zone: 'Zone C',
@@ -241,7 +241,7 @@ export default function ParkingQRModal({
 
               <View className="flex-row justify-between items-center pb-2.5 border-b border-slate-800">
                 <Text className="text-slate-400 text-xs font-semibold">Building:</Text>
-                <Text className="text-white font-bold text-xs">VEMS Building</Text>
+                <Text className="text-white font-bold text-xs">VMES Building</Text>
               </View>
 
               <View className="flex-row justify-between items-center pb-2.5 border-b border-slate-800">
