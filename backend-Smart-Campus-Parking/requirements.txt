@@ -6,3 +6,5 @@ pydantic
 httpx
 PyJWT
 requests
+
+email-validator
