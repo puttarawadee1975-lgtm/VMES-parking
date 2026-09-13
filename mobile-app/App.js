@@ -184,19 +184,19 @@ function MainApp() {
 
   useEffect(() => {
     let interval;
-    if (currentUser) {
+    if (currentUser?.role === 'admin') {
       interval = setInterval(() => {
         setSimStep((prev) => (prev + 1) % 100);
       }, 100);
     }
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, [currentUser?.role]);
 
   useEffect(() => {
-    if (simStep === 0 && currentUser) {
+    if (simStep === 0 && currentUser?.role === 'admin') {
       triggerScan();
     }
-  }, [simStep]);
+  }, [simStep, currentUser?.role]);
 
   const triggerScan = () => {
     const nextIdx = (currentVehIndex + 1) % SIMULATED_VEHICLES.length;
@@ -539,8 +539,6 @@ function MainApp() {
                   parkedSpot={parkedSpot}
                   onOpenQRScanner={() => setShowQRModal(true)}
                   onExitBuilding={handleExitBuilding}
-                  activeSimVeh={activeSimVeh}
-                  triggerScan={triggerScan}
                   onOpenNotifications={() => setShowNotificationsModal(true)}
                 />
               )
