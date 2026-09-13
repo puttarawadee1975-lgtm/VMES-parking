@@ -253,6 +253,11 @@ async def get_all_registered_vehicles():
             combined = f"{raw_type} {brand} {model}".lower()
             v_type = "car" if (raw_type == "car" or any(kw in combined for kw in CAR_KEYWORDS)) else "motorcycle"
             full_detail = format_vehicle_detail(v_type, brand, model, color)
+            
+            user_email = d.get("user_email", "")
+            user_doc = users_collection.find_one({"email": user_email}) if users_collection is not None and user_email else None
+            user_name = user_doc.get("name", user_email.split("@")[0].capitalize()) if user_doc else user_email.split("@")[0].capitalize()
+            user_score = user_doc.get("driving_score", 100) if user_doc else 100
 
             vehicles.append({
                 "plate": p_str,
@@ -262,11 +267,11 @@ async def get_all_registered_vehicles():
                 "model": model,
                 "color": color,
                 "vehicle": full_detail,
-                "owner": d.get("user_email", "").split("@")[0].capitalize(),
-                "ownerEmail": d.get("user_email", ""),
+                "owner": user_name,
+                "ownerEmail": user_email,
                 "id": "STU-" + d.get("user_email", "0000")[:4],
                 "role": d.get("role", "Student").capitalize(),
-                "score": 100
+                "score": user_score
             })
             
     if users_collection is not None:
@@ -398,9 +403,9 @@ async def get_admin_analytics():
     """
     from database import detection_logs_collection
     
-    total_scans = 1284
-    violations_count = 146
-    compliant_count = 1138
+    total_scans = 0
+    violations_count = 0
+    compliant_count = 0
     
     if detection_logs_collection is not None:
         real_total = detection_logs_collection.count_documents({})
@@ -413,7 +418,7 @@ async def get_admin_analytics():
         "total_scans": total_scans,
         "violations_count": violations_count,
         "compliant_count": compliant_count,
-        "hourly_distribution": [45, 210, 340, 180, 95, 130, 110, 160, 290, 310, 140]
+        "hourly_distribution": []
     }
 
 

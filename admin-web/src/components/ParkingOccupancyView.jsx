@@ -7,14 +7,20 @@ const SAMPLE_ZONE_IMAGES = [
 ];
 
 export default function ParkingOccupancyView({ parkingOccupancy, logs }) {
-  const { total = 18 } = parkingOccupancy || {};
+  const {
+    total = 18,
+    occupied = 0,
+    available = 0,
+    rate = 0
+  } = parkingOccupancy || {};
 
-  // Calculate live count from logs
-  const estCars = logs.filter(l => l.vehicle_type === 'car' || (l.vehicle && /car|รถยนต์/i.test(l.vehicle))).length;
+  // Use live parking-status data for current car occupancy.
+  const estCars = occupied;
+  const availableCarSpots = available;
+  const carRate = rate;
+
+  // Motorcycle occupancy is still estimated from detection logs for now.
   const estMotos = logs.filter(l => l.vehicle_type === 'motorcycle' || (l.vehicle && /motorcycle|มอเตอร์ไซค์/i.test(l.vehicle))).length;
-
-  const availableCarSpots = Math.max(0, total - estCars);
-  const carRate = Number(((estCars / total) * 100).toFixed(1));
 
   // Dynamic Building Zones State
   const [zones, setZones] = useState([

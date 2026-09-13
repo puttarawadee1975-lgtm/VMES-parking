@@ -75,6 +75,8 @@ async def ingest_detection_event(payload: DetectionLogCreate):
                     user_doc = users_collection.find_one({"email": user_email})
                 break
 
+    penalty_applied = False
+
     if user_doc:
         matched_user = user_doc
         matched_user_name = f"{user_doc.get('name')} ({user_doc.get('email')})"
@@ -105,6 +107,7 @@ async def ingest_detection_event(payload: DetectionLogCreate):
                     {"_id": user_doc["_id"]},
                     {"$set": {"driving_score": new_score}}
                 )
+                penalty_applied = True
 
     elif registered_vehicle:
         matched_user_name = registered_vehicle.get("user_email") or "Registered Vehicle"
@@ -115,6 +118,7 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         "vehicle_type": vehicle_type,
         "helmet_detected": helmet_detected,
         "violation": is_violation,
+        "penalty_applied": penalty_applied,
         "gate_type": payload.gate_type,
         "zone": payload.zone or "Zone A",
         "timestamp": now,
@@ -132,6 +136,7 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         vehicle_type=vehicle_type,
         helmet_detected=helmet_detected,
         violation=is_violation,
+        penalty_applied=penalty_applied,
         gate_type=payload.gate_type,
         zone=payload.zone,
         timestamp=now,
@@ -191,6 +196,7 @@ async def get_all_detections(days: int = 30):
                     vehicle_type=doc.get("vehicle_type", "motorcycle"),
                     helmet_detected=doc.get("helmet_detected"),
                     violation=doc.get("violation", False),
+                    penalty_applied=doc.get("penalty_applied"),
                     gate_type=doc.get("gate_type", "ENTRY"),
                     zone=doc.get("zone", "Zone A"),
                     timestamp=doc.get("timestamp", datetime.now(timezone.utc)),

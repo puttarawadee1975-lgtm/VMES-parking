@@ -35,6 +35,7 @@ class DetectionLogCreate(BaseModel):
 class DetectionLogResponse(DetectionLogCreate):
     id: str
     matched_user: Optional[str] = None
+    penalty_applied: Optional[bool] = None
 
 # Driving Score Audit Log Schemas
 class DrivingScoreLogCreate(BaseModel):

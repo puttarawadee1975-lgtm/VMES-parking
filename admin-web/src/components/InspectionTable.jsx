@@ -237,7 +237,13 @@ export default function InspectionTable({
                     </td>
                     <td>
                       <span style={{ color: item.isViolation ? '#dc2626' : '#059669', fontWeight: 700 }}>
-                        {item.isViolation ? 'Penalized (-10 pts)' : 'Pass Granted'}
+                        {!item.isViolation
+  ? 'Pass Granted'
+  : item.penaltyApplied === true
+    ? 'Penalized (-10 pts)'
+    : item.penaltyApplied === false
+      ? 'Violation Logged (Penalty Already Applied Today)'
+      : 'Violation Logged'}
                       </span>
                     </td>
                   </tr>
@@ -305,7 +311,13 @@ export default function InspectionTable({
                 </div>
               </div>
               <div style={{ fontSize: 14, fontWeight: 800, color: selectedSnapshot.isViolation ? '#dc2626' : '#059669' }}>
-                {selectedSnapshot.isViolation ? 'Penalized (-10 pts)' : 'Pass Granted'}
+                {!selectedSnapshot.isViolation
+  ? 'Pass Granted'
+  : selectedSnapshot.penaltyApplied === true
+    ? 'Penalized (-10 pts)'
+    : selectedSnapshot.penaltyApplied === false
+      ? 'Violation Logged (Penalty Already Applied Today)'
+      : 'Violation Logged'}
               </div>
             </div>
 

@@ -67,6 +67,23 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
     return cur;
   };
 
+  const uniqueDrivers = Array.from(
+    new Map(
+      vehicles.map(item => [item.ownerEmail || item.owner, item])
+    ).values()
+  );
+
+  const getLatestViolation = (item) => {
+    return logs.find(log =>
+      log.isViolation &&
+      (
+        log.owner === item.ownerEmail ||
+        log.owner === item.owner ||
+        log.owner?.includes(item.ownerEmail || '')
+      )
+    );
+  };
+
   return (
     <div className="card">
       <div className="card-header">
@@ -88,8 +105,11 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
             </tr>
           </thead>
           <tbody>
-            {vehicles.map((item, i) => (
-              <tr key={i}>
+            {uniqueDrivers.map((item, i) => {
+              const latestViolation = getLatestViolation(item);
+
+              return (
+                <tr key={i}>
                 <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
                 <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.owner}</td>
                 <td style={{ 
@@ -100,11 +120,11 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
                   {item.score} / 100
                 </td>
                 <td>
-                  {item.isViolation ? (
+                  {latestViolation ? (
                     <div>
-                      <div style={{ fontWeight: 600, color: '#dc2626' }}>No Helmet (-10 pts)</div>
+                      <div style={{ fontWeight: 600, color: '#dc2626' }}>No Helmet Violation</div>
                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                        {item.lastViolationDate || item.time || 'Today'}
+                        {latestViolation.date} • {latestViolation.time}
                       </div>
                     </div>
                   ) : (
@@ -134,7 +154,8 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
