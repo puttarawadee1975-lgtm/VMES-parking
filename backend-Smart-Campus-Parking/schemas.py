@@ -75,6 +75,11 @@ class SavedSpotCreate(BaseModel):
     savedDate: Optional[str] = None
     savedTime: Optional[str] = None
 
+class SavedSpotResponse(SavedSpotCreate):
+    user_email: Optional[str] = None
+    timestamp: Optional[datetime] = None
+
+
 class SpotReservationCreate(BaseModel):
     zone: str = Field(..., description="e.g. Zone A")
     building: str = Field(default="VMES Building", description="e.g. VMES Building")

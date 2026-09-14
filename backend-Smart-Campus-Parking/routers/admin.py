@@ -254,6 +254,14 @@ async def get_all_registered_vehicles():
             v_type = "car" if (raw_type == "car" or any(kw in combined for kw in CAR_KEYWORDS)) else "motorcycle"
             full_detail = format_vehicle_detail(v_type, brand, model, color)
 
+            email_prefix = d.get("user_email", "").split("@")[0]
+            if email_prefix.isdigit():
+                s_id = email_prefix
+                o_name = d.get("name") or d.get("owner") or f"Student {email_prefix}"
+            else:
+                s_id = d.get("student_id") or f"STU-{email_prefix[:4].upper()}"
+                o_name = d.get("name") or d.get("owner") or email_prefix.capitalize()
+
             vehicles.append({
                 "plate": p_str,
                 "province": prov_str,
@@ -262,9 +270,9 @@ async def get_all_registered_vehicles():
                 "model": model,
                 "color": color,
                 "vehicle": full_detail,
-                "owner": d.get("user_email", "").split("@")[0].capitalize(),
+                "owner": o_name,
                 "ownerEmail": d.get("user_email", ""),
-                "id": "STU-" + d.get("user_email", "0000")[:4],
+                "id": s_id,
                 "role": d.get("role", "Student").capitalize(),
                 "score": 100
             })

@@ -9,6 +9,7 @@ import ScoresTable from './components/ScoresTable';
 import AnnouncementsTable from './components/AnnouncementsTable';
 import ParkingOccupancyView from './components/ParkingOccupancyView';
 import ViolationsTable from './components/ViolationsTable';
+import LiveOverviewDashboard from './components/LiveOverviewDashboard';
 
 const INITIAL_VEHICLES = [
   { plate: '1กข 1234', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'Honda', model: 'PCX 160', color: 'Black', vehicle: 'Motorcycle Honda PCX 160 (Black)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Thanaphat S.', id: '65070042', role: 'Student', score: 98, ownerEmail: '65070042@student.university.ac.th' },
@@ -211,14 +212,14 @@ export default function App() {
   };
 
   const titles = {
-    'overview': { title: 'Live Gate & Operations Overview', subtitle: 'Real-time AI License Plate Recognition & Campus Safety Monitor' },
-    'live-camera': { title: 'Gate Camera Feed Surveillance Grid (ENTRY & EXIT)', subtitle: 'Multi-Gate CCTV Stream & Optical Character Recognition' },
-    'access-history': { title: 'Gate Access & Violation History Log', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
-    'vehicles': { title: 'Registered Vehicles & Campus Passes', subtitle: 'Manage student & staff approved license plates and 1-plate policy rules' },
-    'safety-scores': { title: 'Driver Safety Scores & Audit Console', subtitle: '100-point scale enforcement, violation penalties, and score restorations' },
-    'violations': { title: 'Gate Access & Violation History Log', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
-    'parking-map': { title: 'Building Occupancy & Capacity Monitor', subtitle: 'Real-time building parking availability, load percentage, and floor specifications' },
-    'announcements': { title: 'Campus Announcements Management', subtitle: 'Broadcast real-time notices, safety updates, and maintenance alerts to mobile users' }
+    'overview': { title: 'Live Overview', subtitle: 'Real-time gate scans, parking load & safety updates' },
+    'live-camera': { title: 'Gate Camera', subtitle: 'Multi-Gate CCTV Stream & Optical Character Recognition' },
+    'access-history': { title: 'Gate Access & Violation History', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
+    'vehicles': { title: 'Vehicle Directory', subtitle: 'Manage student & staff approved license plates' },
+    'safety-scores': { title: 'Driving Score', subtitle: '100-point scale enforcement, violation penalties, and score restorations' },
+    'violations': { title: 'Gate Access & Violation History', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
+    'parking-map': { title: 'Building Occupancy', subtitle: "Real-time VMES's building parking availability" },
+    'announcements': { title: 'Official Campus Announcements', subtitle: 'Broadcast real-time notices, safety updates, and maintenance alerts to mobile users' }
   };
 
   const currentMeta = titles[activeTab] || titles['overview'];
@@ -234,18 +235,15 @@ export default function App() {
         />
 
         {activeTab === 'overview' && (
-          <div>
-            <KpiCards
-              totalScans={totalScans}
-              violationsCount={violationsCount}
-              availableSpots={parkingOccupancy.available}
-              occupiedRate={parkingOccupancy.rate}
-            />
-
-            <div style={{ marginTop: 16 }}>
-              <InspectionTable logs={logs} isOverview={true} onViewAllHistory={() => { setViolationUserFilter(''); setActiveTab('access-history'); }} />
-            </div>
-          </div>
+          <LiveOverviewDashboard
+            totalScans={totalScans}
+            violationsCount={violationsCount}
+            parkingOccupancy={parkingOccupancy}
+            logs={logs}
+            vehicles={vehicles}
+            onNavigate={(tab) => { setViolationUserFilter(''); setActiveTab(tab); }}
+            handleTriggerScan={handleTriggerScan}
+          />
         )}
 
         {(activeTab === 'access-history' || activeTab === 'violations') && (
@@ -264,7 +262,7 @@ export default function App() {
                 <i className="ri-camera-lens-line"></i>
                 <span>VMES CCTV Entry & Exit Gate</span>
               </div>
-              <span className="text-muted text-xs">2-Camera Grid Stream</span>
+              <span className="text-muted text-xs">2-Camera Stream</span>
             </div>
 
             <div className="grid-2-col gap-16 mt-16" style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

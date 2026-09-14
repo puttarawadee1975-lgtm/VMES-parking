@@ -3,10 +3,10 @@ import React, { useState, useMemo } from 'react';
 const SAMPLE_ZONE_IMAGES = [
   { name: 'Ground Floor Car Deck', url: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80' },
   { name: 'Motorcycle Two-Wheeler Deck', url: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80' },
-  { name: 'Faculty & Staff Reserved Deck', url: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80' }
+  { name: 'Faculty & Staff Car Deck', url: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80' }
 ];
 
-// Initial mock data of parking spots (Scanned QR & Admin Locked Reservations)
+// Initial mock data of parking spots (Camera ALPR)
 const INITIAL_REGISTERED_PARKED_SPOTS = [
   {
     id: 'SPOT-65070042',
@@ -20,12 +20,12 @@ const INITIAL_REGISTERED_PARKED_SPOTS = [
     vehicleName: 'Honda PCX 160 (Black)',
     building: 'VMES Building',
     zone: 'Zone B',
-    floor: 'Floor 1',
-    pillar: 'Pillar B06-B10',
-    entryTime: 'Today • 08:24 AM (Gate 1 Entry Scan)',
-    exitTime: 'Active (Currently Parked)',
-    scannedTime: 'Today • 08:24 AM',
-    entryGate: 'Gate 1 (Main Entrance) at 08:24 AM',
+    floor: 'Floor G',
+    pillar: 'Spot B-01',
+    entryTime: '08:24 AM (Gate 1 Entry)',
+    exitTime: 'Active (In Building)',
+    scannedTime: '08:24 AM',
+    entryGate: 'Gate 1 Entry at 08:24 AM',
     safetyScore: 98,
     status: 'Active Parked',
     imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
@@ -43,11 +43,11 @@ const INITIAL_REGISTERED_PARKED_SPOTS = [
     building: 'VMES Building',
     zone: 'Zone A',
     floor: 'Floor G',
-    pillar: 'Pillar G05-G09 (VIP Entrance)',
-    entryTime: 'Today • 09:10 AM (Gate 1 Entry Scan)',
-    exitTime: 'Active (Currently Parked)',
-    scannedTime: 'Today • 09:10 AM',
-    entryGate: 'Gate 1 (Main Entrance) at 09:10 AM',
+    pillar: 'Spot A-02',
+    entryTime: '09:10 AM (Gate 1 Entry)',
+    exitTime: 'Active (In Building)',
+    scannedTime: '09:10 AM',
+    entryGate: 'Gate 1 Entry at 09:10 AM',
     safetyScore: 100,
     status: 'Active Parked',
     imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80'
@@ -64,19 +64,19 @@ const INITIAL_REGISTERED_PARKED_SPOTS = [
     vehicleName: 'Toyota Camry (White)',
     building: 'VMES Building',
     zone: 'Zone C',
-    floor: 'Floor 2',
-    pillar: 'Pillar C01-C04 (Faculty Area)',
-    entryTime: 'Today • 08:10 AM (Gate 2 Entry Scan)',
-    exitTime: 'Active (Currently Parked)',
-    scannedTime: 'Today • 08:10 AM',
-    entryGate: 'Gate 2 (East Entrance) at 08:10 AM',
+    floor: 'Floor G',
+    pillar: 'Spot C-01',
+    entryTime: '08:10 AM (Gate 2 Entry)',
+    exitTime: 'Active (In Building)',
+    scannedTime: '08:10 AM',
+    entryGate: 'Gate 2 Entry at 08:10 AM',
     safetyScore: 100,
     status: 'Active Parked',
     imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80'
   },
   {
-    id: 'SPOT-LOCKED-VIP',
-    owner: 'Cherie Anan (Guest VIP)',
+    id: 'SPOT-66070112',
+    owner: 'Cherie Anan',
     studentId: '66070112',
     ownerEmail: 'cherie.a@student.university.ac.th',
     role: 'Student',
@@ -87,13 +87,13 @@ const INITIAL_REGISTERED_PARKED_SPOTS = [
     building: 'VMES Building',
     zone: 'Zone A',
     floor: 'Floor G',
-    pillar: 'Pillar G10-G12',
-    entryTime: 'Admin Lock • Pre-Reserved',
-    exitTime: 'Hold Duration: 2 Hours (Faculty Lock)',
-    scannedTime: 'Admin Lock • Pre-Reserved',
-    entryGate: 'Hold Duration: 2 Hours (Faculty Event Lock)',
+    pillar: 'Spot A-03',
+    entryTime: '08:00 AM (Gate 1 Entry)',
+    exitTime: 'Active (In Building)',
+    scannedTime: '08:00 AM',
+    entryGate: 'Gate 1 (Main Entrance) at 08:00 AM',
     safetyScore: 100,
-    status: 'Reserved & Locked',
+    status: 'Active Parked',
     imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80'
   },
   {
@@ -108,12 +108,12 @@ const INITIAL_REGISTERED_PARKED_SPOTS = [
     vehicleName: 'Yamaha Grand Filano (Gray)',
     building: 'VMES Building',
     zone: 'Zone B',
-    floor: 'Floor 1',
-    pillar: 'Pillar B01-B05',
-    entryTime: 'Today • 09:15 AM (Zone QR Scan)',
-    exitTime: 'Active (Currently Parked)',
-    scannedTime: 'Today • 09:15 AM',
-    entryGate: 'Gate 1 (Main Entrance) at 09:15 AM',
+    floor: 'Floor G',
+    pillar: 'Spot B-02',
+    entryTime: '09:15 AM (Gate 1 Entry)',
+    exitTime: 'Active (In Building)',
+    scannedTime: '09:15 AM',
+    entryGate: 'Gate 1 Entry at 09:15 AM',
     safetyScore: 80,
     status: 'Active Parked',
     imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
@@ -131,11 +131,11 @@ const INITIAL_REGISTERED_PARKED_SPOTS = [
     building: 'VMES Building',
     zone: 'Zone A',
     floor: 'Floor G',
-    pillar: 'Pillar G01-G04',
-    entryTime: 'Today • 10:25 AM (Gate 2 Entry Scan)',
-    exitTime: 'Active (Currently Parked)',
-    scannedTime: 'Today • 10:25 AM',
-    entryGate: 'Gate 2 (East Entrance) at 10:25 AM',
+    pillar: 'Spot A-01',
+    entryTime: '10:25 AM (Gate 1 Entry)',
+    exitTime: 'Active (In Building)',
+    scannedTime: '10:25 AM',
+    entryGate: 'Gate 1 Entry at 10:25 AM',
     safetyScore: 95,
     status: 'Active Parked',
     imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80'
@@ -151,51 +151,190 @@ const INITIAL_REGISTERED_PARKED_SPOTS = [
     vehicleType: 'motorcycle',
     vehicleName: 'Vespa Sprint 150 (White)',
     building: 'VMES Building',
-    zone: 'Zone B',
-    floor: 'Floor 1',
-    pillar: 'Pillar B08-B12',
-    entryTime: 'Today • 11:00 AM (Zone QR Scan)',
-    exitTime: 'Active (Currently Parked)',
-    scannedTime: 'Today • 11:00 AM',
-    entryGate: 'Gate 1 (Main Entrance) at 11:00 AM',
+    zone: 'Zone D',
+    floor: 'Floor G',
+    pillar: 'Spot D-01',
+    entryTime: '11:00 AM (Gate 2 Entry)',
+    exitTime: 'Active (In Building)',
+    scannedTime: '11:00 AM',
+    entryGate: 'Gate 2 Entry at 11:00 AM',
     safetyScore: 100,
+    status: 'Active Parked',
+    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
+  },
+  {
+    id: 'SPOT-65070512',
+    owner: 'Kittisak W.',
+    studentId: '65070512',
+    ownerEmail: '65070512@student.university.ac.th',
+    role: 'Student',
+    plate: '4กม 7777',
+    province: 'กรุงเทพมหานคร',
+    vehicleType: 'motorcycle',
+    vehicleName: 'GPX Drone 150 (Red)',
+    building: 'VMES Building',
+    zone: 'Zone B',
+    floor: 'Floor G',
+    pillar: 'Spot B-01',
+    entryTime: '07:45 AM (Gate 1 Entry)',
+    exitTime: 'Active (In Building)',
+    scannedTime: '07:45 AM',
+    entryGate: 'Gate 1 (Main Entrance) at 07:45 AM',
+    safetyScore: 50,
     status: 'Active Parked',
     imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
   }
 ];
 
-// Definition of automobile zone layout pillars for visual slot grid (Cars Only)
+// Historical parking records log
+const INITIAL_PARKING_HISTORY = [
+  {
+    id: 'HIST-1001',
+    date: '2026-09-14',
+    entryTime: '08:15 AM (Gate 1 Entry)',
+    exitTime: '12:45 PM (Exit Gate 1)',
+    duration: '4h 30m',
+    spot: 'Spot A-01',
+    zone: 'Zone A',
+    studentId: '65070088',
+    owner: 'Puttarawadee T.',
+    role: 'Student',
+    plate: '3กข 8924',
+    province: 'กรุงเทพมหานคร',
+    vehicleName: 'Toyota Yaris Ativ (Silver)',
+    vehicleType: 'car',
+    status: 'Completed'
+  },
+  {
+    id: 'HIST-1002',
+    date: '2026-09-14',
+    entryTime: '07:50 AM (Gate 2 Entry)',
+    exitTime: '16:20 PM (Exit Gate 1)',
+    duration: '8h 30m',
+    spot: 'Spot C-01',
+    zone: 'Zone C',
+    studentId: 'SEC-01',
+    owner: 'Dr. Somchai P.',
+    role: 'Staff',
+    plate: '9กข 9999',
+    province: 'สมุทรปราการ',
+    vehicleName: 'Toyota Camry (White)',
+    vehicleType: 'car',
+    status: 'Completed'
+  },
+  {
+    id: 'HIST-1003',
+    date: '2026-09-14',
+    entryTime: '08:24 AM (Gate 1 Entry)',
+    exitTime: '12:30 PM (Exit Gate 2)',
+    duration: '4h 06m',
+    spot: 'Spot B-01',
+    zone: 'Zone B',
+    studentId: '65070042',
+    owner: 'Thanaphat S.',
+    role: 'Student',
+    plate: '1กข 1234',
+    province: 'กรุงเทพมหานคร',
+    vehicleName: 'Honda PCX 160 (Black)',
+    vehicleType: 'motorcycle',
+    status: 'Completed'
+  },
+  {
+    id: 'HIST-1004',
+    date: '2026-09-13',
+    entryTime: '09:00 AM (Gate 1 Entry)',
+    exitTime: '15:10 PM (Exit Gate 1)',
+    duration: '6h 10m',
+    spot: 'Spot A-03',
+    zone: 'Zone A',
+    studentId: '66070112',
+    owner: 'Cherie Anan',
+    role: 'Student',
+    plate: '9กฮ 5512',
+    province: 'กรุงเทพมหานคร',
+    vehicleName: 'Mazda 2 Sedan (Red)',
+    vehicleType: 'car',
+    status: 'Completed'
+  },
+  {
+    id: 'HIST-1005',
+    date: '2026-09-13',
+    entryTime: '10:15 AM (Gate 2 Entry)',
+    exitTime: '17:45 PM (Exit Gate 2)',
+    duration: '7h 30m',
+    spot: 'Spot D-01',
+    zone: 'Zone D',
+    studentId: '65070244',
+    owner: 'Chayanan T.',
+    role: 'Student',
+    plate: '2กข 4321',
+    province: 'นนทบุรี',
+    vehicleName: 'Vespa Sprint 150 (White)',
+    vehicleType: 'motorcycle',
+    status: 'Completed'
+  },
+  {
+    id: 'HIST-1006',
+    date: '2026-09-12',
+    entryTime: '08:30 AM (Gate 1 Entry)',
+    exitTime: '13:00 PM (Exit Gate 1)',
+    duration: '4h 30m',
+    spot: 'Spot A-02',
+    zone: 'Zone A',
+    studentId: '65070399',
+    owner: 'Puttarapon M.',
+    role: 'Student',
+    plate: '5กษ 8888',
+    province: 'กรุงเทพมหานคร',
+    vehicleName: 'Honda Civic (Black)',
+    vehicleType: 'car',
+    status: 'Completed'
+  }
+];
+
+// Definition of zone layout spots for visual slot grid
 const ZONE_PILLAR_LAYOUTS = {
   'Zone A': [
-    { pillar: 'Pillar G01', spotId: 'SPOT-65070399', label: 'Spot G01' },
-    { pillar: 'Pillar G02', spotId: 'SPOT-65070088', label: 'Spot G02' },
-    { pillar: 'Pillar G03', spotId: 'SPOT-LOCKED-VIP', isLocked: true, label: 'Spot G03' },
-    { pillar: 'Pillar G04', spotId: null, label: 'Spot G04' },
-    { pillar: 'Pillar G05', spotId: null, label: 'Spot G05' },
-    { pillar: 'Pillar G06', spotId: null, label: 'Spot G06' },
-    { pillar: 'Pillar G07', spotId: null, label: 'Spot G07' },
-    { pillar: 'Pillar G08', spotId: null, label: 'Spot G08' },
-    { pillar: 'Pillar G09', spotId: null, label: 'Spot G09' },
-    { pillar: 'Pillar G10', spotId: null, label: 'Spot G10' }
+    { pillar: 'Spot A-01', spotId: 'SPOT-65070399', label: 'Spot A-01' },
+    { pillar: 'Spot A-02', spotId: 'SPOT-65070088', label: 'Spot A-02' },
+    { pillar: 'Spot A-03', spotId: 'SPOT-66070112', label: 'Spot A-03' },
+    { pillar: 'Spot A-04', spotId: null, label: 'Spot A-04' },
+    { pillar: 'Spot A-05', spotId: null, label: 'Spot A-05' },
+    { pillar: 'Spot A-06', spotId: null, label: 'Spot A-06' },
+    { pillar: 'Spot A-07', spotId: null, label: 'Spot A-07' },
+    { pillar: 'Spot A-08', spotId: null, label: 'Spot A-08' },
+    { pillar: 'Spot A-09', spotId: null, label: 'Spot A-09' },
+    { pillar: 'Spot A-10', spotId: null, label: 'Spot A-10' }
+  ],
+  'Zone B': [
+    { pillar: 'Spot B-01', spotId: 'SPOT-65070042', label: 'Side B-01' },
+    { pillar: 'Spot B-02', spotId: 'SPOT-65070118', label: 'Side B-02' }
   ],
   'Zone C': [
-    { pillar: 'Pillar C01-C04 (Faculty Area)', spotId: 'SPOT-SOMCHAI-P' },
-    { pillar: 'Pillar C05-C08', spotId: null, label: 'Available Faculty Spot' },
-    { pillar: 'Pillar C09-C12', spotId: null, label: 'Available Staff Spot' }
+    { pillar: 'Spot C-01', spotId: 'SPOT-SOMCHAI-P', label: 'Spot C-01' },
+    { pillar: 'Spot C-02', spotId: null, label: 'Spot C-02' },
+    { pillar: 'Spot C-03', spotId: null, label: 'Spot C-03' },
+    { pillar: 'Spot C-04', spotId: null, label: 'Spot C-04' },
+    { pillar: 'Spot C-05', spotId: null, label: 'Spot C-05' },
+    { pillar: 'Spot C-06', spotId: null, label: 'Spot C-06' },
+    { pillar: 'Spot C-07', spotId: null, label: 'Spot C-07' },
+    { pillar: 'Spot C-08', spotId: null, label: 'Spot C-08' }
+  ],
+  'Zone D': [
+    { pillar: 'Spot D-01', spotId: 'SPOT-65070244', label: 'Spot D-01' }
   ]
 };
 
 export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehicles = [] }) {
-  const { total = 18 } = parkingOccupancy || {};
+  const { total = 21 } = parkingOccupancy || {};
 
-  // Active Main View Tab: 'tracker' (Default) or 'zones-config'
-  const [activeSubTab, setActiveSubTab] = useState('tracker');
 
-  // Active Selected Zone for Inspection: 'ALL', 'Zone A', 'Zone B', 'Zone C'
-  const [selectedZoneId, setSelectedZoneId] = useState('ALL');
-
-  // Search Query for filter
+  // Search & Date Filter Controls
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedZoneId, setSelectedZoneId] = useState('ALL');
+  const [dateFilter, setDateFilter] = useState('today');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reservationFilter, setReservationFilter] = useState('ACTIVE');
 
   // Calculate live count from logs
   const estCars = logs.filter(l => l.vehicle_type === 'car' || (l.vehicle && /car/i.test(l.vehicle))).length;
@@ -208,15 +347,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
 
 
 
-  // Modal State for Admin Spot Locking / Reservation
-  const [showAdminLockModal, setShowAdminLockModal] = useState(false);
-  const [lockTargetOwner, setLockTargetOwner] = useState('');
-  const [lockTargetPlate, setLockTargetPlate] = useState('');
-  const [lockZone, setLockZone] = useState('Zone A');
-  const [lockFloor, setLockFloor] = useState('Floor G');
-  const [lockPillar, setLockPillar] = useState('Pillar G10-G12');
-  const [lockPurpose, setLockPurpose] = useState('Faculty / Staff Reserved');
-  const [lockDuration, setLockDuration] = useState('2 Hours');
+
 
   // Dynamic Building Zones List
   const [zones, setZones] = useState([
@@ -225,11 +356,11 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       name: 'Zone A',
       tag: 'Cars Only',
       badgeClass: 'badge-live',
-      location: 'Ground Floor - Automobile Deck',
-      pillars: 'Pillars G01 - G10',
+      location: 'Floor G - Automobile Deck A',
+      pillars: 'Spots A-01 - A-10',
       capacity: '10 Car Spots',
       imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80',
-      description: 'Main Entrance Automobile Deck with direct lift access.',
+      description: 'Automobile Deck A (A-01 to A-10).',
       color: '#2563eb',
       bgLight: '#eff6ff'
     },
@@ -238,26 +369,39 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       name: 'Zone B',
       tag: 'Motorcycles',
       badgeClass: 'badge-warning',
-      location: 'Floor 1 - Two-Wheeler Deck',
-      pillars: 'Pillars B01 - B12 (Ramp Side)',
-      capacity: '12 Motorcycle Spots',
+      location: 'Floor G - Motorcycle Deck B',
+      pillars: 'Spots B-01, B-02 (2 Sides)',
+      capacity: '2 Motorcycle Sides',
       imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80',
-      description: 'Dedicated two-wheeler deck with helmet storage.',
+      description: 'Motorcycle Deck B with 2 sides (B-01, B-02).',
       color: '#d97706',
       bgLight: '#fef3c7'
     },
     {
       id: 'Zone C',
       name: 'Zone C',
-      tag: 'Staff & Faculty',
-      badgeClass: 'badge-secondary',
-      location: 'Floor 2 - Reserved Automobile Deck',
-      pillars: 'Pillars C01 - C06 (Faculty Area)',
-      capacity: '12 Car Spots',
+      tag: 'Cars Only',
+      badgeClass: 'badge-live',
+      location: 'Floor G - Automobile Deck C',
+      pillars: 'Spots C-01 - C-08',
+      capacity: '8 Car Spots',
       imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80',
-      description: 'Reserved deck for university staff and faculty.',
+      description: 'Automobile Deck C (C-01 to C-08).',
       color: '#9333ea',
       bgLight: '#f3e8ff'
+    },
+    {
+      id: 'Zone D',
+      name: 'Zone D',
+      tag: 'Motorcycles',
+      badgeClass: 'badge-warning',
+      location: 'Floor G - Motorcycle Deck D',
+      pillars: 'Spot D-01',
+      capacity: '1 Motorcycle Spot',
+      imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80',
+      description: 'Single Motorcycle Deck D (D-01).',
+      color: '#059669',
+      bgLight: '#dcfce7'
     }
   ]);
 
@@ -275,72 +419,91 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   const [formImageUrl, setFormImageUrl] = useState('');
   const [formDescription, setFormDescription] = useState('');
 
-  // Count active & locked spots per zone
+  // Count active spots per zone
   const getZoneActiveCount = (zoneName) => {
-    return parkedSpots.filter(s => (s.status === 'Active Parked' || s.status === 'Reserved & Locked') && s.zone.toUpperCase().includes(zoneName.toUpperCase())).length;
+    return parkedSpots.filter(s => s.status === 'Active Parked' && s.zone.toUpperCase().includes(zoneName.toUpperCase())).length;
   };
 
-  const getZoneLockedCount = (zoneName) => {
-    return parkedSpots.filter(s => s.status === 'Reserved & Locked' && s.zone.toUpperCase().includes(zoneName.toUpperCase())).length;
-  };
 
-  // Filtered Scanned & Locked Parking Spots
+  // Filtered Scanned Parking Spots
   const filteredSpots = useMemo(() => {
     return parkedSpots.filter(spot => {
+      // 1. Search Query Filter
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q || (
-        spot.owner.toLowerCase().includes(q) ||
-        spot.studentId.toLowerCase().includes(q) ||
-        spot.plate.toLowerCase().includes(q) ||
-        spot.zone.toLowerCase().includes(q) ||
-        spot.pillar.toLowerCase().includes(q) ||
-        spot.vehicleName.toLowerCase().includes(q) ||
-        spot.status.toLowerCase().includes(q)
+        spot.owner?.toLowerCase().includes(q) ||
+        spot.studentId?.toLowerCase().includes(q) ||
+        spot.plate?.toLowerCase().includes(q) ||
+        spot.zone?.toLowerCase().includes(q) ||
+        spot.pillar?.toLowerCase().includes(q) ||
+        spot.vehicleName?.toLowerCase().includes(q) ||
+        spot.status?.toLowerCase().includes(q)
       );
 
+      // 2. Zone Filter
       const matchZone = selectedZoneId === 'ALL' || spot.zone.toUpperCase().includes(selectedZoneId.toUpperCase());
-      return matchSearch && matchZone;
+
+      // 3. Date Filter
+      let matchDate = true;
+      if (dateFilter !== 'all') {
+        const itemDate = spot.rawDate ? new Date(spot.rawDate) : (spot.timestamp ? new Date(spot.timestamp) : new Date());
+        const today = new Date();
+        if (dateFilter === 'today') {
+          matchDate = itemDate.toDateString() === today.toDateString();
+        } else if (dateFilter === 'yesterday') {
+          const yest = new Date(today);
+          yest.setDate(yest.getDate() - 1);
+          matchDate = itemDate.toDateString() === yest.toDateString();
+        } else if (dateFilter === 'custom' && selectedDate) {
+          const [year, month, day] = selectedDate.split('-').map(Number);
+          matchDate = itemDate.getFullYear() === year && (itemDate.getMonth() + 1) === month && itemDate.getDate() === day;
+        }
+      }
+
+      // 4. Status Filter
+      let matchStatus = true;
+      if (reservationFilter === 'ACTIVE') {
+        matchStatus = spot.status === 'Active Parked';
+      }
+
+      return matchSearch && matchZone && matchDate && matchStatus;
     });
-  }, [parkedSpots, searchQuery, selectedZoneId]);
+  }, [parkedSpots, searchQuery, selectedZoneId, dateFilter, selectedDate, reservationFilter]);
 
-  // Admin Action: Save New Spot Reservation / Lock
-  const handleSaveAdminLockSpot = (e) => {
-    e.preventDefault();
-    const targetVeh = vehicles.find(v => v.owner === lockTargetOwner || v.id === lockTargetOwner) || vehicles[0];
-    const now = new Date();
-    const timeStr = `Today • ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  // Filtered Historical Parking Records
+  const filteredHistory = useMemo(() => {
+    return INITIAL_PARKING_HISTORY.filter(item => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch = !q || (
+        item.owner?.toLowerCase().includes(q) ||
+        item.studentId?.toLowerCase().includes(q) ||
+        item.plate?.toLowerCase().includes(q) ||
+        item.spot?.toLowerCase().includes(q) ||
+        item.zone?.toLowerCase().includes(q) ||
+        item.vehicleName?.toLowerCase().includes(q)
+      );
 
-    const newLockedSpot = {
-      id: `LOCK-${Date.now().toString().slice(-6)}`,
-      owner: lockTargetOwner || (targetVeh ? targetVeh.owner : 'Faculty Reserved'),
-      studentId: targetVeh ? targetVeh.id : 'ADMIN-LOCK',
-      ownerEmail: targetVeh ? targetVeh.ownerEmail : 'admin@university.ac.th',
-      role: targetVeh ? (targetVeh.role || 'Staff') : 'Staff',
-      plate: lockTargetPlate || (targetVeh ? targetVeh.plate : '1กข 8924'),
-      province: targetVeh ? (targetVeh.province || 'กรุงเทพมหานคร') : 'กรุงเทพมหานคร',
-      vehicleType: targetVeh ? targetVeh.vehicle_type : 'car',
-      vehicleName: targetVeh ? (targetVeh.vehicle || `${targetVeh.brand} ${targetVeh.model}`) : `${lockPurpose}`,
-      building: 'VMES Building',
-      zone: lockZone,
-      floor: lockFloor,
-      pillar: lockPillar,
-      scannedTime: `Admin Lock • ${timeStr}`,
-      entryGate: `Hold Duration: ${lockDuration} (${lockPurpose})`,
-      safetyScore: 100,
-      status: 'Reserved & Locked',
-      imageUrl: SAMPLE_ZONE_IMAGES[0].url
-    };
+      const matchZone = selectedZoneId === 'ALL' || item.zone.toUpperCase().includes(selectedZoneId.toUpperCase());
 
-    setParkedSpots(prev => [newLockedSpot, ...prev]);
-    setShowAdminLockModal(false);
-  };
+      let matchDate = true;
+      if (dateFilter !== 'all') {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (dateFilter === 'today') {
+          matchDate = item.date === todayStr;
+        } else if (dateFilter === 'yesterday') {
+          const yest = new Date();
+          yest.setDate(yest.getDate() - 1);
+          matchDate = item.date === yest.toISOString().split('T')[0];
+        } else if (dateFilter === 'custom' && selectedDate) {
+          matchDate = item.date === selectedDate;
+        }
+      }
 
-  // Admin Action: Unlock / Release a Locked Spot
-  const handleUnlockSpot = (spotId) => {
-    if (window.confirm('Are you sure you want to unlock and release this reserved parking spot?')) {
-      setParkedSpots(prev => prev.filter(s => s.id !== spotId));
-    }
-  };
+      return matchSearch && matchZone && matchDate;
+    });
+  }, [searchQuery, selectedZoneId, dateFilter, selectedDate]);
+
+
 
   // Zone Config Controls
   const handleOpenAddZone = () => {
@@ -413,757 +576,349 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   };
 
   const totalActiveSpotsCount = parkedSpots.filter(s => s.status === 'Active Parked').length;
-  const totalLockedSpotsCount = parkedSpots.filter(s => s.status === 'Reserved & Locked').length;
-  const currentSelectedZoneObj = zones.find(z => z.name.toUpperCase() === selectedZoneId.toUpperCase());
+  const currentSelectedZoneObj = zones.find(z => z.name.toUpperCase() === selectedZoneId.toUpperCase() || z.id.toUpperCase() === selectedZoneId.toUpperCase());
+  const isMotorcycleZone = currentSelectedZoneObj ? /motorcycle/i.test(currentSelectedZoneObj.tag || '') : false;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const exitedTodayCount = INITIAL_PARKING_HISTORY.filter(h => h.date === todayStr).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Top Overview KPI Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <div className="kpi-card" style={{ background: '#ffffff', padding: 20, borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Active Parked Accounts</span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-              <i className="ri-qr-scan-2-line"></i>
-            </div>
+      {/* Top Overview KPI Row - Layout Matching Screenshot */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        {/* Card 1: Parked Vehicles / Today's Traffic */}
+        <div className="kpi-card" style={{ background: '#ffffff', padding: '20px 24px', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <i className="ri-car-fill" style={{ color: '#2563eb', fontSize: 24 }}></i>
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#0f172a', marginTop: 10 }}>
-            {totalActiveSpotsCount} <span style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Parked Cars/Motos</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Parked Vehicles</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{totalActiveSpotsCount}</div>
+            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Currently Inside Building</div>
           </div>
-          <div style={{ fontSize: 12, color: '#059669', fontWeight: 600, marginTop: 4 }}>Verified Scanned QR Locations</div>
         </div>
 
-        <div className="kpi-card" style={{ background: '#ffffff', padding: 20, borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Locked & Reserved Spots</span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-              <i className="ri-lock-2-line"></i>
-            </div>
+        {/* Card 2: Available Car Spots */}
+        <div className="kpi-card" style={{ background: '#ffffff', padding: '20px 24px', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <i className="ri-parking-box-fill" style={{ color: '#059669', fontSize: 24 }}></i>
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#d97706', marginTop: 10 }}>
-            {totalLockedSpotsCount} <span style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Locked Spots</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Available Parking Spots</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{availableCarSpots}</div>
+            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Campus Building (18 Car Spots)</div>
           </div>
-          <div style={{ fontSize: 12, color: '#d97706', fontWeight: 600, marginTop: 4 }}>Pre-Booked / VIP Reservations</div>
         </div>
 
-        <div className="kpi-card" style={{ background: '#ffffff', padding: 20, borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Available Car Spots</span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#dcfce7', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-              <i className="ri-checkbox-circle-line"></i>
-            </div>
+        {/* Card 3: Motorcycles Inside */}
+        <div className="kpi-card" style={{ background: '#ffffff', padding: '20px 24px', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <i className="ri-motorbike-fill" style={{ color: '#2563eb', fontSize: 24 }}></i>
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#059669', marginTop: 10 }}>{availableCarSpots} <span style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Open</span></div>
-          <div style={{ fontSize: 12, color: '#059669', fontWeight: 600, marginTop: 4 }}>Ready for Car Entry</div>
-        </div>
-
-        <div className="kpi-card" style={{ background: '#ffffff', padding: 20, borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Motorcycles Inside</span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f3e8ff', color: '#9333ea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-              <i className="ri-motorbike-line"></i>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Motorcycles Inside</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{estMotos}</div>
+            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Live Two-Wheelers Capacity</div>
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#9333ea', marginTop: 10 }}>{estMotos} <span style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Motorcycles</span></div>
-          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Tracked via QR Scan</div>
         </div>
       </div>
 
-      {/* Navigation Sub-tab Header */}
-      <div className="card" style={{ padding: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 12, border: '1px solid #e2e8f0' }}>
-            <button 
-              onClick={() => setActiveSubTab('tracker')}
-              style={{
-                padding: '8px 18px',
-                borderRadius: 10,
-                border: 'none',
-                background: activeSubTab === 'tracker' ? '#ffffff' : 'transparent',
-                color: activeSubTab === 'tracker' ? '#2563eb' : '#64748b',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                boxShadow: activeSubTab === 'tracker' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6
-              }}
-            >
-              <i className="ri-qr-scan-2-line" style={{ fontSize: 16 }}></i>
-              Zone-by-Zone Parking Tracker
-            </button>
-
-            <button 
-              onClick={() => setActiveSubTab('zones-config')}
-              style={{
-                padding: '8px 18px',
-                borderRadius: 10,
-                border: 'none',
-                background: activeSubTab === 'zones-config' ? '#ffffff' : 'transparent',
-                color: activeSubTab === 'zones-config' ? '#2563eb' : '#64748b',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                boxShadow: activeSubTab === 'zones-config' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6
-              }}
-            >
-              <i className="ri-layout-grid-line" style={{ fontSize: 16 }}></i>
-              Building Zones & Specifications
-            </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Clickable Zone Selector Cards Bar */}
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
+            Select Building Zone Filter:
           </div>
 
-
-        </div>
-      </div>
-
-      {/* TAB 1: Zone-by-Zone Clickable Inspection & Lock Management Section */}
-      {activeSubTab === 'tracker' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          
-          {/* Clickable Zone Selector Cards Bar */}
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
-              Select Zone to Inspect & Lock Spots:
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-              {/* All Zones Card */}
-              <div 
-                onClick={() => setSelectedZoneId('ALL')}
-                style={{
-                  background: selectedZoneId === 'ALL' ? '#eff6ff' : '#ffffff',
-                  border: `2px solid ${selectedZoneId === 'ALL' ? '#2563eb' : '#e2e8f0'}`,
-                  borderRadius: 16,
-                  padding: 16,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: selectedZoneId === 'ALL' ? '0 4px 12px rgba(37, 99, 235, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)',
-                  position: 'relative'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 800, fontSize: 15, color: selectedZoneId === 'ALL' ? '#1e3a8a' : '#0f172a' }}>
-                    All Building Zones
-                  </span>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#3b82f6', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                    <i className="ri-building-2-fill"></i>
-                  </div>
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: '#2563eb', marginTop: 8 }}>
-                  {totalActiveSpotsCount + totalLockedSpotsCount} <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Active / Locked</span>
-                </div>
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, fontWeight: 600 }}>
-                  Overview across all VMES Building floors
-                </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+            {/* All Zones Card */}
+            <div
+              onClick={() => setSelectedZoneId('ALL')}
+              style={{
+                background: selectedZoneId === 'ALL' ? '#eff6ff' : '#ffffff',
+                border: `2px solid ${selectedZoneId === 'ALL' ? '#2563eb' : '#e2e8f0'}`,
+                borderRadius: 14,
+                padding: '12px 14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: selectedZoneId === 'ALL' ? '0 4px 12px rgba(37, 99, 235, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: selectedZoneId === 'ALL' ? '#1e3a8a' : '#0f172a' }}>
+                  All Zones
+                </span>
               </div>
-
-              {/* Individual Dynamic Zone Cards */}
-              {zones.map((z) => {
-                const isSelected = selectedZoneId.toUpperCase() === z.name.toUpperCase();
-                const activeInZone = getZoneActiveCount(z.name);
-                const lockedInZone = getZoneLockedCount(z.name);
-
-                return (
-                  <div 
-                    key={z.id}
-                    onClick={() => setSelectedZoneId(z.name)}
-                    style={{
-                      background: isSelected ? z.bgLight : '#ffffff',
-                      border: `2px solid ${isSelected ? z.color : '#e2e8f0'}`,
-                      borderRadius: 16,
-                      padding: 16,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      boxShadow: isSelected ? `0 4px 12px ${z.color}33` : '0 1px 3px rgba(0,0,0,0.05)',
-                      position: 'relative'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>
-                        {z.name}
-                      </span>
-                      <span className={`badge ${z.badgeClass}`} style={{ fontSize: 10 }}>{z.tag}</span>
-                    </div>
-
-                    <div style={{ fontSize: 24, fontWeight: 800, color: z.color, marginTop: 8 }}>
-                      {activeInZone} <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Parked</span>
-                      {lockedInZone > 0 && (
-                        <span style={{ fontSize: 12, color: '#d97706', fontWeight: 800, marginLeft: 6 }}>
-                          ({lockedInZone} 🔒 Locked)
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ fontSize: 11, color: '#475569', marginTop: 4, fontWeight: 600 }}>
-                      <i className="ri-map-pin-line" style={{ marginRight: 3, color: z.color }}></i>
-                      {z.location}
-                    </div>
-                  </div>
-                );
-              })}
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#2563eb', marginTop: 6 }}>
+                {totalActiveSpotsCount} <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Active</span>
+              </div>
             </div>
-          </div>
 
-          {/* Active Zone Detail Header & Visual Pillar Grid */}
-          <div className="card" style={{ padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
-                    {selectedZoneId === 'ALL' ? 'VMES Building - All Parking Zones' : `Inspecting: ${selectedZoneId}`}
-                  </h3>
-                  <span className="badge badge-live" style={{ fontSize: 11 }}>
-                    {selectedZoneId === 'ALL' ? 'All Vehicles & Locked Spots' : (currentSelectedZoneObj?.tag || 'Zone View')}
-                  </span>
-                  {(selectedZoneId === 'Zone B' || /motorcycle/i.test(zones.find(z => z.id === selectedZoneId)?.tag || '')) && (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '3px 10px', borderRadius: 20, border: '1px solid #bfdbfe' }}>
-                      📷 Single Zone QR Code
+            {/* Individual Dynamic Zone Cards */}
+            {zones.map((z) => {
+              const isSelected = selectedZoneId.toUpperCase() === z.name.toUpperCase();
+              const activeInZone = getZoneActiveCount(z.name);
+
+              return (
+                <div
+                  key={z.id}
+                  onClick={() => setSelectedZoneId(z.name)}
+                  style={{
+                    background: isSelected ? z.bgLight : '#ffffff',
+                    border: `2px solid ${isSelected ? z.color : '#e2e8f0'}`,
+                    borderRadius: 14,
+                    padding: '12px 14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isSelected ? `0 4px 12px ${z.color}22` : '0 1px 3px rgba(0,0,0,0.03)',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 800, fontSize: 13, color: '#0f172a' }}>
+                      {z.name}
                     </span>
-                  )}
-                </div>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                  {selectedZoneId === 'ALL' 
-                    ? 'Displaying all registered student & staff vehicles and locked reservations across all VMES Building zones.'
-                    : `${currentSelectedZoneObj?.location || ''} • ${currentSelectedZoneObj?.pillars || ''}`}
-                </div>
-              </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>{z.tag}</span>
+                  </div>
 
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#2563eb', marginTop: 6 }}>
+                    {activeInZone} <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Parked</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Active Zone Detail Header & Controls Card */}
+        <div className="card" style={{ padding: '20px 24px', borderRadius: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <i className="ri-building-2-line" style={{ color: '#2563eb', fontSize: 20 }}></i>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a' }}>
+                  {selectedZoneId === 'ALL' ? 'Building Parking Occupancy' : selectedZoneId}
+                </h3>
+                {selectedZoneId !== 'ALL' && (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#0f172a' }}>
+                    {currentSelectedZoneObj?.tag}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                {selectedZoneId === 'ALL'
+                  ? 'Track real-time vehicle entry and exit timestamps.'
+                  : `${currentSelectedZoneObj?.location || ''}`}
+              </div>
+            </div>
+
+            {/* Controls: Search, Status, Date & Zone Filters */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               {/* Search Bar */}
-              <div style={{ position: 'relative', width: 260 }}>
-                <i className="ri-search-line" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}></i>
-                <input 
-                  type="text" 
-                  placeholder="Search in this zone..." 
+              <div style={{ position: 'relative', width: 220 }}>
+                <i className="ri-search-line" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 14 }}></i>
+                <input
+                  type="text"
+                  placeholder="Search plate, ID, name..."
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '8px 12px 8px 36px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
+                    padding: '8px 12px 8px 34px',
                     borderRadius: 10,
-                    fontSize: 13,
-                    color: '#0f172a',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    fontSize: 12,
                     fontWeight: 600,
+                    color: '#0f172a',
                     outline: 'none'
                   }}
                 />
               </div>
-            </div>
 
-            {/* All Building Zones Table View */}
-            {selectedZoneId === 'ALL' && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid #f1f5f9' }}>
-                  <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Student / User ID</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name & Role</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registered Vehicle</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Zone & Location</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Entry & Exit Timestamps</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parkedSpots
-                        .filter(s => {
-                          if (!searchQuery) return true;
-                          const q = searchQuery.toLowerCase();
-                          return (
-                            s.owner?.toLowerCase().includes(q) ||
-                            s.studentId?.toLowerCase().includes(q) ||
-                            s.plate?.toLowerCase().includes(q) ||
-                            s.vehicleName?.toLowerCase().includes(q) ||
-                            s.zone?.toLowerCase().includes(q)
-                          );
-                        })
-                        .map((spot, idx) => {
-                          const isLocked = spot.status === 'Reserved & Locked';
-                          return (
-                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}>
-                              <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: 13 }}>
-                                {spot.studentId}
-                              </td>
-                              <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: 14 }}>
-                                {spot.owner}
-                                <span style={{ fontSize: 11, color: '#64748b', fontWeight: 500, marginLeft: 6 }}>({spot.role})</span>
-                              </td>
-                              <td style={{ padding: '14px 16px' }}>
-                                <span style={{ fontWeight: 800, color: '#0f172a', fontSize: 13 }}>
-                                  {spot.plate}
-                                </span>
-                                <span style={{ fontSize: 13, color: '#475569', fontWeight: 500, marginLeft: 6 }}>
-                                  ({spot.province}) • {spot.vehicleName}
-                                </span>
-                              </td>
-                              <td style={{ padding: '14px 16px', fontSize: 12, color: '#475569', fontWeight: 600 }}>
-                                <span style={{ fontWeight: 800, color: '#2563eb' }}>{spot.zone}</span> • {spot.floor}
-                              </td>
-                              <td style={{ padding: '14px 16px', fontSize: 12, color: '#64748b', fontWeight: 500 }}>
-                                {isLocked ? (
-                                  <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '4px 10px', borderRadius: 20, border: '1px solid #fde68a' }}>
-                                    🔒 Reserved & Locked
-                                  </span>
-                                ) : (
-                                  <div>
-                                    <div style={{ fontSize: 12, color: '#059669', fontWeight: 700 }}>
-                                      <i className="ri-login-circle-line" style={{ marginRight: 4 }}></i>
-                                      In: {spot.entryTime || spot.scannedTime || 'Today • 08:24 AM'}
-                                    </div>
-                                    <div style={{ fontSize: 11, color: spot.exitTime && !spot.exitTime.includes('Active') ? '#dc2626' : '#64748b', marginTop: 3 }}>
-                                      <i className="ri-logout-circle-line" style={{ marginRight: 4, color: spot.exitTime && !spot.exitTime.includes('Active') ? '#dc2626' : '#94a3b8' }}></i>
-                                      Out: {spot.exitTime || 'Active (In Building)'}
-                                    </div>
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+              {/* Reservation Status Dropdown */}
+              <select
+                value={reservationFilter}
+                onChange={(e) => setReservationFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#0f172a',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 10,
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="ACTIVE">Currently Parked</option>
+                <option value="EXITED">Exited</option>
+                <option value="ALL">All Statuses (Parked & Exited)</option>
+              </select>
 
-            {/* Motorcycle Zone Minimal Table View */}
-            {selectedZoneId !== 'ALL' && (selectedZoneId === 'Zone B' || /motorcycle/i.test(zones.find(z => z.id === selectedZoneId)?.tag || '')) && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid #f1f5f9' }}>
-                  <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Student / User ID</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registered Vehicle</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Entry & Exit Timestamps</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parkedSpots
-                        .filter(s => {
-                          const matchesZone = s.zone === selectedZoneId || (selectedZoneId === 'Zone B' && (s.vehicleType === 'motorcycle' || /motorcycle/i.test(s.vehicleName)));
-                          if (!matchesZone) return false;
-                          if (!searchQuery) return true;
-                          const q = searchQuery.toLowerCase();
-                          return (s.owner?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.plate?.toLowerCase().includes(q) || s.vehicleName?.toLowerCase().includes(q));
-                        })
-                        .map((moto, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}>
-                            <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: 13 }}>
-                              {moto.studentId}
-                            </td>
-                            <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: 14 }}>
-                              {moto.owner}
-                            </td>
-                            <td style={{ padding: '14px 16px' }}>
-                              <span style={{ fontWeight: 800, color: '#0f172a', fontSize: 13 }}>
-                                {moto.plate}
-                              </span>
-                              <span style={{ fontSize: 13, color: '#475569', fontWeight: 500, marginLeft: 6 }}>
-                                ({moto.province}) • {moto.vehicleName}
-                              </span>
-                            </td>
-                            <td style={{ padding: '14px 16px', fontSize: 12, color: '#64748b', fontWeight: 500 }}>
-                              <div style={{ fontSize: 12, color: '#059669', fontWeight: 700 }}>
-                                <i className="ri-login-circle-line" style={{ marginRight: 4 }}></i>
-                                In: {moto.entryTime || moto.scannedTime || 'Today • 08:24 AM'}
-                              </div>
-                              <div style={{ fontSize: 11, color: moto.exitTime && !moto.exitTime.includes('Active') ? '#dc2626' : '#64748b', marginTop: 3 }}>
-                                <i className="ri-logout-circle-line" style={{ marginRight: 4, color: moto.exitTime && !moto.exitTime.includes('Active') ? '#dc2626' : '#94a3b8' }}></i>
-                                Out: {moto.exitTime || 'Active (In Building)'}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+              {/* Zone Select Dropdown */}
+              <select
+                value={selectedZoneId}
+                onChange={(e) => setSelectedZoneId(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#0f172a',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 10,
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="ALL">All Zones</option>
+                {zones.map((z) => (
+                  <option key={z.id} value={z.name}>
+                    {z.name} ({z.tag})
+                  </option>
+                ))}
+              </select>
 
-            {/* Visual Pillar Slot Grid for specific Automobile zone view */}
-            {selectedZoneId !== 'ALL' && selectedZoneId !== 'Zone B' && !/motorcycle/i.test(zones.find(z => z.id === selectedZoneId)?.tag || '') && ZONE_PILLAR_LAYOUTS[selectedZoneId] && (
-              <div style={{ marginBottom: 24, background: '#f8fafc', borderRadius: 16, padding: 18, border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <i className="ri-layout-2-line" style={{ color: '#2563eb' }}></i>
-                    Interactive Pillar Layout & Spot Lock Grid ({selectedZoneId}):
-                  </div>
-                  <button
-                    onClick={() => {
-                      setLockZone(selectedZoneId);
-                      setLockPillar(ZONE_PILLAR_LAYOUTS[selectedZoneId][0]?.pillar || '');
-                      setShowAdminLockModal(true);
-                    }}
-                    style={{
-                      background: '#fef3c7',
-                      border: '1px solid #fde68a',
-                      color: '#b45309',
-                      fontSize: 12,
-                      fontWeight: 800,
-                      borderRadius: 10,
-                      padding: '6px 14px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6
-                    }}
-                  >
-                    🔒 Lock / Reserve Spot
-                  </button>
-                </div>
+              {/* Date Filter Dropdown */}
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#0f172a',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 10,
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="custom">Custom Date</option>
+                <option value="all">All Dates</option>
+              </select>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-                  {ZONE_PILLAR_LAYOUTS[selectedZoneId].map((slot, idx) => {
-                    const spotObj = slot.spotId ? parkedSpots.find(s => s.id === slot.spotId) : null;
-                    const isSpotLocked = spotObj && spotObj.status === 'Reserved & Locked';
-                    const isOccupied = !!spotObj;
-
-                    return (
-                      <div 
-                        key={idx}
-                        onClick={() => {
-                          if (!isOccupied) {
-                            setLockZone(selectedZoneId);
-                            setLockPillar(slot.pillar);
-                            setLockTargetOwner('');
-                            setLockTargetPlate('');
-                            setShowAdminLockModal(true);
-                          }
-                        }}
-                        style={{
-                          height: 115,
-                          background: isSpotLocked ? '#fffbeb' : '#ffffff',
-                          border: `1px solid ${isSpotLocked ? '#f59e0b' : (isOccupied ? '#cbd5e1' : '#e2e8f0')}`,
-                          borderRadius: 12,
-                          padding: 12,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                          cursor: isOccupied ? 'default' : 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isOccupied) {
-                            e.currentTarget.style.borderColor = '#94a3b8';
-                            e.currentTarget.style.background = '#f8fafc';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isOccupied) {
-                            e.currentTarget.style.borderColor = '#e2e8f0';
-                            e.currentTarget.style.background = '#ffffff';
-                          }
-                        }}
-                      >
-                        {/* Top Header Row */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: isSpotLocked ? '#b45309' : (isOccupied ? '#1e293b' : '#64748b'),
-                            background: isSpotLocked ? '#fef3c7' : '#f1f5f9',
-                            padding: '2px 8px',
-                            borderRadius: 6
-                          }}>
-                            {slot.pillar}
-                          </span>
-
-                          <span style={{ fontSize: 10, fontWeight: 700, color: isSpotLocked ? '#d97706' : (isOccupied ? '#059669' : '#10b981') }}>
-                            {isSpotLocked ? '🔒 LOCKED' : (isOccupied ? '● Occupied' : '🟢 Available')}
-                          </span>
-                        </div>
-
-                        {/* Middle Content Row */}
-                        <div style={{ margin: '4px 0' }}>
-                          {isOccupied ? (
-                            <>
-                              <div style={{ fontWeight: 800, color: '#0f172a', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {spotObj.owner}
-                              </div>
-                              <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
-                                ID: {spotObj.studentId}
-                              </div>
-                            </>
-                          ) : (
-                            <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>
-                              Available Spot
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Bottom Action / Metadata Row */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, borderTop: '1px solid #f1f5f9' }}>
-                          {isOccupied ? (
-                            <>
-                              <span style={{ fontWeight: 700, color: '#0f172a', fontSize: 11 }}>
-                                {spotObj.plate}
-                              </span>
-                              {isSpotLocked && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleUnlockSpot(spotObj.id);
-                                  }}
-                                  style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 10, fontWeight: 800, borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
-                                >
-                                  🔓 Unlock
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              <span style={{ fontSize: 11, color: '#cbd5e1' }}>
-                                -
-                              </span>
-                              <button
-                                style={{
-                                  background: '#fef3c7',
-                                  border: '1px solid #fde68a',
-                                  color: '#b45309',
-                                  fontSize: 10,
-                                  fontWeight: 800,
-                                  borderRadius: 6,
-                                  padding: '2px 8px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                🔒 Lock
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: Building Zones & Specifications Management */}
-      {activeSubTab === 'zones-config' && (
-        <div className="card" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <i className="ri-layout-grid-line" style={{ color: '#2563eb' }}></i>
-                Building Zones Allocation & Specifications
-              </h3>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                Manage Zone layouts, specify pillars, set capacities, and upload zone photos for Mobile App display
-              </div>
-            </div>
-
-            <button 
-              className="btn btn-primary btn-sm"
-              onClick={handleOpenAddZone}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700, borderRadius: 10, padding: '8px 16px' }}
-            >
-              <i className="ri-add-line" style={{ fontSize: 16 }}></i>
-              Add New Zone
-            </button>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {zones.map((z) => (
-              <div key={z.id} style={{ background: '#ffffff', padding: 18, borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <span style={{ fontWeight: 800, color: '#0f172a', fontSize: 16 }}>{z.name}</span>
-                    <span className={`badge ${z.badgeClass}`}>{z.tag}</span>
-                  </div>
-
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 6 }}>
-                    <i className="ri-map-pin-2-line" style={{ color: '#2563eb', marginRight: 4 }}></i>
-                    {z.location}
-                  </div>
-
-                  <div style={{ fontSize: 12, color: '#0f172a', fontWeight: 700, marginBottom: 8, background: '#f1f5f9', padding: '6px 10px', borderRadius: 8, display: 'inline-block' }}>
-                    <i className="ri-pushpin-line" style={{ color: '#d97706', marginRight: 4 }}></i>
-                    {z.pillars || 'Pillars G01-G09'}
-                  </div>
-
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 12 }}>
-                    Capacity: <strong style={{ color: '#0f172a' }}>{z.capacity}</strong>
-                  </div>
-
-                  {z.imageUrl && (
-                    <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height: 120, marginBottom: 12, border: '1px solid #cbd5e1' }}>
-                      <img 
-                        src={z.imageUrl} 
-                        alt={z.name} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                      <div style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', color: '#ffffff', padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700 }}>
-                        <i className="ri-smartphone-line" style={{ marginRight: 2 }}></i> App Display Ready
-                      </div>
-                    </div>
-                  )}
-
-                  {z.description && (
-                    <div style={{ fontSize: 11, color: '#64748b', fontStyle: 'italic', marginBottom: 12 }}>
-                      "{z.description}"
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 12, borderTop: '1px solid #f1f5f9' }}>
-                  <button 
-                    className="btn btn-secondary btn-sm" 
-                    style={{ flex: 1, color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 700, fontSize: 12, padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                    onClick={() => handleOpenEditZone(z)}
-                  >
-                    <i className="ri-edit-line" style={{ color: '#2563eb' }}></i> Edit Zone & Pillars
-                  </button>
-
-                  {z.imageUrl && (
-                    <button 
-                      className="btn btn-secondary btn-sm" 
-                      style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', padding: '6px 10px' }}
-                      onClick={() => setSelectedPreviewImage({ name: z.name, url: z.imageUrl, location: z.location, pillars: z.pillars })}
-                      title="View Full Zone Photo"
-                    >
-                      <i className="ri-image-line" style={{ color: '#059669' }}></i>
-                    </button>
-                  )}
-
-                  <button 
-                    className="btn btn-secondary btn-sm" 
-                    style={{ color: '#dc2626', border: '1px solid #fecaca', background: '#fef2f2', padding: '6px 10px' }}
-                    onClick={() => handleDeleteZone(z.id)}
-                    title="Delete Zone"
-                  >
-                    <i className="ri-delete-bin-line"></i>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-
-
-      {/* ADMIN LOCK & RESERVE PARKING SPOT MODAL */}
-      {showAdminLockModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
-        }}>
-          <div className="card" style={{ width: 520, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <h3 style={{ margin: 0, color: '#0f172a', fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <i className="ri-lock-2-line" style={{ color: '#d97706' }}></i>
-                <span>🔒 Lock & Reserve Parking Spot (Admin)</span>
-              </h3>
-              <button onClick={() => setShowAdminLockModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: 20, width: 32, height: 32, cursor: 'pointer', color: '#475569', fontSize: 18 }}>✕</button>
-            </div>
-
-            <form onSubmit={handleSaveAdminLockSpot}>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Select Registered User / Vehicle *</label>
-                <select 
-                  value={lockTargetOwner} 
-                  onChange={e => {
-                    setLockTargetOwner(e.target.value);
-                    const matched = vehicles.find(v => v.owner === e.target.value);
-                    if (matched) setLockTargetPlate(matched.plate);
+              {dateFilter === 'custom' && (
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  style={{
+                    padding: '7px 10px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#0f172a',
+                    background: '#ffffff',
+                    border: '1px solid #2563eb',
+                    borderRadius: 10,
+                    outline: 'none'
                   }}
-                  style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600, outline: 'none' }}
-                >
-                  {vehicles.map((v, i) => (
-                    <option key={i} value={v.owner}>
-                      {v.owner} ({v.id || 'Student'}) — {v.plate} ({v.brand} {v.model})
-                    </option>
-                  ))}
-                  <option value="VIP Guest Speaker">VIP Guest Speaker (Faculty Guest)</option>
-                  <option value="Faculty Dean Reserved">Faculty Dean Reserved (Executive / Dean)</option>
-                </select>
-              </div>
+                />
+              )}
+            </div>
+          </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Target Zone *</label>
-                  <select 
-                    value={lockZone} 
-                    onChange={e => {
-                      setLockZone(e.target.value);
-                      if (e.target.value === 'Zone A') { setLockFloor('Floor G'); setLockPillar('Pillar G10-G12'); }
-                      if (e.target.value === 'Zone C') { setLockFloor('Floor 2'); setLockPillar('Pillar C05-C08'); }
-                    }}
-                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600, outline: 'none' }}
-                  >
-                    <option value="Zone A">Zone A (Ground Floor Automobile - Cars Only)</option>
-                    <option value="Zone C">Zone C (Floor 2 Staff/Faculty - Cars Only)</option>
-                  </select>
-                </div>
+          {/* Building Parking Occupancy Table View */}
+          <div style={{ marginTop: 8 }}>
+            <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+              <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Student / User ID</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name & Role</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registered Vehicle</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Zone</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Location</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Entry & Exit Timestamps</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSpots
+                    .map((spot, idx) => {
+                      let rawIn = spot.entryTime || (spot.scannedTime ? `${spot.scannedTime} (Gate 1 Entry)` : '08:24 AM (Gate 1 Entry)');
+                      rawIn = String(rawIn).replace(/^Today\s*•?\s*/i, '').replace(/Admin\s*•?\s*/i, '').replace(/Spot\s*QR\s*Code\s*Scan\s*at/gi, 'Gate 1 Entry at').replace(/Spot\s*QR\s*Scan/gi, 'Gate 1 Entry').replace(/Gate\s*(\d+)\s*Entry\s*Scan/gi, 'Gate $1 Entry').trim();
+                      if (!rawIn.includes('(')) {
+                        rawIn += ' (Gate 1 Entry)';
+                      }
+                      const cleanInTime = rawIn;
 
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Target Pillar / Slot *</label>
-                  <input 
-                    type="text" 
-                    value={lockPillar} 
-                    onChange={e => setLockPillar(e.target.value)}
-                    placeholder="e.g. Pillar G10-G12"
-                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
-                  />
-                </div>
-              </div>
+                      const cleanOutTime = spot.exitTime
+                        ? String(spot.exitTime).replace(/^Today\s*•?\s*/i, '')
+                        : 'Active (In Building)';
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Lock Purpose Tag *</label>
-                  <select 
-                    value={lockPurpose} 
-                    onChange={e => setLockPurpose(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600, outline: 'none' }}
-                  >
-                    <option value="Faculty / Staff Reserved">Faculty / Staff Reserved</option>
-                    <option value="VIP Guest Speaker">VIP Guest Speaker</option>
-                    <option value="Pre-Booked Student Reservation">Pre-Booked Student Reservation</option>
-                    <option value="Special Event Lock">Special Event Lock</option>
-                  </select>
-                </div>
+                      const recordDate = spot.rawDate || new Date().toISOString().split('T')[0];
 
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Hold Duration *</label>
-                  <select 
-                    value={lockDuration} 
-                    onChange={e => setLockDuration(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600, outline: 'none' }}
-                  >
-                    <option value="30 Minutes">30 Minutes</option>
-                    <option value="1 Hour">1 Hour</option>
-                    <option value="2 Hours">2 Hours</option>
-                    <option value="Full Day Lock (24h)">Full Day Lock (24h)</option>
-                    <option value="Indefinite Lock">Indefinite Lock (Until Released)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAdminLockModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ background: '#d97706', borderColor: '#b45309' }}>
-                  🔒 Lock & Reserve Spot
-                </button>
-              </div>
-            </form>
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}>
+                          <td style={{ padding: '14px 16px', fontWeight: 700, color: '#475569', fontSize: 12, whiteSpace: 'nowrap' }}>
+                            {recordDate}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: 13 }}>
+                            {spot.studentId}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: 14 }}>
+                            {spot.owner}
+                            <span style={{ fontSize: 12, color: '#0f172a', fontWeight: 600, marginLeft: 6 }}>({spot.role})</span>
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: 13 }}>
+                              {spot.plate}
+                            </span>
+                            <span style={{ fontSize: 13, color: '#0f172a', fontWeight: 600, marginLeft: 6 }}>
+                              ({spot.province})
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', fontSize: 13, color: '#0f172a', fontWeight: 800 }}>
+                            {spot.zone}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontSize: 12, color: '#0f172a', fontWeight: 600 }}>
+                            {spot.floor}{spot.pillar ? `, ${String(spot.pillar).replace(/\s*\([^)]*\)/gi, '').trim()}` : ''}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontSize: 12, color: '#0f172a', fontWeight: 500 }}>
+                            <div>
+                              <div style={{ fontSize: 12, color: '#0f172a', fontWeight: 700 }}>
+                                <i className="ri-login-circle-line" style={{ marginRight: 4, color: '#0f172a' }}></i>
+                                In: {cleanInTime}
+                              </div>
+                              <div style={{ fontSize: 12, color: cleanOutTime && !cleanOutTime.includes('Active') ? '#0f172a' : '#64748b', marginTop: 3, fontWeight: 700 }}>
+                                <i className="ri-logout-circle-line" style={{ marginRight: 4, color: cleanOutTime && !cleanOutTime.includes('Active') ? '#0f172a' : '#94a3b8' }}></i>
+                                Out: {cleanOutTime}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {filteredSpots.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: 13, fontWeight: 600 }}>
+                        No parked vehicles found matching the search or date filter.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+
+
+
+
+
+
+
+
+
 
       {/* Zone Config Add/Edit Modal */}
       {showZoneModal && (
@@ -1185,9 +940,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Zone Name *</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     placeholder="e.g. Zone A / Zone B / Zone VIP"
                     value={formName}
                     onChange={e => setFormName(e.target.value)}
@@ -1197,7 +952,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
 
                 <div>
                   <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Target Vehicle / Role Tag *</label>
-                  <select 
+                  <select
                     value={formTag}
                     onChange={e => setFormTag(e.target.value)}
                     style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600, outline: 'none' }}
@@ -1214,9 +969,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Floor / Location *</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     placeholder="e.g. Ground Floor - Automobile Deck"
                     value={formLocation}
                     onChange={e => setFormLocation(e.target.value)}
@@ -1226,9 +981,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
 
                 <div>
                   <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Pillars Specification *</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     placeholder="e.g. Pillars G01 - G09 (VIP Entrance)"
                     value={formPillars}
                     onChange={e => setFormPillars(e.target.value)}
@@ -1239,9 +994,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Design Capacity *</label>
-                <input 
-                  type="text" 
-                  required 
+                <input
+                  type="text"
+                  required
                   placeholder="e.g. 6 Car Spots / Dedicated Motorcycle Area"
                   value={formCapacity}
                   onChange={e => setFormCapacity(e.target.value)}
@@ -1253,8 +1008,8 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
                   Zone Layout Photo URL (User App Display) *
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="https://images.unsplash.com/..."
                   value={formImageUrl}
                   onChange={e => setFormImageUrl(e.target.value)}
@@ -1264,7 +1019,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
 
               <div style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>Description / User Notes</label>
-                <textarea 
+                <textarea
                   rows={2}
                   placeholder="Additional notes for students & faculty in User App..."
                   value={formDescription}

@@ -7,11 +7,12 @@ from auth import require_roles
 
 router = APIRouter(prefix="/parking", tags=["Parking Status"])
 
-# Mock default data if collection is empty (Total 18 slots across 3 zones for VMES Building)
+# Mock default data if collection is empty (Total 21 slots across 4 zones for VMES Building)
 DEFAULT_ZONES = [
-    {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 6, "occupied_slots": 2},
-    {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 6, "occupied_slots": 1},
-    {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 6, "occupied_slots": 3},
+    {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 10, "occupied_slots": 2},
+    {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 2, "occupied_slots": 1},
+    {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 8, "occupied_slots": 1},
+    {"zone": "Zone D • Floor G (VMES Building)", "total_slots": 1, "occupied_slots": 1},
 ]
 
 @router.get("/status", response_model=List[ParkingStatusResponse])
@@ -131,7 +132,7 @@ async def clear_user_parking_spot(user_email: str = "demo@student.ac.th"):
 @router.post("/reserve-spot")
 async def reserve_parking_spot(data: SpotReservationCreate):
     """
-    Pre-lock / Reserve a parking spot for a user for a duration of time.
+    Reserve a parking spot for a user for a duration of time.
     """
     now = datetime.now(timezone.utc)
     locked_until = now + timedelta(minutes=data.durationMinutes)
@@ -145,7 +146,7 @@ async def reserve_parking_spot(data: SpotReservationCreate):
         "reserved_at": now.isoformat(),
         "locked_until": locked_until.isoformat(),
         "plate": data.plate,
-        "status": "Reserved & Locked"
+        "status": "Reserved"
     }
     
     if saved_spots_collection is not None:
@@ -159,10 +160,10 @@ async def reserve_parking_spot(data: SpotReservationCreate):
 @router.get("/reservations")
 async def get_all_spot_reservations():
     """
-    Public / Admin endpoint: Get active reserved and locked parking spots.
+    Public / Admin endpoint: Get active reserved parking spots.
     """
     if saved_spots_collection is not None:
-        results = list(saved_spots_collection.find({"status": "Reserved & Locked"}, {"_id": 0}))
+        results = list(saved_spots_collection.find({"$or": [{"status": "Reserved"}, {"status": "Reserved & Locked"}]}, {"_id": 0}))
         return results
     return []
 

@@ -123,8 +123,8 @@ export default function AnnouncementsTable() {
     <div className="card">
       <div className="card-header">
         <div className="card-header-title">
-          <i className="ri-megaphone-line" style={{ color: '#d97706' }}></i>
-          <span>Official Campus Announcements & Student Notices</span>
+          <i className="ri-megaphone-line" style={{ color: '#2563eb' }}></i>
+          <span>Official Campus Announcements</span>
         </div>
         <button className="btn btn-primary" onClick={handleOpenCreate}>
           <i className="ri-add-line"></i> Post New Announcement
@@ -169,14 +169,12 @@ export default function AnnouncementsTable() {
                       ? `Specific Student: ${item.target_user || ''}`
                       : 'All Campus Users'}
                   </td>
-                  <td style={{ color: '#64748b', fontSize: 12 }}>{item.date}</td>
-                  <td style={{ color: '#d97706', fontWeight: 700, fontSize: 12 }}>
+                  <td style={{ color: '#0f172a', fontSize: 12, fontWeight: 500 }}>{item.date}</td>
+                  <td style={{ color: '#0f172a', fontWeight: 500, fontSize: 12 }}>
                     {item.expire_date ? item.expire_date : '-'}
                   </td>
-                  <td>
-                    <span className={`badge ${item.priority === 'high' ? 'badge-danger' : 'badge-live'}`}>
-                      {item.priority === 'high' ? 'HIGH PRIORITY' : 'NORMAL'}
-                    </span>
+                  <td style={{ color: '#0f172a', fontWeight: 600, fontSize: 12 }}>
+                    {item.priority === 'high' ? 'High Priority' : 'Normal'}
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
