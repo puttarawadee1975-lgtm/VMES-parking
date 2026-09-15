@@ -89,14 +89,16 @@ MOCK_ANNOUNCEMENTS = [
 async def get_announcements():
     """
     Public endpoint: Get active campus announcements set by Admin website.
-    Filters out expired announcements automatically.
+    Filters out and automatically deletes expired announcements from MongoDB Atlas.
     """
     today_str = datetime.now().strftime("%Y-%m-%d")
     if announcements_collection is not None:
+        # Automatically purge expired announcements from Database
+        announcements_collection.delete_many({
+            "expire_date": {"$exists": True, "$ne": "", "$lt": today_str}
+        })
         docs = list(announcements_collection.find({}, {"_id": 0}))
-        if docs:
-            active = [a for a in docs if not a.get("expire_date") or a.get("expire_date") >= today_str]
-            return active
+        return docs
 
     active = [a for a in MOCK_ANNOUNCEMENTS if not a.get("expire_date") or a.get("expire_date") >= today_str]
     return active
