@@ -504,7 +504,8 @@ export default function ParkingQRModal({
               </TouchableOpacity>
 
               <Text className="text-slate-500 text-[11px] text-center">
-                AU Smart Campus • Parking Spot Locator System
+                VMES Parking • Parking Spot Locator System
+
               </Text>
             </View>
           </View>

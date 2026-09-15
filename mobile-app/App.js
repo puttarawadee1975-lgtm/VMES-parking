@@ -14,7 +14,8 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthRequest, makeRedirectUri, ResponseType, exchangeCodeAsync } from 'expo-auth-session';
-import { loginWithMicrosoft, saveSpotToMongoDB, clearSpotInMongoDB, registerVehicleToMongoDB, deleteVehicleFromMongoDB, getUserVehiclesFromMongoDB } from './src/services/api';
+import { loginWithMicrosoft, saveSpotToMongoDB, clearSpotInMongoDB, registerVehicleToMongoDB, deleteVehicleFromMongoDB, getUserVehiclesFromMongoDB, getUserNotifications } from './src/services/api';
+import { registerForPushNotificationsAsync, sendLocalPhonePushNotification } from './src/services/notificationService';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -100,10 +101,12 @@ function MainApp() {
             } else {
               const fallbackStudent = {
                 role: 'student',
-                name: 'Cherie A.',
-                studentId: '65070042',
-                email: '65070042@student.university.ac.th',
-                vehicles: [],
+                name: 'Student U6814509',
+                studentId: '6814509',
+                email: 'u6814509@au.edu',
+                vehicles: [
+                  { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
+                ],
                 safetyScore: 100
               };
               fetchUserVehiclesAndLogin(fallbackStudent);
@@ -112,10 +115,12 @@ function MainApp() {
             console.warn('[Auth] Backend Verification Error:', err);
             const fallbackStudent = {
               role: 'student',
-              name: 'Cherie A.',
-              studentId: '65070042',
-              email: '65070042@student.university.ac.th',
-              vehicles: [],
+              name: 'Student U6814509',
+              studentId: '6814509',
+              email: 'u6814509@au.edu',
+              vehicles: [
+                { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
+              ],
               safetyScore: 100
             };
             fetchUserVehiclesAndLogin(fallbackStudent);
@@ -125,10 +130,12 @@ function MainApp() {
           console.warn('[Auth] Exchange Code Error:', err);
           const fallbackStudent = {
             role: 'student',
-            name: 'Cherie A.',
-            studentId: '65070042',
-            email: '65070042@student.university.ac.th',
-            vehicles: [],
+            name: 'Student U6814509',
+            studentId: '6814509',
+            email: 'u6814509@au.edu',
+            vehicles: [
+              { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
+            ],
             safetyScore: 100
           };
           fetchUserVehiclesAndLogin(fallbackStudent);
@@ -167,8 +174,8 @@ function MainApp() {
   useEffect(() => {
     if (currentUser?.email) {
       getUserVehiclesFromMongoDB(currentUser.email).then((dbVehicles) => {
-        const formattedVehicles = (dbVehicles || []).map(v => ({ plate: v.plate, model: v.model }));
-        if (formattedVehicles.length > 0) {
+        if (dbVehicles !== null) {
+          const formattedVehicles = (dbVehicles || []).map(v => ({ plate: v.plate, model: v.model }));
           setCurrentUser((prev) => prev ? { ...prev, vehicles: formattedVehicles } : prev);
           setAllRegisteredAccounts((prevAccs) => ({
             ...prevAccs,
@@ -181,6 +188,64 @@ function MainApp() {
       });
     }
   }, [currentUser?.email]);
+
+  // Register Push Notifications & Real-Time Phone Push Sync
+  const seenNotiIds = useRef(new Set());
+  const isFirstNotiSync = useRef(true);
+
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser?.email) return;
+
+    isFirstNotiSync.current = true;
+
+    const syncAndPushNotis = async () => {
+      try {
+        const notis = await getUserNotifications(currentUser.email);
+        if (Array.isArray(notis) && notis.length > 0) {
+          if (isFirstNotiSync.current) {
+            // First time loading on sign-in/app open: Mark all existing notifications as seen
+            notis.forEach((item) => {
+              if (item.id) seenNotiIds.current.add(item.id);
+            });
+            isFirstNotiSync.current = false;
+            return;
+          }
+
+          // Subsequent syncs: Trigger push/toast ONLY for newly arrived notifications
+          notis.forEach((item) => {
+            if (item.id && !seenNotiIds.current.has(item.id)) {
+              seenNotiIds.current.add(item.id);
+
+              // 1. Send real local phone push alert
+              sendLocalPhonePushNotification({
+                title: item.title,
+                body: item.message,
+                data: { notiId: item.id, type: item.type }
+              });
+
+              // 2. Trigger in-app Toast notification alert banner
+              showToast({
+                type: 'danger',
+                text: item.title,
+                subtext: item.message
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('[PUSH SYNC ERROR]', err);
+      }
+    };
+
+    syncAndPushNotis();
+    const interval = setInterval(syncAndPushNotis, 12000);
+    return () => clearInterval(interval);
+  }, [currentUser?.email]);
+
 
   useEffect(() => {
     let interval;
@@ -289,13 +354,15 @@ function MainApp() {
   };
 
   const handleMicrosoftLogin = async () => {
-    const studentEmail = '65070042@student.university.ac.th';
+    const studentEmail = 'u6814509@au.edu';
     const student = {
       role: 'student',
-      name: 'Cherie A.',
-      studentId: '65070042',
+      name: 'Student U6814509',
+      studentId: '6814509',
       email: studentEmail,
-      vehicles: [],
+      vehicles: [
+        { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
+      ],
       safetyScore: 100
     };
 
@@ -335,12 +402,17 @@ function MainApp() {
     await fetchUserVehiclesAndLogin(preset);
   };
 
-  const handleEditVehicle = (oldPlate, newFullPlate, newFullModel) => {
+  const handleEditVehicle = (oldPlate, newFullPlate, newFullModel, photos = null) => {
     setCurrentUser((prev) => {
       if (!prev) return prev;
       const updatedVehicles = (prev.vehicles || []).map(v => {
         if (v.plate === oldPlate) {
-          return { plate: newFullPlate, model: newFullModel };
+          return {
+            plate: newFullPlate,
+            model: newFullModel,
+            front_photo_url: photos?.vehicle_front_photo || v.front_photo_url,
+            side_photo_url: photos?.vehicle_side_photo || v.side_photo_url
+          };
         }
         return v;
       });
@@ -352,13 +424,28 @@ function MainApp() {
             vehicles: updatedVehicles
           }
         }));
+
+        // Delete old plate entry if plate changed, then register updated vehicle with photos in MongoDB
+        if (oldPlate && oldPlate !== newFullPlate) {
+          deleteVehicleFromMongoDB(prev.email, oldPlate).catch(e => console.warn(e));
+        }
+
+        registerVehicleToMongoDB({
+          user_email: prev.email,
+          role: prev.role || 'student',
+          plate: newFullPlate,
+          model: newFullModel,
+          vehicle_front_photo: photos?.vehicle_front_photo,
+          vehicle_side_photo: photos?.vehicle_side_photo,
+          vehicle_photo: photos?.vehicle_photo
+        }).catch(err => console.warn('Failed to sync edited vehicle to MongoDB:', err));
       }
       return { ...prev, vehicles: updatedVehicles };
     });
     showToast('✏️ Vehicle information updated successfully');
   };
 
-  const handleAddVehicle = (fullPlate, fullModel) => {
+  const handleAddVehicle = (fullPlate, fullModel, vehiclePhoto = null) => {
     // Check student 1-vehicle quota limit
     if (currentUser?.role === 'student' && currentUser?.vehicles && currentUser.vehicles.length >= 1) {
       alert('⚠️ Registration Limit Reached:\nStudents are allowed to register 1 vehicle per account only.');
@@ -386,14 +473,15 @@ function MainApp() {
       return false;
     }
 
-    // Call MongoDB API to persist vehicle registration
+    // Call MongoDB API to persist vehicle registration with mandatory vehicle photo for Admin verification
     registerVehicleToMongoDB(
-      { plate: fullPlate, model: fullModel },
+      { plate: fullPlate, model: fullModel, vehicle_photo: vehiclePhoto },
       currentUser.email,
       currentUser?.role || 'student'
     );
 
     setCurrentUser((prev) => {
+      // Keep mobile local user state clean (without vehicle photo display)
       const updatedVehicles = [...(prev.vehicles || []), { plate: fullPlate, model: fullModel }];
       if (prev?.email) {
         setAllRegisteredAccounts((prevAccs) => ({
@@ -410,6 +498,7 @@ function MainApp() {
     showToast('🛵 Vehicle registered successfully');
     return true;
   };
+
 
   const handleDeleteVehicle = (plateToDelete) => {
     deleteVehicleFromMongoDB(plateToDelete, currentUser?.email || '65070042@student.university.ac.th');

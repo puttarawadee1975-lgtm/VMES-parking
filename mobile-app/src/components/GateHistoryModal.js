@@ -19,15 +19,26 @@ export default function GateHistoryModal({
   currentUser
 }) {
   const [selectedFilter, setSelectedFilter] = useState('ALL'); // 'ALL', 'TRIPS', 'VIOLATIONS'
+  const [selectedDateFilter, setSelectedDateFilter] = useState('TODAY'); // Default to 'TODAY'
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [liveHistory, setLiveHistory] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setSelectedFilter('ALL');
+      setSelectedDateFilter('TODAY');
+      setShowDateDropdown(false);
       loadHistory();
     }
   }, [visible]);
+
+  const DATE_OPTIONS = [
+    { key: 'ALL', label: 'All Dates', icon: 'calendar-outline' },
+    { key: 'TODAY', label: 'Today', icon: 'today-outline' },
+    { key: 'YESTERDAY', label: 'Yesterday', icon: 'time-outline' },
+    { key: 'WEEK', label: 'Last 7 Days', icon: 'stats-chart-outline' },
+  ];
 
   const loadHistory = async () => {
     setLoading(true);
@@ -84,7 +95,8 @@ export default function GateHistoryModal({
 
   const userPlates = (currentUser?.vehicles || []).map(v => v.plate);
   const isAdmin = currentUser?.role === 'admin';
-  const primaryPlate = userPlates[0] || 'กข 3363 อำนาจเจริญ';
+  const primaryPlate = userPlates[0] || '';
+
 
   const getFullDisplayPlate = (plateInput) => {
     if (!plateInput) return formatDisplayPlate(primaryPlate);
@@ -171,6 +183,53 @@ export default function GateHistoryModal({
 
   const displayHistory = [...defaultHistory, ...liveHistory];
 
+  const isSameDay = (d1, d2) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  };
+
+  const matchesDateFilter = (item, dateFilter) => {
+    if (dateFilter === 'ALL') return true;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+    let itemDate = null;
+    if (item.rawDate && item.rawDate instanceof Date && !isNaN(item.rawDate)) {
+      itemDate = item.rawDate;
+    }
+
+    if (dateFilter === 'TODAY') {
+      if (item.isToday) return true;
+      if (item.date === 'Today' || (item.time && item.time.startsWith('Today'))) return true;
+      if (itemDate) return isSameDay(itemDate, today);
+      return false;
+    }
+
+    if (dateFilter === 'YESTERDAY') {
+      if (item.date === 'Yesterday' || (item.time && item.time.startsWith('Yesterday'))) return true;
+      if (itemDate) return isSameDay(itemDate, yesterday);
+      return false;
+    }
+
+    if (dateFilter === 'WEEK') {
+      if (item.isToday || item.date === 'Today' || item.date === 'Yesterday' || (item.time && (item.time.startsWith('Today') || item.time.startsWith('Yesterday')))) {
+        return true;
+      }
+      if (itemDate) {
+        return itemDate >= sevenDaysAgo;
+      }
+      return true;
+    }
+
+    return true;
+  };
+
   const filteredItems = displayHistory.filter(item => {
     // 1. Filter by owner for violations: non-admin users only see violations for their registered vehicles
     if (item.type === 'violation' && !isAdmin) {
@@ -180,9 +239,11 @@ export default function GateHistoryModal({
     }
 
     // 2. Filter by category tab selection
-    if (selectedFilter === 'TRIPS') return item.type === 'trip';
-    if (selectedFilter === 'VIOLATIONS') return item.type === 'violation';
-    return true;
+    if (selectedFilter === 'TRIPS' && item.type !== 'trip') return false;
+    if (selectedFilter === 'VIOLATIONS' && item.type !== 'violation') return false;
+
+    // 3. Filter by date dropdown selection
+    return matchesDateFilter(item, selectedDateFilter);
   });
 
   return (
@@ -203,35 +264,120 @@ export default function GateHistoryModal({
           </TouchableOpacity>
         </View>
 
-        {/* Original Category Filter Pills Bar */}
-        <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10, gap: 8, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-          {[
-            { key: 'ALL', label: 'All' },
-            { key: 'TRIPS', label: 'Entry & Exit' },
-            { key: 'VIOLATIONS', label: 'Violations' },
-          ].map(tab => {
-            const isActive = selectedFilter === tab.key;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                onPress={() => setSelectedFilter(tab.key)}
-                activeOpacity={0.7}
-                style={{
-                  paddingVertical: 7,
-                  paddingHorizontal: 16,
-                  borderRadius: 20,
-                  backgroundColor: isActive ? '#2563eb' : '#f8fafc',
-                  borderWidth: 1,
-                  borderColor: isActive ? '#2563eb' : '#e2e8f0'
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? '#ffffff' : '#64748b' }}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+        {/* Filter Bar with Category Tabs and Date Dropdown */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {[
+              { key: 'ALL', label: 'All' },
+              { key: 'TRIPS', label: 'Entry & Exit' },
+              { key: 'VIOLATIONS', label: 'Violations' },
+            ].map(tab => {
+              const isActive = selectedFilter === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  onPress={() => setSelectedFilter(tab.key)}
+                  activeOpacity={0.7}
+                  style={{
+                    paddingVertical: 6,
+                    paddingHorizontal: 13,
+                    borderRadius: 18,
+                    backgroundColor: isActive ? '#2563eb' : '#f8fafc',
+                    borderWidth: 1,
+                    borderColor: isActive ? '#2563eb' : '#e2e8f0'
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? '#ffffff' : '#64748b' }}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Date Filter Dropdown Selector Button */}
+          <TouchableOpacity
+            onPress={() => setShowDateDropdown(!showDateDropdown)}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: selectedDateFilter !== 'ALL' ? '#eff6ff' : '#f8fafc',
+              borderWidth: 1,
+              borderColor: selectedDateFilter !== 'ALL' ? '#93c5fd' : '#cbd5e1',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 18,
+              gap: 5
+            }}
+          >
+            <Ionicons name="calendar-outline" size={14} color={selectedDateFilter !== 'ALL' ? '#2563eb' : '#475569'} />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: selectedDateFilter !== 'ALL' ? '#1d4ed8' : '#334155' }}>
+              {DATE_OPTIONS.find(o => o.key === selectedDateFilter)?.label || 'All Dates'}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={selectedDateFilter !== 'ALL' ? '#2563eb' : '#64748b'} />
+          </TouchableOpacity>
         </View>
+
+        {/* Date Selector Dropdown Modal */}
+        <Modal
+          visible={showDateDropdown}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowDateDropdown(false)}
+        >
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
+            activeOpacity={1}
+            onPress={() => setShowDateDropdown(false)}
+          >
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 20, width: '100%', maxWidth: 340, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>Filter by Date</Text>
+                <TouchableOpacity onPress={() => setShowDateDropdown(false)} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={18} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ gap: 8 }}>
+                {DATE_OPTIONS.map(opt => {
+                  const isSelected = selectedDateFilter === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      onPress={() => {
+                        setSelectedDateFilter(opt.key);
+                        setShowDateDropdown(false);
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 12,
+                        paddingHorizontal: 14,
+                        borderRadius: 12,
+                        backgroundColor: isSelected ? '#eff6ff' : '#f8fafc',
+                        borderWidth: 1,
+                        borderColor: isSelected ? '#bfdbfe' : '#f1f5f9'
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Ionicons name={opt.icon} size={18} color={isSelected ? '#2563eb' : '#64748b'} />
+                        <Text style={{ fontSize: 14, fontWeight: isSelected ? '800' : '600', color: isSelected ? '#1d4ed8' : '#334155' }}>
+                          {opt.label}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={18} color="#2563eb" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {/* Clean Activity History List */}
         <ScrollView style={{ flex: 1, paddingHorizontal: 20, paddingTop: 16 }} showsVerticalScrollIndicator={false}>

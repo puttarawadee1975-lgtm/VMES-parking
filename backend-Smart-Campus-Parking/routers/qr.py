@@ -15,11 +15,11 @@ async def verify_qr_code(payload: QRCodeVerify, current_user: dict = Depends(get
     if payload.qr_code_data in VALID_QR_CODES:
         return {
             "status": "success",
-            "message": "ยืนยันตัวตนสำเร็จ ได้รับอนุญาตผ่านเข้าพื้นที่",
+            "message": "Identity verified successfully. Entry granted.",
             "user": current_user.get("name")
         }
     else:
         raise HTTPException(
             status_code=400,
-            detail="QR Code ไม่ถูกต้อง หรือไม่มีอยู่ในระบบ"
+            detail="Invalid QR Code or not found in system"
         )

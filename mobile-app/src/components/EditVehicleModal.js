@@ -9,9 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { formatDisplayPlate } from '../utils/provinceHelper';
 import ProvincePickerModal from './ProvincePickerModal';
 
@@ -23,6 +25,8 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
   const [brand, setBrand] = useState('');
   const [modelName, setModelName] = useState('');
   const [color, setColor] = useState('');
+  const [frontPhoto, setFrontPhoto] = useState(null);
+  const [sidePhoto, setSidePhoto] = useState(null);
 
   useEffect(() => {
     if (vehicle) {
@@ -42,12 +46,15 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
       }
       setVehicleType(isCar ? 'car' : 'motorcycle');
 
-      // 2. Parse plate number and province
+      // 2. Parse plate number and province e.g. "3KH 5678 Bangkok"
       const rawPlate = (vehicle.plate || '').trim();
       const parts = rawPlate.split(' ');
-      if (parts.length >= 2) {
+      if (parts.length >= 3) {
+        setPlateNumber(parts.slice(0, parts.length - 1).join(' '));
+        setProvince(parts[parts.length - 1]);
+      } else if (parts.length === 2) {
         setPlateNumber(parts[0]);
-        setProvince(parts.slice(1).join(' '));
+        setProvince(parts[1]);
       } else {
         setPlateNumber(rawPlate);
         setProvince('');
@@ -75,12 +82,65 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
         setBrand(modelWithoutColor);
         setModelName('');
       }
+
+      // 4. Initial photos
+      setFrontPhoto(vehicle.front_photo_url || vehicle.vehicle_photo_url || null);
+      setSidePhoto(vehicle.side_photo_url || null);
     }
   }, [vehicle, visible]);
+
+  const handlePickPhoto = async (type, useCamera = false) => {
+    try {
+      let result;
+      if (useCamera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Permission Required', 'Camera permission is required to take photo.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          quality: 0.5,
+          base64: true
+        });
+      } else {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Permission Required', 'Media library permission is required to choose photo.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          allowsEditing: true,
+          quality: 0.5,
+          base64: true
+        });
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const base64Photo = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        if (type === 'front') {
+          setFrontPhoto(base64Photo);
+        } else {
+          setSidePhoto(base64Photo);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to pick photo:', err);
+    }
+  };
 
   const handleSave = () => {
     if (!plateNumber.trim()) {
       Alert.alert('Required Field', 'Please enter your license plate number.');
+      return;
+    }
+
+    if (/[a-zA-Z]/.test(plateNumber.trim())) {
+      Alert.alert(
+        'Thai Characters Required',
+        'License plate prefix letters must be in Thai characters (e.g. 1กข 1234 or 3กฮ 5678).'
+      );
       return;
     }
 
@@ -104,11 +164,30 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
       return;
     }
 
+    if (!frontPhoto) {
+      Alert.alert(
+        '📷 Front License Plate Required',
+        vehicleType === 'car'
+          ? 'สำหรับการลงทะเบียนรถยนต์ รูปด้านหน้าต้องถ่ายให้เห็นแผ่นป้ายทะเบียนหน้าอย่างชัดเจน'
+          : 'Please provide Front photo of your vehicle.'
+      );
+      return;
+    }
+
+    if (!sidePhoto) {
+      Alert.alert('📷 Side Photo Required', 'Please provide Side photo of your vehicle.');
+      return;
+    }
+
     const icon = vehicleType === 'car' ? '🚗' : '🛵';
     const newFullPlate = formatDisplayPlate(`${plateNumber.trim()} ${province}`);
     const newFullModel = `${icon} ${brand.trim()} ${modelName.trim()} (${color.trim()})`.trim();
 
-    onSave(vehicle?.plate, newFullPlate, newFullModel);
+    onSave(vehicle?.plate, newFullPlate, newFullModel, {
+      vehicle_front_photo: frontPhoto,
+      vehicle_side_photo: sidePhoto,
+      vehicle_photo: frontPhoto
+    });
     onClose();
   };
 
@@ -220,7 +299,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                   style={{
                     backgroundColor: '#ffffff',
                     borderWidth: 1,
-                    borderColor: '#cbd5e1',
+                    borderColor: /[a-zA-Z]/.test(plateNumber) ? '#ef4444' : '#cbd5e1',
                     borderRadius: 14,
                     paddingHorizontal: 16,
                     paddingVertical: 14,
@@ -229,6 +308,11 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                     fontWeight: '700'
                   }}
                 />
+                {/[a-zA-Z]/.test(plateNumber) && (
+                  <Text style={{ fontSize: 11, color: '#ef4444', fontWeight: '700', marginTop: 4 }}>
+                    ⚠️ หมวดตัวอักษรป้ายทะเบียนต้องเป็นภาษาไทยเท่านั้น (เช่น 1กข 1234)
+                  </Text>
+                )}
               </View>
 
               {/* 3. Province Selection */}
@@ -330,6 +414,119 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                 />
               </View>
 
+              {/* Mandatory Vehicle Photos (Front & Side) */}
+              <View style={{ gap: 14, marginTop: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#0f172a' }}>
+                  Vehicle Photos (2 Photos Required) <Text style={{ color: '#ef4444' }}>*</Text>
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748b', marginTop: -8, lineHeight: 16 }}>
+                  Please provide Front and Side photos of your vehicle for Admin identity verification
+                </Text>
+
+                {/* Photo 1: Front Photo */}
+                <View style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 14 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons name="camera" size={16} color="#2563eb" style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
+                        1. Front Photo (Vehicle Front & License Plate) <Text style={{ color: '#ef4444' }}>*</Text>
+                      </Text>
+                    </View>
+                    {frontPhoto && (
+                      <TouchableOpacity onPress={() => setFrontPhoto(null)}>
+                        <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '700' }}>Remove</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {vehicleType === 'car' && (
+                    <View style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons name="alert-circle" size={15} color="#2563eb" style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '700', flex: 1 }}>
+                        รูปด้านหน้ารถยนต์ ต้องถ่ายให้เห็นแผ่นป้ายทะเบียนหน้าอย่างชัดเจน (Required)
+                      </Text>
+                    </View>
+                  )}
+
+                  {frontPhoto ? (
+                    <View style={{ height: 130, borderRadius: 12, overflow: 'hidden', backgroundColor: '#0f172a', position: 'relative' }}>
+                      <Image source={{ uri: frontPhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      <View style={{ position: 'absolute', bottom: 6, right: 6, backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="checkmark-circle" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Front Photo Set</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => handlePickPhoto('front', true)}
+                        activeOpacity={0.8}
+                        style={{ flex: 1, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Ionicons name="camera-outline" size={16} color="#2563eb" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Take Camera</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => handlePickPhoto('front', false)}
+                        activeOpacity={0.8}
+                        style={{ flex: 1, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Ionicons name="image-outline" size={16} color="#475569" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>Choose Gallery</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                {/* Photo 2: Side Photo */}
+                <View style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 14 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons name="car-outline" size={16} color="#2563eb" style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
+                        2. Side Photo (Vehicle Side View) <Text style={{ color: '#ef4444' }}>*</Text>
+                      </Text>
+                    </View>
+                    {sidePhoto && (
+                      <TouchableOpacity onPress={() => setSidePhoto(null)}>
+                        <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '700' }}>Remove</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {sidePhoto ? (
+                    <View style={{ height: 130, borderRadius: 12, overflow: 'hidden', backgroundColor: '#0f172a', position: 'relative' }}>
+                      <Image source={{ uri: sidePhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      <View style={{ position: 'absolute', bottom: 6, right: 6, backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="checkmark-circle" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Side Photo Set</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => handlePickPhoto('side', true)}
+                        activeOpacity={0.8}
+                        style={{ flex: 1, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Ionicons name="camera-outline" size={16} color="#2563eb" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Take Camera</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => handlePickPhoto('side', false)}
+                        activeOpacity={0.8}
+                        style={{ flex: 1, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Ionicons name="image-outline" size={16} color="#475569" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>Choose Gallery</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </View>
+
               {/* Submit Buttons */}
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
                 <TouchableOpacity
@@ -356,7 +553,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                     borderRadius: 16,
                     backgroundColor: '#2563eb',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    justify: 'center',
                     shadowColor: '#2563eb',
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.25,

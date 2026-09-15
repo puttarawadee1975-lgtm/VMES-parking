@@ -9,7 +9,7 @@ export default function CameraStream({
 }) {
   const isViolation = currentDetection?.isViolation;
   const isExit = gateType === "EXIT";
-  const plateText = currentDetection ? `${currentDetection.plate} ${currentDetection.province}` : (isExit ? '5กษ 8888 กรุงเทพมหานคร' : '1กข 1234 กรุงเทพมหานคร');
+  const plateText = currentDetection ? `${currentDetection.plate} ${currentDetection.province}` : (isExit ? '5KS 8888 Bangkok' : '1KB 1234 Bangkok');
   const helmetText = currentDetection ? (isViolation ? 'FAIL: No Helmet' : 'PASS: Helmet Worn') : (isExit ? 'PASS: Exit Verified' : 'PASS: Helmet Worn');
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
 

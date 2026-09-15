@@ -168,32 +168,115 @@ async def get_all_spot_reservations():
     return []
 
 # --- Vehicle Registration MongoDB Endpoints ---
-from database import registered_vehicles_collection
+from database import registered_vehicles_collection, users_collection
 from schemas import VehicleRegisterCreate
+import base64
+import os
 
 @router.post("/register-vehicle")
 async def register_vehicle_in_mongodb(data: VehicleRegisterCreate):
     """
-    Save registered vehicle info to MongoDB (registered_vehicles collection).
+    Save registered vehicle info & 2 mandatory vehicle photos (front & side) to MongoDB.
     """
     if not data.user_email:
         raise HTTPException(status_code=400, detail="user_email is required for vehicle registration")
+    
+    import re
+    if re.search(r'[a-zA-Z]', data.plate or ""):
+        raise HTTPException(
+            status_code=400,
+            detail="License plate letters must be in Thai characters (e.g. 1กข 1234 or 3กฮ 5678)"
+        )
     now = datetime.now(timezone.utc)
+
+    def save_base64_photo(raw_photo, prefix):
+        if not raw_photo:
+            return None
+        if raw_photo.startswith("data:image"):
+            try:
+                header, base64_data = raw_photo.split(",", 1)
+                ext = "jpg"
+                if "png" in header:
+                    ext = "png"
+                img_bytes = base64.b64decode(base64_data)
+                safe_plate = "".join([c for c in data.plate if c.isalnum()]) or "plate"
+                filename = f"{prefix}_{int(now.timestamp())}_{safe_plate}.{ext}"
+                target_dir = os.path.join(os.path.dirname(__file__), "..", "data", "vehicle_photos")
+                os.makedirs(target_dir, exist_ok=True)
+                filepath = os.path.join(target_dir, filename)
+                with open(filepath, "wb") as f:
+                    f.write(img_bytes)
+                return f"/vehicle_photos/{filename}"
+            except Exception as err:
+                print(f"[VEHICLE PHOTO ERROR] {err}")
+                return None
+        elif raw_photo.startswith("http") or raw_photo.startswith("/"):
+            return raw_photo
+        return None
+
+    front_url = data.front_photo_url or save_base64_photo(data.vehicle_front_photo, "front")
+    side_url = data.side_photo_url or save_base64_photo(data.vehicle_side_photo, "side")
+    if not front_url and data.vehicle_photo:
+        front_url = save_base64_photo(data.vehicle_photo, "vehicle")
+
+    # Enforce front photo requirement for car registrations
+    is_car = "🚗" in (data.model or "") or "car" in (data.model or "").lower()
+    if is_car and not front_url:
+        raise HTTPException(
+            status_code=400,
+            detail="Car registration requires a clear front photo displaying the vehicle front license plate."
+        )
+
+    main_photo_url = front_url or side_url or data.vehicle_photo_url
+
     doc = {
         "user_email": data.user_email,
         "role": data.role or "student",
         "plate": data.plate,
         "model": data.model,
+        "vehicle_photo_url": main_photo_url,
+        "front_photo_url": front_url,
+        "side_photo_url": side_url,
         "registered_at": now
     }
-    
+
     if registered_vehicles_collection is not None:
         registered_vehicles_collection.update_one(
             {"user_email": doc["user_email"], "plate": data.plate},
             {"$set": doc},
             upsert=True
         )
-    return {"status": "success", "message": "Vehicle registered in MongoDB", "vehicle": doc}
+
+    if users_collection is not None:
+        user_doc = users_collection.find_one({"email": data.user_email.strip().lower()})
+        if user_doc:
+            user_vehicles = user_doc.get("vehicles", [])
+            updated_vehicles = []
+            found = False
+            for v in user_vehicles:
+                if v.get("plate") == data.plate:
+                    v["model"] = data.model
+                    v["vehicle_photo_url"] = main_photo_url
+                    v["front_photo_url"] = front_url
+                    v["side_photo_url"] = side_url
+                    found = True
+                updated_vehicles.append(v)
+            if not found:
+                updated_vehicles.append({
+                    "plate": data.plate,
+                    "model": data.model,
+                    "vehicle_photo_url": main_photo_url,
+                    "front_photo_url": front_url,
+                    "side_photo_url": side_url
+                })
+            users_collection.update_one(
+                {"email": data.user_email.strip().lower()},
+                {"$set": {"vehicles": updated_vehicles, "license_plate": data.plate}}
+            )
+
+    return {"status": "success", "message": "Vehicle registered in MongoDB with 2 vehicle photos", "vehicle": doc}
+
+
 
 @router.get("/user-vehicles")
 async def get_user_vehicles_from_mongodb(user_email: str = ""):

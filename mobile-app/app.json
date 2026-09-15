@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "SmartParking",
+    "name": "VMES Parking",
     "slug": "license-plate-demo",
     "scheme": "myapp",
     "version": "1.0.0",
@@ -25,10 +25,11 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow AU Smart Parking to access your camera to scan parking pillar QR codes."
+          "cameraPermission": "Allow VMES Parking to access your camera to scan parking pillar QR codes."
         }
       ],
       "expo-web-browser"
     ]
   }
+
 }

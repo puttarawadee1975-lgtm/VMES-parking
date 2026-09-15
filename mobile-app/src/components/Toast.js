@@ -5,14 +5,30 @@ import { Ionicons } from '@expo/vector-icons';
 export default function Toast({ message, onClose, insets }) {
   if (!message) return null;
 
+  const titleText = typeof message === 'object' ? (message.text || message.title || message.message || '') : String(message);
+  const subText = typeof message === 'object' ? (message.subtext || message.body || '') : null;
+  const isDanger = typeof message === 'object' && message.type === 'danger';
+  const topPadding = (insets && typeof insets.top === 'number') ? insets.top : 40;
+
   return (
     <View
-      style={{ top: insets.top + 10 }}
-      className="absolute left-5 right-5 bg-slate-900 p-4 rounded-2xl flex-row items-center justify-between shadow-2xl z-50 max-w-md mx-auto"
+      style={{ top: topPadding + 10 }}
+      className={`absolute left-5 right-5 p-4 rounded-2xl flex-row items-center justify-between shadow-2xl z-50 max-w-md mx-auto ${
+        isDanger ? 'bg-red-600' : 'bg-slate-900'
+      }`}
     >
-      <Text className="text-white text-xs font-bold flex-1 mr-2">{message}</Text>
-      <TouchableOpacity onPress={onClose}>
-        <Ionicons name="close-circle" size={18} color="#94a3b8" />
+      <View className="flex-1 mr-2">
+        <Text className="text-white text-xs font-bold" numberOfLines={2}>
+          {titleText}
+        </Text>
+        {subText ? (
+          <Text className="text-white/80 text-[11px] font-medium mt-0.5" numberOfLines={2}>
+            {subText}
+          </Text>
+        ) : null}
+      </View>
+      <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
+        <Ionicons name="close-circle" size={20} color="#ffffff" />
       </TouchableOpacity>
     </View>
   );

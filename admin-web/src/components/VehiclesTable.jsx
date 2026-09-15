@@ -2,29 +2,29 @@ import React, { useState, useRef, useEffect } from 'react';
 import { THAI_PROVINCES } from '../data/provincesData';
 
 const CAR_COLORS = [
-  { name: 'White', label: 'White (ขาว / บรอนซ์ขาว)', hex: '#ffffff' },
-  { name: 'Black', label: 'Black (ดำ / ดำเงา)', hex: '#0f172a' },
-  { name: 'Silver', label: 'Silver (บรอนซ์เงิน)', hex: '#cbd5e1' },
-  { name: 'Gray', label: 'Gray (เทา / เทาดำ)', hex: '#64748b' },
-  { name: 'Red', label: 'Red (แดง / แดงเมทัลลิก)', hex: '#dc2626' },
-  { name: 'Blue', label: 'Blue (น้ำเงิน / ฟ้า)', hex: '#2563eb' },
-  { name: 'Bronze', label: 'Bronze / Gold (บรอนซ์ทอง / น้ำตาล)', hex: '#d97706' },
-  { name: 'Green', label: 'Green (เขียว)', hex: '#059669' },
-  { name: 'Yellow', label: 'Yellow (เหลือง)', hex: '#eab308' },
-  { name: 'Orange', label: 'Orange (ส้ม)', hex: '#ea580c' }
+  { name: 'White', label: 'White', hex: '#ffffff' },
+  { name: 'Black', label: 'Black', hex: '#0f172a' },
+  { name: 'Silver', label: 'Silver', hex: '#cbd5e1' },
+  { name: 'Gray', label: 'Gray', hex: '#64748b' },
+  { name: 'Red', label: 'Red', hex: '#dc2626' },
+  { name: 'Blue', label: 'Blue', hex: '#2563eb' },
+  { name: 'Bronze', label: 'Bronze / Gold', hex: '#d97706' },
+  { name: 'Green', label: 'Green', hex: '#059669' },
+  { name: 'Yellow', label: 'Yellow', hex: '#eab308' },
+  { name: 'Orange', label: 'Orange', hex: '#ea580c' }
 ];
 
 const MOTORCYCLE_COLORS = [
-  { name: 'Black', label: 'Black (ดำ / ดำด้าน / ดำเงา)', hex: '#0f172a' },
-  { name: 'White', label: 'White (ขาว / ขาวมุก)', hex: '#ffffff' },
-  { name: 'Red', label: 'Red (แดง / แดงบรอนซ์)', hex: '#dc2626' },
-  { name: 'Blue', label: 'Blue (น้ำเงิน / ฟ้า)', hex: '#2563eb' },
-  { name: 'Gray', label: 'Gray (เทา / เทาแลมโบ)', hex: '#64748b' },
-  { name: 'Green', label: 'Green (เขียว / เขียวมะนาว)', hex: '#059669' },
-  { name: 'Yellow', label: 'Yellow (เหลือง)', hex: '#eab308' },
-  { name: 'Orange', label: 'Orange (ส้ม)', hex: '#ea580c' },
-  { name: 'Pink', label: 'Pink (ชมพู)', hex: '#ec4899' },
-  { name: 'Purple', label: 'Purple (ม่วง)', hex: '#9333ea' }
+  { name: 'Black', label: 'Black', hex: '#0f172a' },
+  { name: 'White', label: 'White', hex: '#ffffff' },
+  { name: 'Red', label: 'Red', hex: '#dc2626' },
+  { name: 'Blue', label: 'Blue', hex: '#2563eb' },
+  { name: 'Gray', label: 'Gray', hex: '#64748b' },
+  { name: 'Green', label: 'Green', hex: '#059669' },
+  { name: 'Yellow', label: 'Yellow', hex: '#eab308' },
+  { name: 'Orange', label: 'Orange', hex: '#ea580c' },
+  { name: 'Pink', label: 'Pink', hex: '#ec4899' },
+  { name: 'Purple', label: 'Purple', hex: '#9333ea' }
 ];
 
 function SearchableColorSelect({ value, onChange, vehicleType = 'motorcycle' }) {
@@ -212,7 +212,7 @@ function SearchableProvinceSelect({ value, onChange }) {
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         <input 
           type="text"
-          placeholder="Type or select province (e.g. Bangkok / กรุงเทพ...)"
+          placeholder="Type or select province (e.g. Bangkok...)"
           value={searchTerm}
           onFocus={() => setIsOpen(true)}
           onChange={(e) => {
@@ -320,9 +320,10 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
   const [showModal, setShowModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null); // null for new, object for edit
   const [revokeConfirmVehicle, setRevokeConfirmVehicle] = useState(null); // vehicle to revoke
+  const [selectedPhotoVehicle, setSelectedPhotoVehicle] = useState(null); // vehicle photo preview
   const [newOwner, setNewOwner] = useState('');
   const [newPlate, setNewPlate] = useState('');
-  const [newProvince, setNewProvince] = useState('กรุงเทพมหานคร');
+  const [newProvince, setNewProvince] = useState('Bangkok');
   const [newVehicleType, setNewVehicleType] = useState('motorcycle'); // 'motorcycle' | 'car'
   const [newBrand, setNewBrand] = useState('');
   const [newModel, setNewModel] = useState('');
@@ -331,6 +332,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
   const [newRole, setNewRole] = useState('student');
   const [submitting, setSubmitting] = useState(false);
   const [revoking, setRevoking] = useState(false);
+
 
   const filtered = vehicles.filter(v => 
     (v.plate || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -343,7 +345,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
     setEditingVehicle(null);
     setNewOwner('');
     setNewPlate('');
-    setNewProvince('กรุงเทพมหานคร');
+    setNewProvince('Bangkok');
     setNewVehicleType('motorcycle');
     setNewBrand('');
     setNewModel('');
@@ -358,19 +360,19 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
     setNewOwner(v.owner || '');
     setNewPlate(v.plate || '');
     const matchedP = THAI_PROVINCES.find(p => 
-      p.th.toLowerCase() === (v.province || '').toLowerCase() || 
-      p.en.toLowerCase() === (v.province || '').toLowerCase()
+      (p.th && p.th.toLowerCase() === (v.province || '').toLowerCase()) || 
+      (p.en && p.en.toLowerCase() === (v.province || '').toLowerCase())
     );
-    setNewProvince(matchedP ? matchedP.th : (v.province || 'กรุงเทพมหานคร'));
+    setNewProvince(matchedP ? (matchedP.en || matchedP.th) : (v.province || 'Bangkok'));
     const combinedInfo = (v.vehicle_type || '') + ' ' + (v.vehicle || '') + ' ' + (v.brand || '') + ' ' + (v.model || '');
-    const isCar = v.vehicle_type === 'car' || /car|รถยนต์|mazda|toyota|camry|civic|altis|benz|bmw|accord|nissan/i.test(combinedInfo);
+    const isCar = v.vehicle_type === 'car' || /car|mazda|toyota|camry|civic|altis|benz|bmw|accord|nissan/i.test(combinedInfo);
     setNewVehicleType(isCar ? 'car' : 'motorcycle');
     setNewBrand(v.brand || '');
     
     // Parse model if not separated
     let parsedModel = v.model || '';
     if (!parsedModel && v.vehicle) {
-      parsedModel = v.vehicle.replace(/Motorcycle|Car|รถจักรยานยนต์|รถยนต์|\([^)]*\)/gi, '').trim();
+      parsedModel = v.vehicle.replace(/Motorcycle|Car|\([^)]*\)/gi, '').trim();
     }
     setNewModel(parsedModel);
 
@@ -390,6 +392,11 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!newPlate.trim()) return;
+
+    if (/[a-zA-Z]/.test(newPlate.trim())) {
+      alert('⚠️ License plate letters must be in Thai characters.\n\nPlease enter Thai characters for the plate prefix (e.g., 1กข 1234 or 3กฮ 5678).');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -522,6 +529,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                 <th>Vehicle Type</th>
                 <th>License Plate</th>
                 <th>Vehicle Details</th>
+                <th>Vehicle Photo</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -542,6 +550,31 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>{vTypeLabel}</td>
                     <td style={{ color: '#0f172a', fontWeight: 700 }}>{item.plate} {item.province && !item.plate.includes(item.province) ? item.province : ''}</td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{detailsStr}</td>
+                    <td style={{ color: '#0f172a', fontWeight: 600 }}>
+                      {item.vehicle_photo_url ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPhotoVehicle(item)}
+                          style={{
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            color: '#2563eb',
+                            borderRadius: 8,
+                            padding: '4px 10px',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <i className="ri-image-line" style={{ fontSize: 13 }}></i> View Photo
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>No Photo</span>
+                      )}
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-secondary btn-sm" style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc' }} onClick={() => handleOpenEdit(item)}>
@@ -559,6 +592,88 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
           </table>
         )}
       </div>
+
+      {/* Vehicle Photo View Modal */}
+      {selectedPhotoVehicle && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+        }}>
+          <div className="card" style={{ width: selectedPhotoVehicle.side_photo_url ? 680 : 480, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                  Registered Vehicle Photos
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPhotoVehicle(null)}
+                style={{ background: 'none', border: 'none', fontSize: 22, color: '#64748b', cursor: 'pointer' }}
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            </div>
+
+            {/* Student & Vehicle Info Card */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: 14, marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{selectedPhotoVehicle.owner}</span>
+                <span className="badge badge-primary">{selectedPhotoVehicle.role}</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#475569' }}>
+                Student ID: <strong>{selectedPhotoVehicle.id}</strong> • Plate: <strong>{selectedPhotoVehicle.plate}</strong>
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                Model: <strong>{selectedPhotoVehicle.vehicle}</strong>
+              </div>
+            </div>
+
+            {/* 2 Photos Frame Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: selectedPhotoVehicle.side_photo_url ? '1fr 1fr' : '1fr', gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>1. Front Photo (Front & License Plate)</div>
+                <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
+                  <img
+                    src={selectedPhotoVehicle.front_photo_url ? (selectedPhotoVehicle.front_photo_url.startsWith('/') ? `http://localhost:8000${selectedPhotoVehicle.front_photo_url}` : selectedPhotoVehicle.front_photo_url) : (selectedPhotoVehicle.vehicle_photo_url ? (selectedPhotoVehicle.vehicle_photo_url.startsWith('/') ? `http://localhost:8000${selectedPhotoVehicle.vehicle_photo_url}` : selectedPhotoVehicle.vehicle_photo_url) : '')}
+                    alt="Front Photo"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=80'; }}
+                  />
+                </div>
+              </div>
+
+              {selectedPhotoVehicle.side_photo_url && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>2. Side Photo (Side View)</div>
+                  <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
+                    <img
+                      src={selectedPhotoVehicle.side_photo_url.startsWith('/') ? `http://localhost:8000${selectedPhotoVehicle.side_photo_url}` : selectedPhotoVehicle.side_photo_url}
+                      alt="Side Photo"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=80'; }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedPhotoVehicle(null)}
+                style={{ padding: '8px 20px', fontWeight: 700 }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       {showModal && (
         <div style={{
@@ -602,7 +717,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                   <input 
                     type="text"
                     required
-                    placeholder="e.g. 1กข 1234"
+                    placeholder="e.g. 1AB 1234"
                     value={newPlate}
                     onChange={e => setNewPlate(e.target.value)}
                     style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}

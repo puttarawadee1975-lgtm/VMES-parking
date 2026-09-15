@@ -64,3 +64,9 @@ parking_status_collection = db["parking_status"] if db is not None else None
 saved_spots_collection = db["saved_spots"] if db is not None else None
 registered_vehicles_collection = db["registered_vehicles"] if db is not None else None
 announcements_collection = db["announcements"] if db is not None else None
+semester_resets_collection = db["semester_resets"] if db is not None else None
+academic_terms_collection = db["academic_terms"] if db is not None else None
+notifications_collection = db["notifications"] if db is not None else None
+system_settings_collection = db["system_settings"] if db is not None else None
+
+

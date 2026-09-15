@@ -9,17 +9,18 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
         <div 
           className="brand-logo" 
           onClick={() => setIsCollapsed(!isCollapsed)} 
-          title={isCollapsed ? "Click to Expand Sidebar" : "AU SmartPark"}
+          title={isCollapsed ? "Click to Expand Sidebar" : "VMES Parking"}
           style={{ cursor: 'pointer' }}
         >
           <i className="ri-shield-keyhole-fill"></i>
         </div>
         {!isCollapsed && (
           <div className="brand-text">
-            <h2>AU SmartPark</h2>
+            <h2>VMES Parking</h2>
             <span>ADMIN CONSOLE</span>
           </div>
         )}
+
         <button
           className="collapse-toggle-btn"
           onClick={() => setIsCollapsed(!isCollapsed)}

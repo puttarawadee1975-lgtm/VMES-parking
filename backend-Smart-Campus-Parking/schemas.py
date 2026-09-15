@@ -4,8 +4,16 @@ from pydantic import BaseModel, EmailStr, Field
 
 # Vehicle Schema
 class Vehicle(BaseModel):
-    plate: str = Field(..., description="License plate number, e.g., '1กก1234'")
-    type: Literal["car", "motorcycle"] = Field(..., description="Vehicle type: 'car' or 'motorcycle'")
+    plate: str = Field(..., description="License plate number, e.g., '1กข 1234'")
+    model: Optional[str] = None
+    type: Optional[str] = None
+    vehicle_type: Optional[str] = None
+    province: Optional[str] = None
+    brand: Optional[str] = None
+    color: Optional[str] = None
+    vehicle_photo_url: Optional[str] = None
+    front_photo_url: Optional[str] = None
+    side_photo_url: Optional[str] = None
 
 # User Schemas
 class UserBase(BaseModel):
@@ -13,7 +21,7 @@ class UserBase(BaseModel):
     role: Literal["student", "officer", "office"] = "student"
     name: str
     driving_score: int = Field(default=100, ge=0, le=100)
-    vehicles: List[Vehicle] = Field(default_factory=list)
+    vehicles: List[dict] = Field(default_factory=list)
 
 class UserCreate(UserBase):
     pass
@@ -108,3 +116,11 @@ class VehicleRegisterCreate(BaseModel):
     model: str
     user_email: Optional[str] = None
     role: Optional[str] = "student"
+    vehicle_photo: Optional[str] = None
+    vehicle_front_photo: Optional[str] = None
+    vehicle_side_photo: Optional[str] = None
+    vehicle_photo_url: Optional[str] = None
+    front_photo_url: Optional[str] = None
+    side_photo_url: Optional[str] = None
+
+

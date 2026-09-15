@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Image } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import ParkingLocationCard from '../components/ParkingLocationCard';
 import { toThaiProvince, formatDisplayPlate } from '../utils/provinceHelper';
 import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
@@ -25,6 +26,7 @@ export default function MyVehicleScreen({
   const [newProvince, setNewProvince] = useState('');
   const [newModel, setNewModel] = useState('');
   const [newColor, setNewColor] = useState('');
+  const [vehiclePhoto, setVehiclePhoto] = useState(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
@@ -32,6 +34,43 @@ export default function MyVehicleScreen({
   const isGuest = currentUser?.role === 'guest';
   const isStudent = currentUser?.role === 'student';
   const isAdmin = currentUser?.role === 'admin';
+
+  const handlePickVehiclePhoto = async (useCamera = false) => {
+    try {
+      let result;
+      if (useCamera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          alert('Camera permission is required to take a vehicle photo.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          quality: 0.6,
+          base64: true
+        });
+      } else {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          alert('Media library permission is required to upload a vehicle photo.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          allowsEditing: true,
+          quality: 0.6,
+          base64: true
+        });
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const base64Photo = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        setVehiclePhoto(base64Photo);
+      }
+    } catch (err) {
+      console.error('Failed to pick vehicle photo:', err);
+    }
+  };
 
   // Filter access logs: ONLY display trips for this account's registered vehicles!
   const userPlates = (currentUser?.vehicles || []).map((v) => (v.plate || '').trim().toUpperCase());
@@ -52,13 +91,18 @@ export default function MyVehicleScreen({
       return;
     }
 
+    if (!vehiclePhoto) {
+      alert('📷 Vehicle Photo Required:\nPlease capture or upload a clear photo of your vehicle for campus security and Admin verification.');
+      return;
+    }
+
     const thaiProvince = toThaiProvince(newProvince.trim());
     const fullPlate = `${newPlate.trim().toUpperCase()} ${thaiProvince}`;
     const icon = vehicleType === 'motorcycle' ? '🛵' : '🚗';
     const fullModel = `${icon} ${newModel.trim()} (${newColor.trim()})`;
 
     if (onAddVehicle) {
-      const success = onAddVehicle(fullPlate, fullModel);
+      const success = onAddVehicle(fullPlate, fullModel, vehiclePhoto);
       if (success === false) return;
     } else if (onOpenAddVehicleModal) {
       onOpenAddVehicleModal();
@@ -68,8 +112,10 @@ export default function MyVehicleScreen({
     setNewProvince('');
     setNewModel('');
     setNewColor('');
+    setVehiclePhoto(null);
     setIsRegistering(false);
   };
+
 
   // If user is opening the inline registration form
   if (isRegistering) {
@@ -262,8 +308,58 @@ export default function MyVehicleScreen({
             />
           </View>
 
+          {/* Mandatory Vehicle Photo (Required for Admin Verification) */}
+          <View className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+            <View className="flex-row items-center justify-between mb-1.5">
+              <View className="flex-row items-center">
+                <Ionicons name="camera" size={16} color="#2563eb" style={{ marginRight: 6 }} />
+                <Text className="text-slate-900 text-xs font-bold">Vehicle Photo (Admin Verification)</Text>
+              </View>
+              {vehiclePhoto && (
+                <TouchableOpacity onPress={() => setVehiclePhoto(null)}>
+                  <Text className="text-red-500 text-[11px] font-bold">Remove</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <Text className="text-slate-500 text-[11px] mb-3 leading-tight">
+              Take or upload a photo of your vehicle. This photo is sent to Admin for plate & identity verification.
+            </Text>
+
+            {vehiclePhoto ? (
+              <View className="relative items-center justify-center bg-slate-900 rounded-xl overflow-hidden h-36 border border-slate-300">
+                <Image source={{ uri: vehiclePhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                <View className="absolute bottom-2 right-2 bg-emerald-600/90 py-1 px-2.5 rounded-lg flex-row items-center">
+                  <Ionicons name="checkmark-circle" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                  <Text className="text-white text-[10px] font-bold">Photo Captured</Text>
+                </View>
+              </View>
+            ) : (
+              <View className="flex-row gap-2">
+                <TouchableOpacity
+                  onPress={() => handlePickVehiclePhoto(true)}
+                  activeOpacity={0.8}
+                  className="flex-1 bg-blue-50 border border-blue-200 py-2.5 px-3 rounded-xl flex-row items-center justify-center"
+                >
+                  <Ionicons name="camera-outline" size={16} color="#2563eb" style={{ marginRight: 6 }} />
+                  <Text className="text-blue-700 text-xs font-bold">Take Photo</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handlePickVehiclePhoto(false)}
+                  activeOpacity={0.8}
+                  className="flex-1 bg-white border border-slate-300 py-2.5 px-3 rounded-xl flex-row items-center justify-center"
+                >
+                  <Ionicons name="image-outline" size={16} color="#475569" style={{ marginRight: 6 }} />
+                  <Text className="text-slate-700 text-xs font-bold">Choose Gallery</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
           {/* Action Buttons */}
           <View className="flex-row gap-3 pt-2">
+
             <TouchableOpacity
               onPress={() => setIsRegistering(false)}
               activeOpacity={0.8}
@@ -323,7 +419,8 @@ export default function MyVehicleScreen({
         <View className="bg-slate-900 p-5 sm:p-6">
           <View className="flex-row justify-between items-start">
             <View>
-              <Text className="text-blue-400 text-[10px] font-bold uppercase tracking-wider">AU Smart Campus Pass</Text>
+              <Text className="text-blue-400 text-[10px] font-bold uppercase tracking-wider">VMES Parking Pass</Text>
+
               <Text className="text-white text-lg sm:text-xl font-black mt-1">
                 {currentUser?.name}
               </Text>

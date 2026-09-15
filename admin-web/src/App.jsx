@@ -21,22 +21,44 @@ export default function App() {
   const [parkingOccupancy, setParkingOccupancy] = useState({ available: 0, occupied: 0, total: 0, rate: 0 });
 
   const [logs, setLogs] = useState([]);
+  const [enforcementActive, setEnforcementActive] = useState(true);
 
   const handleNavigateToViolations = (userName) => {
     setViolationUserFilter(userName || '');
     setActiveTab('access-history');
   };
 
-  const fetchAPI = async (endpoint) => {
+  const fetchAPI = async (endpoint, options) => {
     try {
-      const res = await fetch(`http://localhost:8000${endpoint}`);
+      const res = await fetch(`http://localhost:8000${endpoint}`, options);
       if (res.ok) return res;
     } catch (e) {}
-    return fetch(`https://smart-campus-parking-deploy.onrender.com${endpoint}`);
+    return fetch(`https://smart-campus-parking-deploy.onrender.com${endpoint}`, options);
+  };
+
+  const handleToggleEnforcement = async () => {
+    const nextStatus = !enforcementActive;
+    setEnforcementActive(nextStatus);
+    try {
+      await fetchAPI(`/admin/toggle-enforcement?active=${nextStatus}`, { method: 'POST' });
+    } catch (err) {
+      console.warn('Enforcement toggle warning:', err);
+    }
   };
 
   // Fetch real data from Backend FastAPI + MongoDB
   const fetchBackendData = useCallback(async () => {
+    try {
+      // 0. Fetch Enforcement System Status
+      const resEnforce = await fetchAPI('/admin/enforcement-status');
+      if (resEnforce.ok) {
+        const dataEnforce = await resEnforce.json();
+        if (typeof dataEnforce.enforcement_active === 'boolean') {
+          setEnforcementActive(dataEnforce.enforcement_active);
+        }
+      }
+    } catch (e) {}
+
     try {
       // 1. Fetch Detections
       const resDet = await fetchAPI('/detections');
@@ -47,8 +69,19 @@ export default function App() {
             const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
             const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const isV = item.violation || false;
-            const hText = item.vehicle_type === 'car' ? 'N/A (Automobile)' : (item.helmet_detected ? 'Pass (Worn)' : 'NO HELMET');
-            const gateName = item.gate_type ? (item.gate_type.includes('Gate') ? item.gate_type : `Gate 1 (${item.gate_type})`) : 'Gate 1 (Main Entrance)';
+            const vType = isV ? (item.violation_type || (item.vehicle_type === 'car' ? 'Parked >30 Mins' : 'No Helmet')).replace(' (-10 pts)', '') : '-';
+            const hText = isV ? (item.vehicle_type === 'car' ? 'Parked >30 Mins' : 'No Helmet') : '-';
+            let gateName = 'Gate 1 (Entry Gate)';
+            if (item.gate_type) {
+              const gt = String(item.gate_type).toLowerCase();
+              if (gt.includes('exit') || gt.includes('gate 2') || gt.includes('gate2')) {
+                gateName = 'Gate 2 (Exit Gate)';
+              } else if (gt.includes('entry') || gt.includes('gate 1') || gt.includes('gate1')) {
+                gateName = 'Gate 1 (Entry Gate)';
+              } else {
+                gateName = item.gate_type;
+              }
+            }
             let rawP = (item.license_plate || 'Unregistered').trim();
             let rawProv = (item.province || 'กรุงเทพมหานคร').trim();
             const parts = rawP.split(/\s+/);
@@ -61,12 +94,14 @@ export default function App() {
 
             return {
               id: item.id,
+              rawDate: item.timestamp,
               time: timeStr,
               plate: rawP,
               province: rawProv,
               vehicle: `${item.vehicle_type === 'car' ? 'Car' : 'Motorcycle'}`,
               owner: item.matched_user || 'Guest / Unregistered',
               helmet: hText,
+              violationType: vType,
               isViolation: isV,
               penaltyApplied: item.penalty_applied,
               gate: gateName,
@@ -216,6 +251,8 @@ export default function App() {
         <Header
           pageTitle={currentMeta.title}
           pageSubtitle={currentMeta.subtitle}
+          enforcementActive={enforcementActive}
+          onToggleEnforcement={handleToggleEnforcement}
         />
 
         {activeTab === 'overview' && (
