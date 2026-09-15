@@ -667,13 +667,13 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                   key={z.id}
                   onClick={() => setSelectedZoneId(z.name)}
                   style={{
-                    background: isSelected ? z.bgLight : '#ffffff',
-                    border: `2px solid ${isSelected ? z.color : '#e2e8f0'}`,
+                    background: isSelected ? '#eff6ff' : '#ffffff',
+                    border: `2px solid ${isSelected ? '#2563eb' : '#e2e8f0'}`,
                     borderRadius: 14,
                     padding: '12px 14px',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    boxShadow: isSelected ? `0 4px 12px ${z.color}22` : '0 1px 3px rgba(0,0,0,0.03)',
+                    boxShadow: isSelected ? '0 4px 12px rgba(37, 99, 235, 0.15)' : '0 1px 3px rgba(0,0,0,0.03)',
                     position: 'relative'
                   }}
                 >
