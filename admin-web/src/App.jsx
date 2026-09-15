@@ -27,11 +27,19 @@ export default function App() {
     setActiveTab('access-history');
   };
 
-  // Fetch real data from Backend FastAPI
+  const fetchAPI = async (endpoint) => {
+    try {
+      const res = await fetch(`http://localhost:8000${endpoint}`);
+      if (res.ok) return res;
+    } catch (e) {}
+    return fetch(`https://smart-campus-parking-deploy.onrender.com${endpoint}`);
+  };
+
+  // Fetch real data from Backend FastAPI + MongoDB
   const fetchBackendData = useCallback(async () => {
     try {
       // 1. Fetch Detections
-      const resDet = await fetch('https://smart-campus-parking-deploy.onrender.com/detections');
+      const resDet = await fetchAPI('/detections');
       if (resDet.ok) {
         const dataDet = await resDet.json();
         if (Array.isArray(dataDet)) {
@@ -74,7 +82,7 @@ export default function App() {
 
     try {
       // 2. Fetch Analytics
-      const resAnalytics = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/analytics');
+      const resAnalytics = await fetchAPI('/admin/analytics');
       if (resAnalytics.ok) {
         const analytics = await resAnalytics.json();
         setTotalScans(analytics.total_scans || 0);
@@ -85,7 +93,7 @@ export default function App() {
     }
     try {
       // 3. Fetch Parking Status
-      const resPark = await fetch('https://smart-campus-parking-deploy.onrender.com/parking/status');
+      const resPark = await fetchAPI('/parking/status');
       if (resPark.ok) {
         const zones = await resPark.json();
         if (Array.isArray(zones) && zones.length > 0) {
@@ -106,7 +114,7 @@ export default function App() {
 
     try {
       // 4. Fetch Vehicles from Backend (Exact MongoDB Registered Vehicles)
-      const resVeh = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/all-vehicles');
+      const resVeh = await fetchAPI('/admin/all-vehicles');
       if (resVeh.ok) {
         const backendVehicles = await resVeh.json();
         if (Array.isArray(backendVehicles)) {
