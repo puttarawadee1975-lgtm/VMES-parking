@@ -63,3 +63,4 @@ detection_logs_collection = db["detection_logs"] if db is not None else None
 parking_status_collection = db["parking_status"] if db is not None else None
 saved_spots_collection = db["saved_spots"] if db is not None else None
 registered_vehicles_collection = db["registered_vehicles"] if db is not None else None
+announcements_collection = db["announcements"] if db is not None else None

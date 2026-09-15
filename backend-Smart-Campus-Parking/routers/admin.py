@@ -1,7 +1,7 @@
 from typing import List
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends, status
-from database import users_collection
+from database import users_collection, announcements_collection
 from schemas import UserResponse, UserCreate
 from auth import require_roles
 
@@ -92,6 +92,12 @@ async def get_announcements():
     Filters out expired announcements automatically.
     """
     today_str = datetime.now().strftime("%Y-%m-%d")
+    if announcements_collection is not None:
+        docs = list(announcements_collection.find({}, {"_id": 0}))
+        if docs:
+            active = [a for a in docs if not a.get("expire_date") or a.get("expire_date") >= today_str]
+            return active
+
     active = [a for a in MOCK_ANNOUNCEMENTS if not a.get("expire_date") or a.get("expire_date") >= today_str]
     return active
 
@@ -102,8 +108,15 @@ async def create_announcement(announcement: dict):
     """
     now_str = datetime.now().strftime("%H:%M")
     default_expire = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+    
+    ann_count = 1
+    if announcements_collection is not None:
+        ann_count = announcements_collection.count_documents({}) + 1
+    else:
+        ann_count = len(MOCK_ANNOUNCEMENTS) + 1
+
     new_ann = {
-        "id": f"ANN-{len(MOCK_ANNOUNCEMENTS) + 1:02d}",
+        "id": f"ANN-{ann_count:02d}",
         "title": announcement.get("title", "Campus Notice"),
         "content": announcement.get("content", ""),
         "date": f"Today, {now_str}",
@@ -112,6 +125,9 @@ async def create_announcement(announcement: dict):
         "target_user": announcement.get("target_user", ""),
         "expire_date": announcement.get("expire_date", default_expire)
     }
+
+    if announcements_collection is not None:
+        announcements_collection.insert_one(dict(new_ann))
     MOCK_ANNOUNCEMENTS.insert(0, new_ann)
     return {"status": "success", "announcement": new_ann}
 
@@ -121,6 +137,8 @@ async def delete_announcement(ann_id: str):
     Admin website endpoint: Delete a campus announcement by ID.
     """
     global MOCK_ANNOUNCEMENTS
+    if announcements_collection is not None:
+        announcements_collection.delete_one({"id": ann_id})
     MOCK_ANNOUNCEMENTS = [a for a in MOCK_ANNOUNCEMENTS if a.get("id") != ann_id]
     return {"status": "success", "message": f"Announcement {ann_id} deleted"}
 
@@ -129,20 +147,20 @@ async def update_announcement(ann_id: str, payload: dict):
     """
     Admin website endpoint: Edit an existing campus announcement by ID.
     """
+    update_data = {}
+    for key in ["title", "content", "priority", "target_audience", "target_user", "expire_date"]:
+        if key in payload:
+            update_data[key] = payload[key]
+
+    if announcements_collection is not None:
+        announcements_collection.update_one({"id": ann_id}, {"$set": update_data})
+        updated_doc = announcements_collection.find_one({"id": ann_id}, {"_id": 0})
+        if updated_doc:
+            return {"status": "success", "announcement": updated_doc}
+
     for a in MOCK_ANNOUNCEMENTS:
         if a.get("id") == ann_id:
-            if "title" in payload:
-                a["title"] = payload["title"]
-            if "content" in payload:
-                a["content"] = payload["content"]
-            if "priority" in payload:
-                a["priority"] = payload["priority"]
-            if "target_audience" in payload:
-                a["target_audience"] = payload["target_audience"]
-            if "target_user" in payload:
-                a["target_user"] = payload["target_user"]
-            if "expire_date" in payload:
-                a["expire_date"] = payload["expire_date"]
+            a.update(update_data)
             return {"status": "success", "announcement": a}
     raise HTTPException(status_code=404, detail="Announcement not found")
 
