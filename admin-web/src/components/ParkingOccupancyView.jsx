@@ -326,7 +326,12 @@ const ZONE_PILLAR_LAYOUTS = {
 };
 
 export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehicles = [] }) {
-  const { total = 21 } = parkingOccupancy || {};
+  const {
+    total = 21,
+    occupied = 0,
+    available = 0,
+    rate = 0
+  } = parkingOccupancy || {};
 
 
   // Search & Date Filter Controls
