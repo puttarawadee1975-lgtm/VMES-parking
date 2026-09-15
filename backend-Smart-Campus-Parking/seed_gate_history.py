@@ -28,7 +28,7 @@ mock_detections = [
         "violation": True,
         "gate_type": "Entry gate",
         "camera_id": 1,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(minutes=5),
         "matched_email": "65070118@student.university.ac.th",
         "matched_user": "Nattapong K."
@@ -41,7 +41,7 @@ mock_detections = [
         "violation": False,
         "gate_type": "Entry gate",
         "camera_id": 1,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(minutes=12),
         "matched_email": "65070042@student.university.ac.th",
         "matched_user": "Thanaphat S."
@@ -54,7 +54,7 @@ mock_detections = [
         "violation": True,
         "gate_type": "Entry gate",
         "camera_id": 1,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(minutes=24),
         "matched_email": "65070892@student.university.ac.th",
         "matched_user": "Phuvadet C."
@@ -80,7 +80,7 @@ mock_detections = [
         "violation": True,
         "gate_type": "Entry gate",
         "camera_id": 1,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(minutes=48),
         "matched_email": None,
         "matched_user": "Guest / Delivery Rider"
@@ -93,7 +93,7 @@ mock_detections = [
         "violation": False,
         "gate_type": "Entry gate",
         "camera_id": 1,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(hours=1, minutes=10),
         "matched_email": "65070244@student.university.ac.th",
         "matched_user": "Chayanan T."
@@ -106,7 +106,7 @@ mock_detections = [
         "violation": True,
         "gate_type": "Exit gate",
         "camera_id": 2,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(hours=1, minutes=35),
         "matched_email": "65070511@student.university.ac.th",
         "matched_user": "Krit T."
@@ -119,7 +119,7 @@ mock_detections = [
         "violation": False,
         "gate_type": "Exit gate",
         "camera_id": 2,
-        "zone": "Zone C (Floor 2 - Staff & Cars)",
+        "zone": "Zone C (Floor G - Staff & Cars)",
         "timestamp": now - timedelta(hours=2, minutes=5),
         "matched_email": "65070399@student.university.ac.th",
         "matched_user": "Pattarapon M."
@@ -132,7 +132,7 @@ mock_detections = [
         "violation": True,
         "gate_type": "Entry gate",
         "camera_id": 1,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(hours=2, minutes=40),
         "matched_email": "65070399@student.university.ac.th",
         "matched_user": "Pattarapon M."
@@ -145,7 +145,7 @@ mock_detections = [
         "violation": False,
         "gate_type": "Exit gate",
         "camera_id": 2,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(hours=3, minutes=15),
         "matched_email": "65070199@student.university.ac.th",
         "matched_user": "Suthipong W."
@@ -171,7 +171,7 @@ mock_detections = [
         "violation": True,
         "gate_type": "Entry gate",
         "camera_id": 1,
-        "zone": "Zone B (Floor 1 - Motorcycles)",
+        "zone": "Zone B (Floor G - Motorcycles)",
         "timestamp": now - timedelta(hours=4, minutes=45),
         "matched_email": "65070777@student.university.ac.th",
         "matched_user": "Ananda R."

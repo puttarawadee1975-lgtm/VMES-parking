@@ -67,97 +67,128 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
     return cur;
   };
 
-  const uniqueDrivers = Array.from(
-    new Map(
-      vehicles.map(item => [item.ownerEmail || item.owner, item])
-    ).values()
-  );
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const getLatestViolation = (item) => {
-    return logs.find(log =>
-      log.isViolation &&
-      (
-        log.owner === item.ownerEmail ||
-        log.owner === item.owner ||
-        log.owner?.includes(item.ownerEmail || '')
-      )
-    );
-  };
+  // Filter vehicles by Student ID or Name
+  const filteredVehicles = (vehicles || []).filter(item => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const idMatch = (item.id || '').toLowerCase().includes(q);
+    const nameMatch = (item.owner || '').toLowerCase().includes(q);
+    const plateMatch = (item.plate || '').toLowerCase().includes(q);
+    return idMatch || nameMatch || plateMatch;
+  });
 
   return (
     <div className="card">
-      <div className="card-header">
+      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div className="card-header-title">
           <i className="ri-speed-up-line"></i>
-          <span>Driver Safety Score & Penalty Enforcement</span>
+          <span>Driving Score</span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="search-box">
+            <i className="ri-search-line"></i>
+            <input 
+              type="text" 
+              placeholder="Search Student ID or Name..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ minWidth: 220 }}
+            />
+            {searchQuery && (
+              <button 
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontSize: 16
+                }}
+                title="Clear search"
+              >
+                <i className="ri-close-circle-fill"></i>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Student ID</th>
-              <th>Name</th>
-              <th>Safety Score</th>
-              <th>Last Violation</th>
-              <th style={{ textAlign: 'right', paddingRight: 24 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {uniqueDrivers.map((item, i) => {
-              const latestViolation = getLatestViolation(item);
-
-              return (
-                <tr key={i}>
-                <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
-                <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.owner}</td>
-                <td style={{ 
-                  fontWeight: 900, 
-                  fontSize: '15px', 
-                  color: item.score >= 80 ? '#059669' : (item.score >= 60 ? '#d97706' : '#dc2626') 
-                }}>
-                  {item.score} / 100
-                </td>
-                <td>
-                  {latestViolation ? (
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#dc2626' }}>No Helmet Violation</div>
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                        {latestViolation.date} • {latestViolation.time}
-                      </div>
-                    </div>
-                  ) : (
-                    <span style={{ color: '#059669', fontWeight: 600, fontSize: 13 }}>
-                      Compliant (No Violations)
-                    </span>
-                  )}
-                </td>
-                <td style={{ textAlign: 'right', paddingRight: 24 }}>
-                  <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                    <button 
-                      className="btn btn-secondary btn-sm" 
-                      style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 600, fontSize: 12, padding: '5px 11px', borderRadius: 8 }} 
-                      onClick={() => handleOpenAdjustModal(item)}
-                      title="Adjust / Edit Safety Score"
-                    >
-                      <i className="ri-sliders-line" style={{ color: '#2563eb' }}></i> Adjust Score
-                    </button>
-                    <button 
-                      className="btn btn-secondary btn-sm" 
-                      style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 600, fontSize: 12, padding: '5px 11px', borderRadius: 8 }} 
-                      onClick={() => onViewViolations && onViewViolations(item.owner || item.plate)}
-                      title="View Gate Access & Violation History"
-                    >
-                      <i className="ri-history-line" style={{ color: '#64748b' }}></i> History
-                    </button>
-                  </div>
-                </td>
+        {(!filteredVehicles || filteredVehicles.length === 0) ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
+            <i className="ri-user-search-line" style={{ fontSize: 36, color: '#94a3b8', display: 'block', marginBottom: 12 }}></i>
+            <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>No Drivers Found</div>
+            <div style={{ fontSize: 13, color: '#64748b' }}>No student driver matches your Student ID or Name search query.</div>
+          </div>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{ width: '18%' }}>Student ID</th>
+                <th style={{ width: '22%' }}>Name</th>
+                <th style={{ width: '18%' }}>Safety Score</th>
+                <th style={{ width: '24%' }}>Last Violation</th>
+                <th>Actions</th>
               </tr>
-              );
-            })}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredVehicles.map((item, i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
+                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.owner}</td>
+                  <td style={{ 
+                    fontWeight: 900, 
+                    fontSize: '15px', 
+                    color: item.score >= 80 ? '#059669' : (item.score >= 60 ? '#d97706' : '#dc2626') 
+                  }}>
+                    {item.score} / 100
+                  </td>
+                  <td>
+                    {item.isViolation ? (
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#dc2626' }}>No Helmet (-10 pts)</div>
+                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                          {item.lastViolationDate || item.time || 'Today'}
+                        </div>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#0f172a', fontWeight: 600, fontSize: 13 }}>
+                        Compliant (No Violations)
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                      <button 
+                        className="btn btn-secondary btn-sm" 
+                        style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 600, fontSize: 12, padding: '5px 11px', borderRadius: 8 }} 
+                        onClick={() => handleOpenAdjustModal(item)}
+                        title="Adjust / Edit Safety Score"
+                      >
+                        <i className="ri-sliders-line" style={{ color: '#2563eb' }}></i> Adjust Score
+                      </button>
+                      <button 
+                        className="btn btn-secondary btn-sm" 
+                        style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 600, fontSize: 12, padding: '5px 11px', borderRadius: 8 }} 
+                        onClick={() => onViewViolations && onViewViolations(item.owner || item.plate)}
+                        title="View Gate Access & Violation History"
+                      >
+                        <i className="ri-history-line" style={{ color: '#64748b' }}></i> History
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
 

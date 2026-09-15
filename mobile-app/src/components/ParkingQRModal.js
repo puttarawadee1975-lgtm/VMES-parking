@@ -16,7 +16,7 @@ import { getEnglishFormattedDate, getEnglishFormattedTime, PRESET_ZONES } from '
 // Predefined Zone QR presets (VMES Building, Floor G)
 const PRESET_PILLARS = [
   {
-    id: 'QR-VEMS-GA',
+    id: 'QR-VMES-GA',
     building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G05-G09',
@@ -24,7 +24,7 @@ const PRESET_PILLARS = [
     nearestExit: 'Main Entrance Gate 1',
   },
   {
-    id: 'QR-VEMS-GB',
+    id: 'QR-VMES-GB',
     building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G06-G10',
@@ -32,7 +32,7 @@ const PRESET_PILLARS = [
     nearestExit: 'East Exit Walkway',
   },
   {
-    id: 'QR-VEMS-GC',
+    id: 'QR-VMES-GC',
     building: 'VMES Building',
     floor: 'Floor G',
     pillar: 'G11-G15',

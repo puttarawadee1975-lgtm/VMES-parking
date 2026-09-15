@@ -468,7 +468,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
       <div className="card-header">
         <div className="card-header-title">
           <i className="ri-car-line"></i>
-          <span>Registered Vehicles & Campus Passes</span>
+          <span>Vehicle Directory</span>
         </div>
         <div className="header-actions">
           <div className="search-box">

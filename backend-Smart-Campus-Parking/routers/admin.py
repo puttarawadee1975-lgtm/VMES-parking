@@ -259,6 +259,14 @@ async def get_all_registered_vehicles():
             user_name = user_doc.get("name", user_email.split("@")[0].capitalize()) if user_doc else user_email.split("@")[0].capitalize()
             user_score = user_doc.get("driving_score", 100) if user_doc else 100
 
+            email_prefix = d.get("user_email", "").split("@")[0]
+            if email_prefix.isdigit():
+                s_id = email_prefix
+                o_name = d.get("name") or d.get("owner") or f"Student {email_prefix}"
+            else:
+                s_id = d.get("student_id") or f"STU-{email_prefix[:4].upper()}"
+                o_name = d.get("name") or d.get("owner") or email_prefix.capitalize()
+
             vehicles.append({
                 "plate": p_str,
                 "province": prov_str,
@@ -267,9 +275,9 @@ async def get_all_registered_vehicles():
                 "model": model,
                 "color": color,
                 "vehicle": full_detail,
-                "owner": user_name,
-                "ownerEmail": user_email,
-                "id": "STU-" + d.get("user_email", "0000")[:4],
+                "owner": o_name,
+                "ownerEmail": d.get("user_email", ""),
+                "id": s_id,
                 "role": d.get("role", "Student").capitalize(),
                 "score": user_score
             })

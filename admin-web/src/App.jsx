@@ -9,6 +9,7 @@ import ScoresTable from './components/ScoresTable';
 import AnnouncementsTable from './components/AnnouncementsTable';
 import ParkingOccupancyView from './components/ParkingOccupancyView';
 import ViolationsTable from './components/ViolationsTable';
+import LiveOverviewDashboard from './components/LiveOverviewDashboard';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -82,7 +83,6 @@ export default function App() {
     } catch (e) {
       console.log('Backend connection notice (analytics):', e.message);
     }
-    
     try {
       // 3. Fetch Parking Status
       const resPark = await fetch('https://smart-campus-parking-deploy.onrender.com/parking/status');
@@ -147,7 +147,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       // Refresh state immediately after posting detection
       fetchBackendData();
     } catch (e) {
@@ -188,14 +188,14 @@ export default function App() {
   };
 
   const titles = {
-    'overview': { title: 'Live Gate & Operations Overview', subtitle: 'Real-time AI License Plate Recognition & Campus Safety Monitor' },
-    'live-camera': { title: 'Gate Camera Feed Surveillance Grid (ENTRY & EXIT)', subtitle: 'Multi-Gate CCTV Stream & Optical Character Recognition' },
-    'access-history': { title: 'Gate Access & Violation History Log', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
-    'vehicles': { title: 'Registered Vehicles & Campus Passes', subtitle: 'Manage student & staff approved license plates and 1-plate policy rules' },
-    'safety-scores': { title: 'Driver Safety Scores & Audit Console', subtitle: '100-point scale enforcement, violation penalties, and score restorations' },
-    'violations': { title: 'Gate Access & Violation History Log', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
-    'parking-map': { title: 'Building Occupancy & Capacity Monitor', subtitle: 'Real-time building parking availability, load percentage, and floor specifications' },
-    'announcements': { title: 'Campus Announcements Management', subtitle: 'Broadcast real-time notices, safety updates, and maintenance alerts to mobile users' }
+    'overview': { title: 'Live Overview', subtitle: 'Real-time gate scans, parking load & safety updates' },
+    'live-camera': { title: 'Gate Camera', subtitle: 'Multi-Gate CCTV Stream & Optical Character Recognition' },
+    'access-history': { title: 'Gate Access & Violation History', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
+    'vehicles': { title: 'Vehicle Directory', subtitle: 'Manage student & staff approved license plates' },
+    'safety-scores': { title: 'Driving Score', subtitle: '100-point scale enforcement, violation penalties, and score restorations' },
+    'violations': { title: 'Gate Access & Violation History', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
+    'parking-map': { title: 'Building Occupancy', subtitle: "Real-time VMES's building parking availability" },
+    'announcements': { title: 'Official Campus Announcements', subtitle: 'Broadcast real-time notices, safety updates, and maintenance alerts to mobile users' }
   };
 
   const currentMeta = titles[activeTab] || titles['overview'];
@@ -205,30 +205,27 @@ export default function App() {
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onClearViolationFilter={() => setViolationUserFilter('')} />
 
       <main className="main-content">
-        <Header 
-          pageTitle={currentMeta.title} 
+        <Header
+          pageTitle={currentMeta.title}
           pageSubtitle={currentMeta.subtitle}
         />
 
         {activeTab === 'overview' && (
-          <div>
-            <KpiCards 
-              totalScans={totalScans} 
-              violationsCount={violationsCount} 
-              availableSpots={parkingOccupancy.available} 
-              occupiedRate={parkingOccupancy.rate} 
-            />
-
-            <div style={{ marginTop: 16 }}>
-              <InspectionTable logs={logs} isOverview={true} onViewAllHistory={() => { setViolationUserFilter(''); setActiveTab('access-history'); }} />
-            </div>
-          </div>
+          <LiveOverviewDashboard
+            totalScans={totalScans}
+            violationsCount={violationsCount}
+            parkingOccupancy={parkingOccupancy}
+            logs={logs}
+            vehicles={vehicles}
+            onNavigate={(tab) => { setViolationUserFilter(''); setActiveTab(tab); }}
+            handleTriggerScan={handleTriggerScan}
+          />
         )}
 
         {(activeTab === 'access-history' || activeTab === 'violations') && (
-          <InspectionTable 
-            logs={logs} 
-            isOverview={false} 
+          <InspectionTable
+            logs={logs}
+            isOverview={false}
             initialSearchQuery={violationUserFilter}
             initialViolationFilter={activeTab === 'violations' ? 'violations_only' : 'all'}
           />
@@ -241,23 +238,23 @@ export default function App() {
                 <i className="ri-camera-lens-line"></i>
                 <span>VMES CCTV Entry & Exit Gate</span>
               </div>
-              <span className="text-muted text-xs">2-Camera Grid Stream</span>
+              <span className="text-muted text-xs">2-Camera Stream</span>
             </div>
 
             <div className="grid-2-col gap-16 mt-16" style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <CameraStream 
+              <CameraStream
                 gateName="Gate 1 (Entry Gate)"
                 camId="CAM-01: ENTRY RAMP"
                 gateType="ENTRY"
-                currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]} 
-                onTriggerScan={() => handleTriggerScan('ENTRY')} 
+                currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]}
+                onTriggerScan={() => handleTriggerScan('ENTRY')}
               />
-              <CameraStream 
+              <CameraStream
                 gateName="Gate 2 (Exit Gate)"
                 camId="CAM-02: EXIT RAMP"
                 gateType="EXIT"
-                currentDetection={logs.find(l => l.gate.includes('EXIT'))} 
-                onTriggerScan={() => handleTriggerScan('EXIT')} 
+                currentDetection={logs.find(l => l.gate.includes('EXIT'))}
+                onTriggerScan={() => handleTriggerScan('EXIT')}
               />
             </div>
           </div>
@@ -268,10 +265,10 @@ export default function App() {
         )}
 
         {activeTab === 'safety-scores' && (
-          <ScoresTable 
-            vehicles={vehicles} 
-            logs={logs} 
-            onAdjustScore={handleAdjustScore} 
+          <ScoresTable
+            vehicles={vehicles}
+            logs={logs}
+            onAdjustScore={handleAdjustScore}
             onViewViolations={handleNavigateToViolations}
           />
         )}

@@ -185,7 +185,7 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
                         style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         onClick={() => setSelectedSnapshot({ ...item, snapshotUrl })}
                       >
-                        <i className="ri-image-line" style={{ color: '#2563eb' }}></i> View Photo
+                        <i className="ri-image-line" style={{ color: '#0f172a' }}></i> View Photo
                       </button>
                     </td>
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>

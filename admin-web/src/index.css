@@ -66,6 +66,13 @@ body {
   flex-direction: column;
   padding: 24px 16px;
   flex-shrink: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+  position: relative;
+}
+
+.sidebar.collapsed {
+  width: 76px;
+  padding: 24px 10px;
 }
 
 .sidebar-brand {
@@ -74,7 +81,59 @@ body {
   gap: 12px;
   margin-bottom: 32px;
   padding-left: 8px;
+  position: relative;
 }
+
+.sidebar.collapsed .sidebar-brand {
+  padding-left: 0;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.collapse-toggle-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.2s ease;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.collapse-toggle-btn:hover {
+  background: #e2e8f0;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+
+.sidebar.collapsed .collapse-toggle-btn {
+  margin-left: 0;
+  width: 32px;
+  height: 28px;
+}
+
+.sidebar.collapsed .menu-item {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.sidebar.collapsed .menu-item i {
+  font-size: 20px;
+}
+
+.sidebar.collapsed .user-pill {
+  justify-content: center;
+  padding: 8px;
+}
+
 
 .brand-logo {
   width: 42px;

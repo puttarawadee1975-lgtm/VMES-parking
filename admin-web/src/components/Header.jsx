@@ -8,12 +8,7 @@ export default function Header({ pageTitle, pageSubtitle }) {
         <p className="page-subtitle">{pageSubtitle}</p>
       </div>
 
-      <div className="header-right">
-        <div className="icon-btn" title="System Notifications">
-          <i className="ri-notification-3-line"></i>
-          <span className="notification-badge"></span>
-        </div>
-      </div>
+      <div className="header-right"></div>
     </header>
   );
 }

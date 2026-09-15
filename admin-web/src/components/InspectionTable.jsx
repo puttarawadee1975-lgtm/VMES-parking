@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
-export default function InspectionTable({ 
-  logs, 
-  isOverview = false, 
+export default function InspectionTable({
+  logs,
+  isOverview = false,
   onViewAllHistory,
   initialSearchQuery = '',
   initialViolationFilter = 'all'
@@ -11,6 +11,7 @@ export default function InspectionTable({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [violationFilter, setViolationFilter] = useState(initialViolationFilter); // 'all' | 'violations_only' | 'pass_only'
+  const [gateFilter, setGateFilter] = useState('all'); // 'all' | 'entry' | 'exit'
   const [selectedSnapshot, setSelectedSnapshot] = useState(null);
 
   React.useEffect(() => {
@@ -29,6 +30,10 @@ export default function InspectionTable({
     // 1. Violation Filter
     if (violationFilter === 'violations_only' && !item.isViolation) return false;
     if (violationFilter === 'pass_only' && item.isViolation) return false;
+
+    // 1.5 Gate Direction Filter (Entry / Exit)
+    if (gateFilter === 'entry' && !(item.gate || '').toLowerCase().includes('entry') && !(item.action || '').toLowerCase().includes('entry')) return false;
+    if (gateFilter === 'exit' && !(item.gate || '').toLowerCase().includes('exit') && !(item.action || '').toLowerCase().includes('exit')) return false;
 
     // 2. Date Filter
     let dateMatch = true;
@@ -72,13 +77,13 @@ export default function InspectionTable({
     <div className="card">
       <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div className="card-header-title">
-          <i className="ri-list-check-2"></i>
-          <span>{isOverview ? 'Recent Gate Scans (Live Feed)' : 'Gate Access & Violation History Log'}</span>
+          <i className="ri-history-line"></i>
+          <span>{isOverview ? 'Recent Gate Scans (Live Feed)' : 'Gate Access & Violation History'}</span>
         </div>
 
         {isOverview ? (
-          <button 
-            className="btn btn-secondary btn-sm" 
+          <button
+            className="btn btn-secondary btn-sm"
             style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
             onClick={onViewAllHistory}
           >
@@ -89,15 +94,15 @@ export default function InspectionTable({
             {/* Search Input Box */}
             <div className="search-box">
               <i className="ri-search-line"></i>
-              <input 
-                type="text" 
-                placeholder="Search User, Plate, or Gate..." 
+              <input
+                type="text"
+                placeholder="Search User, Plate, or Gate..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ minWidth: 180 }}
               />
               {searchQuery && (
-                <button 
+                <button
                   type="button"
                   onClick={() => setSearchQuery('')}
                   style={{
@@ -118,7 +123,7 @@ export default function InspectionTable({
             </div>
 
             {/* Violation Filter Dropdown */}
-            <select 
+            <select
               value={violationFilter}
               onChange={(e) => setViolationFilter(e.target.value)}
               style={{
@@ -138,8 +143,29 @@ export default function InspectionTable({
               <option value="pass_only">Pass Granted</option>
             </select>
 
+            {/* Gate Filter Dropdown */}
+            <select
+              value={gateFilter}
+              onChange={(e) => setGateFilter(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#0f172a',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: 8,
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="all">All Gates (Entry & Exit)</option>
+              <option value="entry">Entry Gate Only</option>
+              <option value="exit">Exit Gate Only</option>
+            </select>
+
             {/* Date Filter Dropdown */}
-            <select 
+            <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               style={{
@@ -161,7 +187,7 @@ export default function InspectionTable({
             </select>
 
             {dateFilter === 'custom' && (
-              <input 
+              <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
@@ -196,6 +222,7 @@ export default function InspectionTable({
           <table className="table">
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Time</th>
                 <th>Plate Number</th>
                 <th>Vehicle & Owner</th>
@@ -208,12 +235,23 @@ export default function InspectionTable({
             <tbody>
               {displayLogs.map((item, index) => {
                 const isCar = (item.vehicle || '').toLowerCase().includes('car');
-                const snapshotUrl = item.imageUrl || item.image || (isCar 
-                  ? 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80' 
+                const snapshotUrl = item.imageUrl || item.image || (isCar
+                  ? 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80'
                   : 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80');
+
+                const formattedDate = (() => {
+                  let d = new Date();
+                  if (item.rawDate) d = new Date(item.rawDate);
+                  else if (item.timestamp) d = new Date(item.timestamp);
+                  const day = String(d.getDate()).padStart(2, '0');
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const year = d.getFullYear();
+                  return !isNaN(d.getTime()) ? `${day}/${month}/${year}` : new Date().toLocaleDateString('en-GB');
+                })();
 
                 return (
                   <tr key={index}>
+                    <td style={{ fontWeight: 600, color: '#64748b', fontSize: 12 }}>{formattedDate}</td>
                     <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.time}</td>
                     <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.plate} {item.province && !item.plate.includes(item.province) ? item.province : ''}</td>
                     <td>
@@ -221,18 +259,23 @@ export default function InspectionTable({
                       <div style={{ fontSize: 11, color: '#64748b' }}>{item.vehicle}</div>
                     </td>
                     <td>
-                      <span style={{ color: item.isViolation ? '#dc2626' : '#059669', fontWeight: 700 }}>
+                      <span style={{
+                        color: String(item.helmet || '').toUpperCase().includes('NO HELMET')
+                          ? '#dc2626'
+                          : (String(item.helmet || '').toUpperCase().includes('PASS') || String(item.helmet || '').toUpperCase().includes('WORN') ? '#059669' : '#0f172a'),
+                        fontWeight: 700
+                      }}>
                         {item.helmet}
                       </span>
                     </td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{item.gate}</td>
                     <td>
-                      <button 
-                        className="btn btn-secondary btn-sm" 
+                      <button
+                        className="btn btn-secondary btn-sm"
                         style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         onClick={() => setSelectedSnapshot({ ...item, snapshotUrl })}
                       >
-                        <i className="ri-image-line" style={{ color: '#2563eb' }}></i> View Photo
+                        <i className="ri-image-line" style={{ color: '#0f172a' }}></i> View Photo
                       </button>
                     </td>
                     <td>
@@ -280,7 +323,7 @@ export default function InspectionTable({
                   })()}
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedSnapshot(null)}
                 style={{ background: 'none', border: 'none', fontSize: 22, color: '#94a3b8', cursor: 'pointer', padding: 4 }}
               >
@@ -290,9 +333,9 @@ export default function InspectionTable({
 
             {/* Image Frame */}
             <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#000000', position: 'relative', marginBottom: 16 }}>
-              <img 
-                src={selectedSnapshot.snapshotUrl} 
-                alt="CCTV Gate Entry Snapshot" 
+              <img
+                src={selectedSnapshot.snapshotUrl}
+                alt="CCTV Gate Entry Snapshot"
                 style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }}
               />
               <div style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(15, 23, 42, 0.85)', color: '#ffffff', padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
@@ -307,7 +350,12 @@ export default function InspectionTable({
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginTop: 2 }}>Gate: {selectedSnapshot.gate}</div>
                 <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
-                  Helmet Check: {selectedSnapshot.helmet || 'Pass'}
+                  Helmet Check: <span style={{
+                    color: String(selectedSnapshot.helmet || '').toUpperCase().includes('NO HELMET')
+                      ? '#dc2626'
+                      : (String(selectedSnapshot.helmet || '').toUpperCase().includes('PASS') || String(selectedSnapshot.helmet || '').toUpperCase().includes('WORN') ? '#059669' : '#0f172a'),
+                    fontWeight: 700
+                  }}>{selectedSnapshot.helmet || 'Pass'}</span>
                 </div>
               </div>
               <div style={{ fontSize: 14, fontWeight: 800, color: selectedSnapshot.isViolation ? '#dc2626' : '#059669' }}>
