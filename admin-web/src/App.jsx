@@ -231,7 +231,7 @@ export default function App() {
   };
 
   const titles = {
-    'overview': { title: 'Live Overview', subtitle: 'Real-time gate scans, parking load & safety updates' },
+    'overview': { title: 'Dashboard', subtitle: 'Academic term statistics, safety violations & campus parking load' },
     'live-camera': { title: 'Gate Camera', subtitle: 'Multi-Gate CCTV Stream & Optical Character Recognition' },
     'access-history': { title: 'Gate Access & Violation History', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
     'vehicles': { title: 'Vehicle Directory', subtitle: 'Manage student & staff approved license plates' },

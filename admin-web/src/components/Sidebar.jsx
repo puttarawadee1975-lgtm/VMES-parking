@@ -36,10 +36,10 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
         <button 
           onClick={() => setActiveTab('overview')} 
           className={`menu-item ${activeTab === 'overview' ? 'active' : ''}`}
-          title="Live Overview"
+          title="Dashboard"
         >
           <i className="ri-dashboard-3-line"></i>
-          {!isCollapsed && <span>Live Overview</span>}
+          {!isCollapsed && <span>Dashboard</span>}
         </button>
         <button 
           onClick={() => setActiveTab('live-camera')} 
