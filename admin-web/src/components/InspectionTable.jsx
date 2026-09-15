@@ -11,6 +11,7 @@ export default function InspectionTable({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [violationFilter, setViolationFilter] = useState(initialViolationFilter); // 'all' | 'violations_only' | 'pass_only'
+  const [gateFilter, setGateFilter] = useState('all'); // 'all' | 'entry' | 'exit'
   const [selectedSnapshot, setSelectedSnapshot] = useState(null);
 
   React.useEffect(() => {
@@ -29,6 +30,10 @@ export default function InspectionTable({
     // 1. Violation Filter
     if (violationFilter === 'violations_only' && !item.isViolation) return false;
     if (violationFilter === 'pass_only' && item.isViolation) return false;
+
+    // 1.5 Gate Direction Filter (Entry / Exit)
+    if (gateFilter === 'entry' && !(item.gate || '').toLowerCase().includes('entry') && !(item.action || '').toLowerCase().includes('entry')) return false;
+    if (gateFilter === 'exit' && !(item.gate || '').toLowerCase().includes('exit') && !(item.action || '').toLowerCase().includes('exit')) return false;
 
     // 2. Date Filter
     let dateMatch = true;
@@ -136,6 +141,27 @@ export default function InspectionTable({
               <option value="all">All</option>
               <option value="violations_only">Helmet Violations</option>
               <option value="pass_only">Pass Granted</option>
+            </select>
+
+            {/* Gate Filter Dropdown */}
+            <select
+              value={gateFilter}
+              onChange={(e) => setGateFilter(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#0f172a',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: 8,
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="all">All Gates (Entry & Exit)</option>
+              <option value="entry">Entry Gate Only</option>
+              <option value="exit">Exit Gate Only</option>
             </select>
 
             {/* Date Filter Dropdown */}

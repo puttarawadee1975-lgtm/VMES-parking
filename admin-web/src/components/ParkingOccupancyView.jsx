@@ -465,7 +465,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       // 4. Status Filter
       let matchStatus = true;
       if (reservationFilter === 'ACTIVE') {
-        matchStatus = spot.status === 'Active Parked';
+        matchStatus = spot.status === 'Active Parked' || (spot.exitTime && spot.exitTime.includes('Active'));
+      } else if (reservationFilter === 'EXITED') {
+        matchStatus = spot.status === 'Exited' || spot.status === 'Completed' || (spot.exitTime && !spot.exitTime.toLowerCase().includes('active'));
       }
 
       return matchSearch && matchZone && matchDate && matchStatus;
