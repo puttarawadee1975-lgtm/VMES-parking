@@ -10,7 +10,7 @@ export default function KpiCards({ totalScans, violationsCount, availableSpots, 
         <div className="kpi-details">
           <span className="kpi-title">Today's Gate Traffic (In & Out)</span>
           <h3 className="kpi-value">{totalScans.toLocaleString()}</h3>
-          <span className="kpi-sub green"><i className="ri-arrow-up-line"></i> +12.4% vs yesterday</span>
+          <span className="kpi-sub text-muted">Live detection records</span>
         </div>
       </div>
 
@@ -21,7 +21,10 @@ export default function KpiCards({ totalScans, violationsCount, availableSpots, 
         <div className="kpi-details">
           <span className="kpi-title">Helmet Violations Caught</span>
           <h3 className="kpi-value">{violationsCount.toLocaleString()}</h3>
-          <span className="kpi-sub red"><i className="ri-shield-cross-line"></i> 11.3% violation rate</span>
+          <span className="kpi-sub red">
+  <i className="ri-shield-cross-line"></i>{' '}
+  {totalScans > 0 ? ((violationsCount / totalScans) * 100).toFixed(1) : '0.0'}% violation rate
+</span>
         </div>
       </div>
 

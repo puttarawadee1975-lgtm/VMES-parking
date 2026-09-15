@@ -11,24 +11,14 @@ import ParkingOccupancyView from './components/ParkingOccupancyView';
 import ViolationsTable from './components/ViolationsTable';
 import LiveOverviewDashboard from './components/LiveOverviewDashboard';
 
-const INITIAL_VEHICLES = [
-  { plate: '1กข 1234', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'Honda', model: 'PCX 160', color: 'Black', vehicle: 'Motorcycle Honda PCX 160 (Black)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Thanaphat S.', id: '65070042', role: 'Student', score: 98, ownerEmail: '65070042@student.university.ac.th' },
-  { plate: '3กฮ 5678', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'Yamaha', model: 'Grand Filano', color: 'Gray', vehicle: 'Motorcycle Yamaha Grand Filano (Gray)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Main Entrance)', owner: 'Nattapong K.', id: '65070118', role: 'Student', score: 80, ownerEmail: '65070118@student.university.ac.th', lastViolationDate: '09/09/2026 • 09:15' },
-  { plate: '4กม 7777', province: 'กรุงเทพมหานคร', vehicle_type: 'motorcycle', brand: 'GPX', model: 'Drone 150', color: 'Red', vehicle: 'Motorcycle GPX Drone 150 (Red)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Entry Gate)', owner: 'Kittisak W.', id: '65070512', role: 'Student', score: 50, ownerEmail: '65070512@student.university.ac.th', lastViolationDate: '08/09/2026 • 16:30' },
-  { plate: '7กต 3333', province: 'ชลบุรี', vehicle_type: 'motorcycle', brand: 'Honda', model: 'Click 160', color: 'Blue', vehicle: 'Motorcycle Honda Click 160 (Blue)', helmet: 'NO HELMET', isViolation: true, gate: 'Gate 1 (Entry Gate)', owner: 'Phatcharapol N.', id: '65070625', role: 'Student', score: 40, ownerEmail: '65070625@student.university.ac.th', lastViolationDate: '07/09/2026 • 14:10' },
-  { plate: '9กข 9999', province: 'สมุทรปราการ', vehicle_type: 'car', brand: 'Toyota', model: 'Camry', color: 'White', vehicle: 'Car Toyota Camry (White)', helmet: 'N/A (Automobile)', isViolation: false, gate: 'Gate 2 (East Entrance)', owner: 'Dr. Somchai P.', id: 'SEC-01', role: 'Staff', score: 100, ownerEmail: 'somchai@university.ac.th' },
-  { plate: '2กข 4321', province: 'นนทบุรี', vehicle_type: 'motorcycle', brand: 'Vespa', model: 'Sprint 150', color: 'White', vehicle: 'Motorcycle Vespa Sprint 150 (White)', helmet: 'Pass (Worn)', isViolation: false, gate: 'Gate 1 (Main Entrance)', owner: 'Chayanan T.', id: '65070244', role: 'Student', score: 100, ownerEmail: '65070244@student.university.ac.th' },
-  { plate: '5กษ 8888', province: 'กรุงเทพมหานคร', vehicle_type: 'car', brand: 'Honda', model: 'Civic', color: 'Black', vehicle: 'Car Honda Civic (Black)', helmet: 'N/A (Automobile)', isViolation: false, gate: 'Gate 2 (East Entrance)', owner: 'Pattarapon M.', id: '65070399', role: 'Student', score: 95, ownerEmail: '65070399@student.university.ac.th' }
-];
-
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [violationUserFilter, setViolationUserFilter] = useState('');
-  const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
-  const [totalScans, setTotalScans] = useState(1284);
-  const [violationsCount, setViolationsCount] = useState(146);
+  const [vehicles, setVehicles] = useState([]);
+  const [totalScans, setTotalScans] = useState(0);
+  const [violationsCount, setViolationsCount] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [parkingOccupancy, setParkingOccupancy] = useState({ available: 12, occupied: 6, total: 18, rate: 33.3 });
+  const [parkingOccupancy, setParkingOccupancy] = useState({ available: 0, occupied: 0, total: 0, rate: 0 });
 
   const [logs, setLogs] = useState([]);
 
@@ -41,7 +31,7 @@ export default function App() {
   const fetchBackendData = useCallback(async () => {
     try {
       // 1. Fetch Detections
-      const resDet = await fetch('http://localhost:8000/detections');
+      const resDet = await fetch('https://smart-campus-parking-deploy.onrender.com/detections');
       if (resDet.ok) {
         const dataDet = await resDet.json();
         if (Array.isArray(dataDet)) {
@@ -68,18 +58,14 @@ export default function App() {
               province: rawProv,
               vehicle: `${item.vehicle_type === 'car' ? 'Car' : 'Motorcycle'}`,
               owner: item.matched_user || 'Guest / Unregistered',
-              owner: item.matched_user || 'Guest / Unregistered',
               helmet: hText,
               isViolation: isV,
+              penaltyApplied: item.penalty_applied,
               gate: gateName,
               zone: item.zone || 'Zone A'
             };
           });
           setLogs(transformedLogs);
-          if (transformedLogs.length > 0) {
-            setTotalScans(prev => Math.max(prev, transformedLogs.length));
-            setViolationsCount(prev => Math.max(prev, transformedLogs.filter(l => l.isViolation).length));
-          }
         }
       }
     } catch (e) {
@@ -87,8 +73,19 @@ export default function App() {
     }
 
     try {
-      // 2. Fetch Parking Status
-      const resPark = await fetch('http://localhost:8000/parking/status');
+      // 2. Fetch Analytics
+      const resAnalytics = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/analytics');
+      if (resAnalytics.ok) {
+        const analytics = await resAnalytics.json();
+        setTotalScans(analytics.total_scans || 0);
+        setViolationsCount(analytics.violations_count || 0);
+      }
+    } catch (e) {
+      console.log('Backend connection notice (analytics):', e.message);
+    }
+    try {
+      // 3. Fetch Parking Status
+      const resPark = await fetch('https://smart-campus-parking-deploy.onrender.com/parking/status');
       if (resPark.ok) {
         const zones = await resPark.json();
         if (Array.isArray(zones) && zones.length > 0) {
@@ -108,17 +105,12 @@ export default function App() {
     }
 
     try {
-      // 3. Fetch Vehicles from Backend (Exact MongoDB Registered Vehicles)
-      const resVeh = await fetch('http://localhost:8000/admin/all-vehicles');
+      // 4. Fetch Vehicles from Backend (Exact MongoDB Registered Vehicles)
+      const resVeh = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/all-vehicles');
       if (resVeh.ok) {
         const backendVehicles = await resVeh.json();
         if (Array.isArray(backendVehicles)) {
-          const existingPlates = new Set(backendVehicles.map(v => v.plate));
-          const combined = [
-            ...backendVehicles,
-            ...INITIAL_VEHICLES.filter(iv => !existingPlates.has(iv.plate))
-          ];
-          setVehicles(combined);
+          setVehicles(backendVehicles);
         }
       }
     } catch (e) {
@@ -150,7 +142,7 @@ export default function App() {
         zone: 'Zone A'
       };
 
-      await fetch('http://localhost:8000/detections', {
+      await fetch('https://smart-campus-parking-deploy.onrender.com/detections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -160,22 +152,6 @@ export default function App() {
       fetchBackendData();
     } catch (e) {
       console.warn('Scan trigger API notice:', e);
-      // Fallback local update
-      const now = new Date();
-      const timeStr = now.toTimeString().split(' ')[0];
-      setTotalScans(prev => prev + 1);
-      if (item.isViolation) setViolationsCount(prev => prev + 1);
-      const newLog = {
-        time: timeStr,
-        plate: item.plate,
-        province: item.province,
-        vehicle: item.vehicle,
-        owner: item.owner || 'Student',
-        helmet: item.helmet,
-        isViolation: item.isViolation,
-        gate: `Gate (${gateType})`
-      };
-      setLogs(prev => [newLog, ...prev.slice(0, 49)]);
     }
   };
 
@@ -186,7 +162,7 @@ export default function App() {
     const reason = customReason || defaultReason;
 
     try {
-      await fetch('http://localhost:8000/admin/adjust-score', {
+      await fetch('https://smart-campus-parking-deploy.onrender.com/admin/adjust-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

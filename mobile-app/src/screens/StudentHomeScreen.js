@@ -29,10 +29,17 @@ export default function StudentHomeScreen({
   const fetchParkingData = async () => {
     setLoading(true);
     const data = await getParkingStatus();
+
     if (data) {
       setParkingZones(data);
     }
+
+    setLoading(false);
+  };
+
+  const fetchAnnouncements = async () => {
     const anns = await getAnnouncements();
+
     if (anns && Array.isArray(anns)) {
       const filteredAnns = anns.filter(ann => {
         if (!ann.target_audience || ann.target_audience === 'all') return true;
@@ -56,13 +63,14 @@ export default function StudentHomeScreen({
       }));
       setAnnouncements(filteredAnns);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchParkingData();
-    // Optional: Refresh every 30 seconds automatically
+    fetchAnnouncements();
+    // Refresh every 30 seconds automatically
     const interval = setInterval(fetchParkingData, 30000);
+
     return () => clearInterval(interval);
   }, []);
 

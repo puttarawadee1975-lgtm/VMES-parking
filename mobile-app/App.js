@@ -93,7 +93,8 @@ function MainApp() {
               const formattedUser = {
                 ...data.user,
                 studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : '65070042'),
-                vehicles: data.user.vehicles || []
+                vehicles: data.user.vehicles || [],
+		safetyScore: data.user.driving_score ?? 100
               };
               fetchUserVehiclesAndLogin(formattedUser);
             } else {
@@ -103,7 +104,7 @@ function MainApp() {
                 studentId: '65070042',
                 email: '65070042@student.university.ac.th',
                 vehicles: [],
-                safetyScore: 98
+                safetyScore: 100
               };
               fetchUserVehiclesAndLogin(fallbackStudent);
             }
@@ -115,7 +116,7 @@ function MainApp() {
               studentId: '65070042',
               email: '65070042@student.university.ac.th',
               vehicles: [],
-              safetyScore: 98
+              safetyScore: 100
             };
             fetchUserVehiclesAndLogin(fallbackStudent);
           });
@@ -128,7 +129,7 @@ function MainApp() {
             studentId: '65070042',
             email: '65070042@student.university.ac.th',
             vehicles: [],
-            safetyScore: 98
+            safetyScore: 100
           };
           fetchUserVehiclesAndLogin(fallbackStudent);
         });
@@ -183,19 +184,19 @@ function MainApp() {
 
   useEffect(() => {
     let interval;
-    if (currentUser) {
+    if (currentUser?.role === 'admin') {
       interval = setInterval(() => {
         setSimStep((prev) => (prev + 1) % 100);
       }, 100);
     }
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, [currentUser?.role]);
 
   useEffect(() => {
-    if (simStep === 0 && currentUser) {
+    if (simStep === 0 && currentUser?.role === 'admin') {
       triggerScan();
     }
-  }, [simStep]);
+  }, [simStep, currentUser?.role]);
 
   const triggerScan = () => {
     const nextIdx = (currentVehIndex + 1) % SIMULATED_VEHICLES.length;
@@ -295,7 +296,7 @@ function MainApp() {
       studentId: '65070042',
       email: studentEmail,
       vehicles: [],
-      safetyScore: 98
+      safetyScore: 100
     };
 
     try {
@@ -329,7 +330,7 @@ function MainApp() {
       studentId: accountEmail.replace(/\D/g, '') || '65070042',
       email: accountEmail,
       vehicles: [],
-      safetyScore: 98
+      safetyScore: 100
     };
     await fetchUserVehiclesAndLogin(preset);
   };
@@ -538,8 +539,6 @@ function MainApp() {
                   parkedSpot={parkedSpot}
                   onOpenQRScanner={() => setShowQRModal(true)}
                   onExitBuilding={handleExitBuilding}
-                  activeSimVeh={activeSimVeh}
-                  triggerScan={triggerScan}
                   onOpenNotifications={() => setShowNotificationsModal(true)}
                 />
               )

@@ -21,7 +21,7 @@ export default function AnnouncementsTable() {
 
   const fetchAnnouncements = async () => {
     try {
-      const res = await fetch('http://localhost:8000/admin/announcements');
+      const res = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/announcements');
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(data);
@@ -74,14 +74,14 @@ export default function AnnouncementsTable() {
 
       if (editingItem) {
         // Edit existing announcement
-        await fetch(`http://localhost:8000/admin/announcements/${editingItem.id}`, {
+        await fetch(`https://smart-campus-parking-deploy.onrender.com/admin/announcements/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
       } else {
         // Post new announcement
-        await fetch('http://localhost:8000/admin/announcements', {
+        await fetch('https://smart-campus-parking-deploy.onrender.com/admin/announcements', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -107,7 +107,7 @@ export default function AnnouncementsTable() {
     if (!deleteConfirmItem) return;
     setDeleting(true);
     try {
-      await fetch(`http://localhost:8000/admin/announcements/${deleteConfirmItem.id}`, {
+      await fetch(`https://smart-campus-parking-deploy.onrender.com/admin/announcements/${deleteConfirmItem.id}`, {
         method: 'DELETE'
       });
       setDeleteConfirmItem(null);

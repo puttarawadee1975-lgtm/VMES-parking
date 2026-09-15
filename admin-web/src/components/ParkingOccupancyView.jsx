@@ -336,20 +336,17 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [reservationFilter, setReservationFilter] = useState('ACTIVE');
 
-  // Calculate live count from logs
-  const estCars = logs.filter(l => l.vehicle_type === 'car' || (l.vehicle && /car/i.test(l.vehicle))).length;
-  const estMotos = logs.filter(l => l.vehicle_type === 'motorcycle' || (l.vehicle && /motorcycle/i.test(l.vehicle))).length;
+  // Calculate live count from logs & occupancy
+  const estCars = occupied > 0 ? occupied : logs.filter(l => l.vehicle_type === 'car' || (l.vehicle && /car/i.test(l.vehicle))).length;
+  const estMotos = (logs || []).filter(l => l.vehicle_type === 'motorcycle' || (l.vehicle && /motorcycle|มอเตอร์ไซค์/i.test(l.vehicle))).length;
 
-  const availableCarSpots = Math.max(0, total - estCars);
+  const availableCarSpots = available > 0 ? available : Math.max(0, total - estCars);
+  const carRate = rate;
 
   // State for Registered Account Scanned & Admin Locked Parking Spots
   const [parkedSpots, setParkedSpots] = useState(INITIAL_REGISTERED_PARKED_SPOTS);
 
-
-
-
-
-  // Dynamic Building Zones List
+  // Dynamic Building Zones State
   const [zones, setZones] = useState([
     {
       id: 'Zone A',

@@ -1,24 +1,8 @@
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+export const API_BASE_URL =
+  'https://smart-campus-parking-deploy.onrender.com';
 
-// Automatically detect the local IP from Expo Dev Server
-let localIp = 'localhost'; // fallback for simulator
-const debuggerHost = Constants.expoConfig?.hostUri;
-if (debuggerHost) {
-  localIp = debuggerHost.split(':')[0];
-} else if (Platform.OS === 'android') {
-  localIp = '10.0.2.2'; // Android emulator localhost
-}
-
-// Backend IP Address (Dynamic based on current Wi-Fi)
-export const MAC_MINI_IP = localIp;
-export const API_PORT = '8000';
-
-// API Base URL for HTTP Requests
-export const API_BASE_URL = `http://${MAC_MINI_IP}:${API_PORT}`;
-
-// WebSocket URL for Live Detections
-export const WS_BASE_URL = `ws://${MAC_MINI_IP}:${API_PORT}/ws/detections`;
+export const WS_BASE_URL =
+  'wss://smart-campus-parking-deploy.onrender.com/ws/detections';
 
 let storedToken = null;
 
