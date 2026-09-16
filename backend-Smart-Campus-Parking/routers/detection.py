@@ -81,8 +81,16 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         matched_user = user_doc
         matched_user_name = f"{user_doc.get('name')} ({user_doc.get('email')})"
 
-        # Deduct driving score at most once per day
-        if is_violation:
+        # Check if Master Enforcement system is ACTIVE
+        from database import system_settings_collection
+        enforcement_enabled = True
+        if system_settings_collection is not None:
+            setting = system_settings_collection.find_one({"key": "enforcement_system"})
+            if setting and "active" in setting:
+                enforcement_enabled = setting["active"]
+
+        # Deduct driving score at most once per day IF enforcement is enabled
+        if is_violation and enforcement_enabled:
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
@@ -169,6 +177,20 @@ async def ingest_detection_event(payload: DetectionLogCreate):
                     }
                 }
             )
+
+    # Trigger automatic notification creation on Vehicle ENTRY (Student Cars ONLY for VMES Parking Limit)
+    if payload.gate_type == "ENTRY" and matched_user and matched_user.get("email"):
+        try:
+            user_role = (matched_user.get("role") or "student").lower()
+            if user_role == "student" and vehicle_type == "car":
+                from routers.notifications import check_and_create_vmes_parking_notification
+                check_and_create_vmes_parking_notification(matched_user["email"], payload.zone or "VMES Building")
+
+            if is_violation:
+                from routers.notifications import trigger_helmet_violation_notification
+                trigger_helmet_violation_notification(matched_user["email"], payload.license_plate, payload.zone or "VMES Entry Gate")
+        except Exception as noti_err:
+            print(f"[DETECTION NOTI ERROR] {noti_err}")
 
     return log_response
 

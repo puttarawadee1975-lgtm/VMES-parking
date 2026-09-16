@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getAnnouncements } from '../services/api';
+import { getAnnouncements, getUserNotifications } from '../services/api';
 import AnnouncementDetailModal from './AnnouncementDetailModal';
 import DrivingScoreModal from './DrivingScoreModal';
 
@@ -29,14 +29,41 @@ export default function NotificationsModal({
     if (!visible) return;
     const loadNotis = async () => {
       try {
-        const anns = await getAnnouncements();
         let notiList = [];
+        const dbNotis = await getUserNotifications(currentUser?.email);
+        
+        if (Array.isArray(dbNotis) && dbNotis.length > 0) {
+          dbNotis.forEach(item => {
+            const isWarning = item.scoreDeducted > 0 || 
+                              item.type === 'vmes_parking_warning' || 
+                              item.type === 'vmes_parking_30min_warning' ||
+                              item.type === 'vmes_overtime_penalty' ||
+                              item.type === 'helmet_violation' ||
+                              (item.type && (item.type.includes('warning') || item.type.includes('penalty') || item.type.includes('violation')));
+
+            notiList.push({
+              id: item.id || `NOTI-${Math.random()}`,
+              title: item.title,
+              type: isWarning ? 'warning' : 'announcement',
+              rawType: item.type,
+              category: item.category || (isWarning ? 'Safety Alert' : 'Campus Notice'),
+              message: item.message,
+              date: item.timestamp ? new Date(item.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Today',
+              location: item.zone || item.location || 'VMES Building',
+              plate: item.plate || 'Campus Pass',
+              scoreDeducted: item.scoreDeducted !== undefined ? item.scoreDeducted : (item.type && (item.type.includes('penalty') || item.type.includes('violation')) ? 10 : 0),
+              unread: !item.read
+            });
+          });
+        }
+
+        const anns = await getAnnouncements();
         
         // Add safety warning if student has penalty
         if (currentUser?.safetyScore !== undefined && currentUser?.safetyScore < 100) {
-          notiList.push({
+          notiList.unshift({
             id: 'NOTI-SAFETY-01',
-            title: 'No Helmet Violation Detected',
+            title: 'No Helmet Violation Detected (-10 Points)',
             type: 'warning',
             category: 'Safety Alert',
             message: `AI CCTV detected driving without a helmet at ${currentUser?.gateName || 'VMES Entry Gate'}. 10-point safety deduction applied.`,
@@ -93,14 +120,38 @@ export default function NotificationsModal({
 
   const notifications = dynamicNotis.length > 0 ? dynamicNotis : [
     {
+      id: 'NOTI-VMES-OVERTIME',
+      title: 'VMES Car Parking Overtime (-10 Points)',
+      type: 'warning',
+      category: 'Safety Alert',
+      message: 'Exceeded the 30-minute weekday car parking limit at VMES Building before 16:30. 10 safety driving points have been deducted.',
+      date: '10:45 AM (30+ mins)',
+      location: 'VMES Building',
+      plate: '3KH 5678',
+      scoreDeducted: 10,
+      unread: true
+    },
+    {
+      id: 'NOTI-VMES-30MIN',
+      title: 'VMES Car Parking Limit: 30 Mins Max',
+      type: 'warning',
+      category: 'Parking Alert',
+      message: 'Student car parking at VMES is permitted for up to 30 minutes before 16:30 on weekdays. Exceeding 30 minutes for cars will result in a 10-point safety deduction. Motorcycles park free & unlimited anytime.',
+      date: '10:15 AM',
+      location: 'VMES Building',
+      plate: '3KH 5678',
+      scoreDeducted: 0,
+      unread: false
+    },
+    {
       id: 'NOTI-101',
-      title: 'No Helmet Violation Detected',
+      title: 'No Helmet Violation Detected (-10 Points)',
       type: 'warning',
       category: 'Safety Alert',
       message: 'AI CCTV detected driving without a helmet at VMES Entry Gate. 10-point safety deduction applied.',
       date: '08:22 AM',
       location: 'VMES Entry Gate',
-      plate: '1AB-9999',
+      plate: '3KH 5678',
       scoreDeducted: 10,
       unread: true
     },
@@ -119,19 +170,57 @@ export default function NotificationsModal({
   ];
 
   const filteredNotis = notifications.filter(n => {
-    if (selectedFilter === 'SAFETY') return n.type === 'warning';
-    if (selectedFilter === 'ADMIN') return n.type === 'announcement';
+    if (selectedFilter === 'SAFETY') {
+      return (
+        n.category === 'Safety Alert' ||
+        n.rawType === 'helmet_violation' ||
+        (n.title && n.title.toLowerCase().includes('helmet'))
+      );
+    }
+    if (selectedFilter === 'PARKING') {
+      return (
+        n.category === 'Parking Alert' ||
+        n.rawType === 'vmes_overtime_penalty' ||
+        n.rawType === 'vmes_parking_30min_warning' ||
+        (n.title && (n.title.toLowerCase().includes('vmes') || n.title.toLowerCase().includes('parking')))
+      );
+    }
+    if (selectedFilter === 'ADMIN') {
+      return (
+        n.type === 'announcement' ||
+        n.category === 'Campus Notice' ||
+        n.category === 'Admin Announcement'
+      );
+    }
     return true;
   });
 
-  const getIcon = (type) => {
-    if (type === 'warning') return { name: 'warning-outline', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
-    if (type === 'announcement') return { name: 'megaphone-outline', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
-    return { name: 'notifications-outline', color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' };
+  const getIcon = (item) => {
+    const rawType = item.rawType || '';
+    const type = item.type || '';
+
+    if (rawType === 'helmet_violation' || (type === 'warning' && item.scoreDeducted > 0 && item.category === 'Safety Alert')) {
+      return { name: 'shield-outline', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+    }
+    if (rawType === 'vmes_overtime_penalty' || (type === 'warning' && item.scoreDeducted > 0)) {
+      return { name: 'time-outline', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+    }
+    if (rawType === 'vmes_parking_30min_warning' || item.title.includes('30 Mins Max')) {
+      return { name: 'car-outline', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
+    }
+    if (type === 'announcement') {
+      return { name: 'megaphone-outline', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
+    }
+    return { name: 'notifications-outline', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
   };
 
   const handleOpenDetail = (item) => {
-    if (item.type === 'warning' || item.category === 'Safety Alert') {
+    // VMES 30-Min Parking Limit is an informative notice only — no detail modal pop up
+    if (item.rawType === 'vmes_parking_30min_warning' || (item.title && item.title.includes('30 Mins Max'))) {
+      return;
+    }
+
+    if (item.type === 'warning' || item.category === 'Safety Alert' || item.scoreDeducted > 0) {
       setShowDrivingScoreModal(true);
     } else {
       setSelectedAnnouncement({
@@ -168,34 +257,41 @@ export default function NotificationsModal({
             </TouchableOpacity>
           </View>
 
-          {/* Filter Tabs Bar */}
-          <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10, gap: 8, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-            {[
-              { key: 'ALL', label: 'All' },
-              { key: 'SAFETY', label: 'Safety Alerts' },
-              { key: 'ADMIN', label: 'Announcements' },
-            ].map(tab => {
-              const isActive = selectedFilter === tab.key;
-              return (
-                <TouchableOpacity
-                  key={tab.key}
-                  onPress={() => setSelectedFilter(tab.key)}
-                  activeOpacity={0.7}
-                  style={{
-                    paddingVertical: 7,
-                    paddingHorizontal: 16,
-                    borderRadius: 20,
-                    backgroundColor: isActive ? '#2563eb' : '#f8fafc',
-                    borderWidth: 1,
-                    borderColor: isActive ? '#2563eb' : '#e2e8f0'
-                  }}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? '#ffffff' : '#64748b' }}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Horizontal Scrollable Filter Tabs Bar */}
+          <View style={{ backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10, gap: 8 }}
+            >
+              {[
+                { key: 'ALL', label: 'All' },
+                { key: 'SAFETY', label: 'Safety Alerts' },
+                { key: 'PARKING', label: 'Parking Alerts' },
+                { key: 'ADMIN', label: 'Announcements' },
+              ].map(tab => {
+                const isActive = selectedFilter === tab.key;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    onPress={() => setSelectedFilter(tab.key)}
+                    activeOpacity={0.7}
+                    style={{
+                      paddingVertical: 7,
+                      paddingHorizontal: 16,
+                      borderRadius: 20,
+                      backgroundColor: isActive ? '#2563eb' : '#f8fafc',
+                      borderWidth: 1,
+                      borderColor: isActive ? '#2563eb' : '#e2e8f0'
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? '#ffffff' : '#64748b' }}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
 
           {/* Notification List Scroll Area */}
@@ -208,17 +304,18 @@ export default function NotificationsModal({
                 </View>
               ) : (
                 filteredNotis.map(item => {
-                  const iconConfig = getIcon(item.type);
+                  const iconConfig = getIcon(item);
+                  const isClickable = item.rawType !== 'vmes_parking_30min_warning' && !(item.title && item.title.includes('30 Mins Max'));
 
                   return (
                     <TouchableOpacity
                       key={item.id}
                       onPress={() => handleOpenDetail(item)}
-                      activeOpacity={0.7}
+                      activeOpacity={isClickable ? 0.7 : 1}
                       style={{
                         backgroundColor: '#ffffff',
                         borderWidth: 1,
-                        borderColor: item.type === 'warning' ? '#fecaca' : '#e2e8f0',
+                        borderColor: item.scoreDeducted > 0 ? '#fecaca' : '#e2e8f0',
                         borderRadius: 20,
                         padding: 16,
                         shadowColor: '#000',
@@ -250,19 +347,36 @@ export default function NotificationsModal({
                         {/* Content */}
                         <View style={{ flex: 1, marginRight: 8 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
-                            <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', flex: 1, marginRight: 8, lineHeight: 21 }} numberOfLines={1}>
-                              {item.title}
-                            </Text>
+                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginRight: 8 }}>
+                              <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a', lineHeight: 21 }}>
+                                {item.title}
+                              </Text>
+                            </View>
                             <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '600', marginTop: 2 }}>{item.date}</Text>
                           </View>
 
-                          <Text style={{ fontSize: 13, color: '#475569', lineHeight: 18 }} numberOfLines={2}>
+                          <Text style={{ fontSize: 13, color: '#475569', lineHeight: 18, marginBottom: item.scoreDeducted > 0 ? 8 : 0 }}>
                             {item.message}
                           </Text>
+
+                          {item.scoreDeducted > 0 && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#fee2e2', marginTop: 4 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Ionicons name="location-outline" size={12} color="#64748b" />
+                                <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '600' }}>{item.location || 'VMES Building'}</Text>
+                              </View>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Ionicons name="alert-circle-outline" size={12} color="#dc2626" />
+                                <Text style={{ fontSize: 11, color: '#dc2626', fontWeight: '800' }}>-10 Points Deducted</Text>
+                              </View>
+                            </View>
+                          )}
                         </View>
 
-                        {/* Arrow Indicator */}
-                        <Ionicons name="chevron-forward" size={18} color="#94a3b8" style={{ marginTop: 3 }} />
+                        {/* Arrow Indicator (Rendered only for clickable items) */}
+                        {isClickable && (
+                          <Ionicons name="chevron-forward" size={18} color="#94a3b8" style={{ marginTop: 3 }} />
+                        )}
                       </View>
                     </TouchableOpacity>
                   );

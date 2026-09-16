@@ -16,7 +16,8 @@ export default function Header({ insets, currentUser, onLogout, onOpenNotificati
             <Ionicons name="shield-checkmark" size={20} color="#fff" />
           </View>
           <View>
-            <Text className="text-slate-900 font-black text-base">AU Parking</Text>
+            <Text className="text-slate-900 font-black text-base">VMES Parking</Text>
+
           </View>
         </View>
 

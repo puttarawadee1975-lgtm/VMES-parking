@@ -177,7 +177,7 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
                     </td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{item.gate}</td>
                     <td style={{ fontWeight: 600, color: '#0f172a' }}>
-                      No Helmet Worn
+                      {item.violationType?.replace(' (-10 pts)', '') || (item.vehicle?.toLowerCase().includes('car') ? 'Parked >30 Mins' : 'No Helmet')}
                     </td>
                     <td>
                       <button 
@@ -201,12 +201,15 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
 
       {/* Snapshot Preview Modal */}
       {selectedSnapshot && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
-        }}>
-          <div className="card" style={{ width: 540, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+        <div
+          onClick={() => setSelectedSnapshot(null)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+          }}
+        >
+          <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 540, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h3 style={{ margin: 0, color: '#0f172a', fontSize: 17, fontWeight: 800 }}>
@@ -234,15 +237,12 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
             </div>
 
             {/* Image Frame */}
-            <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#000000', position: 'relative', marginBottom: 16 }}>
+            <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#000000', marginBottom: 16 }}>
               <img 
                 src={selectedSnapshot.snapshotUrl} 
                 alt="CCTV Helmet Violation" 
                 style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }}
               />
-              <div style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(15, 23, 42, 0.85)', color: '#ffffff', padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
-                Plate: {selectedSnapshot.plate} ({selectedSnapshot.owner})
-              </div>
             </div>
 
             <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -254,10 +254,6 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
                 <div style={{ fontSize: 12, color: '#b91c1c', marginTop: 2 }}>Violation: No Helmet Worn (AI Confidence: 98.4%)</div>
               </div>
               <div style={{ fontSize: 16, fontWeight: 900, color: '#dc2626' }}>-10 pts</div>
-            </div>
-
-            <div style={{ marginTop: 16, textAlign: 'right' }}>
-              <button className="btn btn-secondary" onClick={() => setSelectedSnapshot(null)}>Close</button>
             </div>
           </div>
         </div>

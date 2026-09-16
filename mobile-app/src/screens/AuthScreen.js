@@ -22,10 +22,11 @@ export default function AuthScreen({
         <View className="w-20 h-20 bg-blue-600 rounded-3xl items-center justify-center mb-5 shadow-lg shadow-blue-500/30">
           <Ionicons name="shield-checkmark" size={40} color="#fff" />
         </View>
-        <Text className="text-3xl font-black text-slate-900 tracking-tight text-center">AU Parking</Text>
+        <Text className="text-3xl font-black text-slate-900 tracking-tight text-center">VMES Parking</Text>
         <Text className="text-blue-600 font-bold text-xs mt-1 uppercase tracking-wider text-center">
-          Smart Campus Parking & Safety
+          VMES Building Campus Parking & Safety
         </Text>
+
         <Text className="text-slate-500 text-xs mt-2 text-center leading-relaxed px-2">
           Intelligent motorcycle parking management & automated safety monitoring system
         </Text>

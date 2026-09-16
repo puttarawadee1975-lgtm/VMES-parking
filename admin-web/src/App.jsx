@@ -21,17 +21,47 @@ export default function App() {
   const [parkingOccupancy, setParkingOccupancy] = useState({ available: 0, occupied: 0, total: 0, rate: 0 });
 
   const [logs, setLogs] = useState([]);
+  const [enforcementActive, setEnforcementActive] = useState(true);
 
   const handleNavigateToViolations = (userName) => {
     setViolationUserFilter(userName || '');
     setActiveTab('access-history');
   };
 
-  // Fetch real data from Backend FastAPI
+  const fetchAPI = async (endpoint, options) => {
+    try {
+      const res = await fetch(`http://localhost:8000${endpoint}`, options);
+      if (res.ok) return res;
+    } catch (e) {}
+    return fetch(`https://smart-campus-parking-deploy.onrender.com${endpoint}`, options);
+  };
+
+  const handleToggleEnforcement = async () => {
+    const nextStatus = !enforcementActive;
+    setEnforcementActive(nextStatus);
+    try {
+      await fetchAPI(`/admin/toggle-enforcement?active=${nextStatus}`, { method: 'POST' });
+    } catch (err) {
+      console.warn('Enforcement toggle warning:', err);
+    }
+  };
+
+  // Fetch real data from Backend FastAPI + MongoDB
   const fetchBackendData = useCallback(async () => {
     try {
+      // 0. Fetch Enforcement System Status
+      const resEnforce = await fetchAPI('/admin/enforcement-status');
+      if (resEnforce.ok) {
+        const dataEnforce = await resEnforce.json();
+        if (typeof dataEnforce.enforcement_active === 'boolean') {
+          setEnforcementActive(dataEnforce.enforcement_active);
+        }
+      }
+    } catch (e) {}
+
+    try {
       // 1. Fetch Detections
-      const resDet = await fetch('https://smart-campus-parking-deploy.onrender.com/detections');
+      const resDet = await fetchAPI('/detections');
       if (resDet.ok) {
         const dataDet = await resDet.json();
         if (Array.isArray(dataDet)) {
@@ -39,8 +69,19 @@ export default function App() {
             const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
             const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const isV = item.violation || false;
-            const hText = item.vehicle_type === 'car' ? 'N/A (Automobile)' : (item.helmet_detected ? 'Pass (Worn)' : 'NO HELMET');
-            const gateName = item.gate_type ? (item.gate_type.includes('Gate') ? item.gate_type : `Gate 1 (${item.gate_type})`) : 'Gate 1 (Main Entrance)';
+            const vType = isV ? (item.violation_type || (item.vehicle_type === 'car' ? 'Parked >30 Mins' : 'No Helmet')).replace(' (-10 pts)', '') : '-';
+            const hText = isV ? (item.vehicle_type === 'car' ? 'Parked >30 Mins' : 'No Helmet') : '-';
+            let gateName = 'Gate 1 (Entry Gate)';
+            if (item.gate_type) {
+              const gt = String(item.gate_type).toLowerCase();
+              if (gt.includes('exit') || gt.includes('gate 2') || gt.includes('gate2')) {
+                gateName = 'Gate 2 (Exit Gate)';
+              } else if (gt.includes('entry') || gt.includes('gate 1') || gt.includes('gate1')) {
+                gateName = 'Gate 1 (Entry Gate)';
+              } else {
+                gateName = item.gate_type;
+              }
+            }
             let rawP = (item.license_plate || 'Unregistered').trim();
             let rawProv = (item.province || 'กรุงเทพมหานคร').trim();
             const parts = rawP.split(/\s+/);
@@ -53,12 +94,14 @@ export default function App() {
 
             return {
               id: item.id,
+              rawDate: item.timestamp,
               time: timeStr,
               plate: rawP,
               province: rawProv,
               vehicle: `${item.vehicle_type === 'car' ? 'Car' : 'Motorcycle'}`,
               owner: item.matched_user || 'Guest / Unregistered',
               helmet: hText,
+              violationType: vType,
               isViolation: isV,
               penaltyApplied: item.penalty_applied,
               gate: gateName,
@@ -74,7 +117,7 @@ export default function App() {
 
     try {
       // 2. Fetch Analytics
-      const resAnalytics = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/analytics');
+      const resAnalytics = await fetchAPI('/admin/analytics');
       if (resAnalytics.ok) {
         const analytics = await resAnalytics.json();
         setTotalScans(analytics.total_scans || 0);
@@ -85,7 +128,7 @@ export default function App() {
     }
     try {
       // 3. Fetch Parking Status
-      const resPark = await fetch('https://smart-campus-parking-deploy.onrender.com/parking/status');
+      const resPark = await fetchAPI('/parking/status');
       if (resPark.ok) {
         const zones = await resPark.json();
         if (Array.isArray(zones) && zones.length > 0) {
@@ -106,7 +149,7 @@ export default function App() {
 
     try {
       // 4. Fetch Vehicles from Backend (Exact MongoDB Registered Vehicles)
-      const resVeh = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/all-vehicles');
+      const resVeh = await fetchAPI('/admin/all-vehicles');
       if (resVeh.ok) {
         const backendVehicles = await resVeh.json();
         if (Array.isArray(backendVehicles)) {
@@ -188,7 +231,7 @@ export default function App() {
   };
 
   const titles = {
-    'overview': { title: 'Live Overview', subtitle: 'Real-time gate scans, parking load & safety updates' },
+    'overview': { title: 'Dashboard', subtitle: 'Academic term statistics, safety violations & campus parking load' },
     'live-camera': { title: 'Gate Camera', subtitle: 'Multi-Gate CCTV Stream & Optical Character Recognition' },
     'access-history': { title: 'Gate Access & Violation History', subtitle: 'Real-time & historic gate entry/exit logs, helmet violation audits, and CCTV snapshots' },
     'vehicles': { title: 'Vehicle Directory', subtitle: 'Manage student & staff approved license plates' },
@@ -208,6 +251,8 @@ export default function App() {
         <Header
           pageTitle={currentMeta.title}
           pageSubtitle={currentMeta.subtitle}
+          enforcementActive={enforcementActive}
+          onToggleEnforcement={handleToggleEnforcement}
         />
 
         {activeTab === 'overview' && (

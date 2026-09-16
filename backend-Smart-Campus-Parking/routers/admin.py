@@ -1,7 +1,8 @@
-from typing import List
-from datetime import datetime, timedelta
+from typing import List, Optional
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Depends, status
-from database import users_collection
+from database import users_collection, announcements_collection, semester_resets_collection, academic_terms_collection
+
 from schemas import UserResponse, UserCreate
 from auth import require_roles
 
@@ -89,9 +90,17 @@ MOCK_ANNOUNCEMENTS = [
 async def get_announcements():
     """
     Public endpoint: Get active campus announcements set by Admin website.
-    Filters out expired announcements automatically.
+    Filters out and automatically deletes expired announcements from MongoDB Atlas.
     """
     today_str = datetime.now().strftime("%Y-%m-%d")
+    if announcements_collection is not None:
+        # Automatically purge expired announcements from Database
+        announcements_collection.delete_many({
+            "expire_date": {"$exists": True, "$ne": "", "$lt": today_str}
+        })
+        docs = list(announcements_collection.find({}, {"_id": 0}))
+        return docs
+
     active = [a for a in MOCK_ANNOUNCEMENTS if not a.get("expire_date") or a.get("expire_date") >= today_str]
     return active
 
@@ -102,8 +111,15 @@ async def create_announcement(announcement: dict):
     """
     now_str = datetime.now().strftime("%H:%M")
     default_expire = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+    
+    ann_count = 1
+    if announcements_collection is not None:
+        ann_count = announcements_collection.count_documents({}) + 1
+    else:
+        ann_count = len(MOCK_ANNOUNCEMENTS) + 1
+
     new_ann = {
-        "id": f"ANN-{len(MOCK_ANNOUNCEMENTS) + 1:02d}",
+        "id": f"ANN-{ann_count:02d}",
         "title": announcement.get("title", "Campus Notice"),
         "content": announcement.get("content", ""),
         "date": f"Today, {now_str}",
@@ -112,6 +128,9 @@ async def create_announcement(announcement: dict):
         "target_user": announcement.get("target_user", ""),
         "expire_date": announcement.get("expire_date", default_expire)
     }
+
+    if announcements_collection is not None:
+        announcements_collection.insert_one(dict(new_ann))
     MOCK_ANNOUNCEMENTS.insert(0, new_ann)
     return {"status": "success", "announcement": new_ann}
 
@@ -121,6 +140,8 @@ async def delete_announcement(ann_id: str):
     Admin website endpoint: Delete a campus announcement by ID.
     """
     global MOCK_ANNOUNCEMENTS
+    if announcements_collection is not None:
+        announcements_collection.delete_one({"id": ann_id})
     MOCK_ANNOUNCEMENTS = [a for a in MOCK_ANNOUNCEMENTS if a.get("id") != ann_id]
     return {"status": "success", "message": f"Announcement {ann_id} deleted"}
 
@@ -129,20 +150,20 @@ async def update_announcement(ann_id: str, payload: dict):
     """
     Admin website endpoint: Edit an existing campus announcement by ID.
     """
+    update_data = {}
+    for key in ["title", "content", "priority", "target_audience", "target_user", "expire_date"]:
+        if key in payload:
+            update_data[key] = payload[key]
+
+    if announcements_collection is not None:
+        announcements_collection.update_one({"id": ann_id}, {"$set": update_data})
+        updated_doc = announcements_collection.find_one({"id": ann_id}, {"_id": 0})
+        if updated_doc:
+            return {"status": "success", "announcement": updated_doc}
+
     for a in MOCK_ANNOUNCEMENTS:
         if a.get("id") == ann_id:
-            if "title" in payload:
-                a["title"] = payload["title"]
-            if "content" in payload:
-                a["content"] = payload["content"]
-            if "priority" in payload:
-                a["priority"] = payload["priority"]
-            if "target_audience" in payload:
-                a["target_audience"] = payload["target_audience"]
-            if "target_user" in payload:
-                a["target_user"] = payload["target_user"]
-            if "expire_date" in payload:
-                a["expire_date"] = payload["expire_date"]
+            a.update(update_data)
             return {"status": "success", "announcement": a}
     raise HTTPException(status_code=404, detail="Announcement not found")
 
@@ -198,6 +219,152 @@ async def get_all_score_logs():
     Get all score adjustment audit logs.
     """
     return SCORE_LOGS
+
+LAST_AUTO_RESET_TERM = None
+
+def get_current_semester_info():
+    """
+    Academic Semester Schedule (3 Terms per year):
+    1. Semester 1: June - November (Resets on 1 June)
+    2. Semester 2: November - March (Resets on 1 November)
+    3. Semester 3 (Summer): April - May (Resets on 1 April)
+    """
+    now = datetime.now()
+    month = now.month
+    year = now.year
+
+    if 6 <= month <= 10:
+        current_term = "Semester 1 (June - Nov)"
+        term_code = f"{year}-SEM1"
+        next_reset = f"01/11/{year}"
+    elif month == 11 or month == 12 or 1 <= month <= 3:
+        current_term = "Semester 2 (Nov - Mar)"
+        term_year = year if month >= 11 else year - 1
+        term_code = f"{term_year}-SEM2"
+        next_reset_year = year if month >= 11 else year
+        next_reset = f"01/04/{next_reset_year}"
+    else:  # April - May (4, 5)
+        current_term = "Semester 3 / Summer (Apr - May)"
+        term_code = f"{year}-SUMMER"
+        next_reset = f"01/06/{year}"
+
+    # Load schedule dynamically from MongoDB Atlas collection if available
+    db_schedule = []
+    if academic_terms_collection is not None:
+        cursor = academic_terms_collection.find({}, {"_id": 0})
+        for doc in cursor:
+            db_schedule.append({
+                "term_id": doc.get("term_id"),
+                "term": doc.get("name"),
+                "months": doc.get("months_display"),
+                "reset_month": doc.get("reset_date_str")
+            })
+
+    schedule_list = db_schedule if db_schedule else [
+        {"term_id": 1, "term": "Semester 1", "months": "June - November", "reset_month": "1 June"},
+        {"term_id": 2, "term": "Semester 2", "months": "November - March", "reset_month": "1 November"},
+        {"term_id": 3, "term": "Semester 3 (Summer)", "months": "April - May", "reset_month": "1 April"}
+    ]
+
+    return {
+        "current_semester": current_term,
+        "term_code": term_code,
+        "next_reset_date": next_reset,
+        "schedule": schedule_list
+    }
+
+
+def reset_all_user_scores(semester_name: str = "New Semester"):
+    """
+    Resets all user driving scores back to 100 in MongoDB Atlas.
+    """
+    reset_count = 0
+    if users_collection is not None:
+        result = users_collection.update_many({}, {"$set": {"driving_score": 100}})
+        reset_count = result.modified_count
+    
+    # Log the term reset audit
+    log_entry = {
+        "id": f"SCORE-LOG-{len(SCORE_LOGS) + 1:04d}",
+        "user_email": "ALL_STUDENTS_AND_STAFF",
+        "action": "SEMESTER_RESET",
+        "points_changed": 100,
+        "new_score": 100,
+        "reason": f"Semester Reset: {semester_name} (Safety Score Restored to 100 for All Drivers)",
+        "gate_name": "System Audit",
+        "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M")
+    }
+    SCORE_LOGS.insert(0, log_entry)
+    return reset_count
+
+def check_and_auto_reset_semester_scores():
+    """
+    Automatic 3-Term Semester Reset:
+    Checks if the current academic term has already been reset.
+    If not, automatically restores all driver safety scores to 100 in MongoDB Atlas
+    and records the reset event.
+    """
+    sem_info = get_current_semester_info()
+    term_code = sem_info["term_code"]
+    current_term = sem_info["current_semester"]
+
+    already_reset = False
+    if semester_resets_collection is not None:
+        doc = semester_resets_collection.find_one({"term_code": term_code})
+        if doc:
+            already_reset = True
+    else:
+        global LAST_AUTO_RESET_TERM
+        if LAST_AUTO_RESET_TERM == term_code:
+            already_reset = True
+
+    if not already_reset:
+        count = reset_all_user_scores(semester_name=f"Auto Reset - {current_term}")
+        reset_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+        if semester_resets_collection is not None:
+            semester_resets_collection.insert_one({
+                "term_code": term_code,
+                "semester_name": current_term,
+                "reset_at": reset_time,
+                "reset_count": count,
+                "auto_triggered": True,
+                "status": "COMPLETED"
+            })
+        else:
+            LAST_AUTO_RESET_TERM = term_code
+
+        print(f"[AUTO RESET] Successfully auto-reset {count} user safety scores to 100 for term '{current_term}' ({term_code})")
+        return {"auto_reset_performed": True, "term_code": term_code, "semester": current_term, "reset_count": count, "reset_at": reset_time}
+
+    return {"auto_reset_performed": False, "term_code": term_code, "semester": current_term, "status": "Already reset for this term"}
+
+@router.get("/semester-info")
+async def get_semester_info_endpoint():
+    """
+    Get current semester info, term schedule, next reset date, and check auto-reset status.
+    """
+    auto_status = check_and_auto_reset_semester_scores()
+    info = get_current_semester_info()
+    info["auto_reset_status"] = auto_status
+    return info
+
+@router.post("/reset-semester-scores")
+async def reset_semester_scores_endpoint(payload: dict = None):
+    """
+    Reset all student & staff driver safety scores back to 100 for the new semester.
+    """
+    sem_info = get_current_semester_info()
+    term_name = (payload or {}).get("semester_name") or sem_info["current_semester"]
+    count = reset_all_user_scores(term_name)
+    return {
+        "status": "success",
+        "message": f"Successfully reset all driver safety scores to 100 for {term_name}",
+        "semester": term_name,
+        "reset_count": count,
+        "next_reset_date": sem_info["next_reset_date"]
+    }
+
 
 def clean_plate_and_province(raw_plate: str, raw_prov: str = "กรุงเทพมหานคร"):
     raw_plate = (raw_plate or "").strip()
@@ -279,7 +446,10 @@ async def get_all_registered_vehicles():
                 "ownerEmail": d.get("user_email", ""),
                 "id": s_id,
                 "role": d.get("role", "Student").capitalize(),
-                "score": user_score
+                "score": user_score,
+                "vehicle_photo_url": d.get("vehicle_photo_url") or d.get("front_photo_url") or (user_doc.get("vehicle_photo_url") if user_doc else None),
+                "front_photo_url": d.get("front_photo_url") or d.get("vehicle_photo_url"),
+                "side_photo_url": d.get("side_photo_url")
             })
             
     if users_collection is not None:
@@ -312,10 +482,15 @@ async def get_all_registered_vehicles():
                         "ownerEmail": u_email,
                         "id": u.get("student_id", f"6507{len(vehicles)+1:04d}"),
                         "role": u.get("role", "Student").capitalize(),
-                        "score": u_score
+                        "score": u_score,
+                        "vehicle_photo_url": v.get("vehicle_photo_url") or v.get("front_photo_url") or u.get("vehicle_photo_url"),
+                        "front_photo_url": v.get("front_photo_url") or v.get("vehicle_photo_url"),
+                        "side_photo_url": v.get("side_photo_url")
                     })
+
                     
     return vehicles
+
 
 @router.put("/update-vehicle")
 async def update_registered_vehicle(payload: dict):
@@ -427,6 +602,75 @@ async def get_admin_analytics():
         "violations_count": violations_count,
         "compliant_count": compliant_count,
         "hourly_distribution": []
+    }
+
+@router.post("/purge-30day-history")
+async def manual_purge_30day_history(days: int = 30):
+    """
+    Admin endpoint: Manually trigger retention cleanup to delete records and image files older than 30 days.
+    """
+    from cleanup_service import cleanup_old_records_and_images
+    summary = cleanup_old_records_and_images(days)
+    return summary
+
+@router.get("/enforcement-status")
+async def get_enforcement_system_status():
+    """
+    Get Master Point Deduction Enforcement status (Active vs Special Event Free Parking Mode).
+    """
+    from database import system_settings_collection
+    if system_settings_collection is not None:
+        setting = system_settings_collection.find_one({"key": "enforcement_system"})
+        if setting:
+            return {
+                "enforcement_active": setting.get("active", True),
+                "reason": setting.get("reason", "Standard Campus Policy"),
+                "updated_at": setting.get("updated_at")
+            }
+    return {
+        "enforcement_active": True,
+        "reason": "Standard Campus Policy",
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+
+@router.post("/toggle-enforcement")
+async def toggle_enforcement_system(active: Optional[bool] = None, reason: Optional[str] = "Admin Event Override"):
+    """
+    Toggle Master Point Deduction Enforcement system ON/OFF.
+    - active = True: Normal 10-point deduction enforcement active
+    - active = False: Free Parking Special Event Mode (No point deductions applied)
+    """
+    from database import system_settings_collection
+    now = datetime.now(timezone.utc)
+    
+    current_status = True
+    if system_settings_collection is not None:
+        setting = system_settings_collection.find_one({"key": "enforcement_system"})
+        if setting:
+            current_status = setting.get("active", True)
+    
+    new_active = not current_status if active is None else active
+    
+    doc = {
+        "key": "enforcement_system",
+        "active": new_active,
+        "reason": reason or ("Standard Campus Policy" if new_active else "Special Event Free Parking Mode"),
+        "updated_at": now
+    }
+
+    if system_settings_collection is not None:
+        system_settings_collection.update_one(
+            {"key": "enforcement_system"},
+            {"$set": doc},
+            upsert=True
+        )
+
+    print(f"[ENFORCEMENT SYSTEM TOGGLE] Status changed -> active: {new_active}")
+    return {
+        "status": "updated",
+        "enforcement_active": new_active,
+        "reason": doc["reason"],
+        "updated_at": now.isoformat()
     }
 
 

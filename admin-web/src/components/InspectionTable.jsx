@@ -29,6 +29,8 @@ export default function InspectionTable({
 
     // 1. Violation Filter
     if (violationFilter === 'violations_only' && !item.isViolation) return false;
+    if (violationFilter === 'helmet_only' && (!item.isViolation || (item.violationType && !item.violationType.toLowerCase().includes('helmet')))) return false;
+    if (violationFilter === 'overtime_only' && (!item.isViolation || (item.violationType && !item.violationType.toLowerCase().includes('overtime')))) return false;
     if (violationFilter === 'pass_only' && item.isViolation) return false;
 
     // 1.5 Gate Direction Filter (Entry / Exit)
@@ -138,8 +140,10 @@ export default function InspectionTable({
                 cursor: 'pointer'
               }}
             >
-              <option value="all">All</option>
-              <option value="violations_only">Helmet Violations</option>
+              <option value="all">All Logs & Scans</option>
+              <option value="violations_only">All Violations (-10 pts)</option>
+              <option value="helmet_only">No Helmet Violations (-10 pts)</option>
+              <option value="overtime_only">VMES Overtime Violations (-10 pts)</option>
               <option value="pass_only">Pass Granted</option>
             </select>
 
@@ -226,7 +230,7 @@ export default function InspectionTable({
                 <th>Time</th>
                 <th>Plate Number</th>
                 <th>Vehicle & Owner</th>
-                <th>Helmet Check</th>
+                <th>Violation</th>
                 <th>Gate</th>
                 <th>CCTV Snapshot</th>
                 <th>Access Action</th>
@@ -259,14 +263,19 @@ export default function InspectionTable({
                       <div style={{ fontSize: 11, color: '#64748b' }}>{item.vehicle}</div>
                     </td>
                     <td>
-                      <span style={{
-                        color: String(item.helmet || '').toUpperCase().includes('NO HELMET')
-                          ? '#dc2626'
-                          : (String(item.helmet || '').toUpperCase().includes('PASS') || String(item.helmet || '').toUpperCase().includes('WORN') ? '#059669' : '#0f172a'),
-                        fontWeight: 700
-                      }}>
-                        {item.helmet}
-                      </span>
+                      {(() => {
+                        const vType = item.violationType || (item.helmet || '');
+                        const isHelmetViol = String(vType).toUpperCase().includes('NO HELMET');
+                        const isOvertime = String(vType).toUpperCase().includes('OVERTIME') || String(vType).toUpperCase().includes('30') || (item.isViolation && item.vehicle?.toLowerCase().includes('car'));
+                        
+                        if (isHelmetViol) {
+                          return <span style={{ color: '#0f172a', fontWeight: 600 }}>No Helmet</span>;
+                        }
+                        if (isOvertime) {
+                          return <span style={{ color: '#0f172a', fontWeight: 600 }}>Parked &gt;30 Mins</span>;
+                        }
+                        return <span style={{ color: '#0f172a', fontWeight: 600 }}>-</span>;
+                      })()}
                     </td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{item.gate}</td>
                     <td>
@@ -279,14 +288,10 @@ export default function InspectionTable({
                       </button>
                     </td>
                     <td>
-                      <span style={{ color: item.isViolation ? '#dc2626' : '#059669', fontWeight: 700 }}>
-                        {!item.isViolation
-  ? 'Pass Granted'
-  : item.penaltyApplied === true
-    ? 'Penalized (-10 pts)'
-    : item.penaltyApplied === false
-      ? 'Violation Logged (Penalty Already Applied Today)'
-      : 'Violation Logged'}
+                      <span style={{ color: (item.isViolation && item.penaltyApplied !== false) ? '#dc2626' : '#059669', fontWeight: 700 }}>
+                        {(!item.isViolation || item.penaltyApplied === false)
+                          ? 'Pass Granted'
+                          : 'Penalized (-10 pts)'}
                       </span>
                     </td>
                   </tr>
@@ -299,12 +304,15 @@ export default function InspectionTable({
 
       {/* Snapshot Preview Modal */}
       {selectedSnapshot && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
-        }}>
-          <div className="card" style={{ width: 540, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+        <div
+          onClick={() => setSelectedSnapshot(null)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+          }}
+        >
+          <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 540, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h3 style={{ margin: 0, color: '#0f172a', fontSize: 17, fontWeight: 800 }}>
@@ -332,45 +340,24 @@ export default function InspectionTable({
             </div>
 
             {/* Image Frame */}
-            <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#000000', position: 'relative', marginBottom: 16 }}>
+            <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#000000', marginBottom: 16 }}>
               <img
                 src={selectedSnapshot.snapshotUrl}
                 alt="CCTV Gate Entry Snapshot"
                 style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }}
               />
-              <div style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(15, 23, 42, 0.85)', color: '#ffffff', padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
-                Plate: {selectedSnapshot.plate} ({selectedSnapshot.owner})
-              </div>
             </div>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 12, padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
-                  Plate: {selectedSnapshot.plate} {selectedSnapshot.province && !selectedSnapshot.plate?.includes(selectedSnapshot.province) ? selectedSnapshot.province : ''}
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginTop: 2 }}>Gate: {selectedSnapshot.gate}</div>
-                <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
-                  Helmet Check: <span style={{
-                    color: String(selectedSnapshot.helmet || '').toUpperCase().includes('NO HELMET')
-                      ? '#dc2626'
-                      : (String(selectedSnapshot.helmet || '').toUpperCase().includes('PASS') || String(selectedSnapshot.helmet || '').toUpperCase().includes('WORN') ? '#059669' : '#0f172a'),
-                    fontWeight: 700
-                  }}>{selectedSnapshot.helmet || 'Pass'}</span>
-                </div>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
+                Plate: {selectedSnapshot.plate} {selectedSnapshot.province && !selectedSnapshot.plate?.includes(selectedSnapshot.province) ? selectedSnapshot.province : ''}
               </div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: selectedSnapshot.isViolation ? '#dc2626' : '#059669' }}>
-                {!selectedSnapshot.isViolation
-  ? 'Pass Granted'
-  : selectedSnapshot.penaltyApplied === true
-    ? 'Penalized (-10 pts)'
-    : selectedSnapshot.penaltyApplied === false
-      ? 'Violation Logged (Penalty Already Applied Today)'
-      : 'Violation Logged'}
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginTop: 4 }}>
+                Gate: {selectedSnapshot.gate}
               </div>
-            </div>
-
-            <div style={{ marginTop: 16, textAlign: 'right' }}>
-              <button className="btn btn-secondary" onClick={() => setSelectedSnapshot(null)}>Close</button>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginTop: 2 }}>
+                Owner: {selectedSnapshot.owner}
+              </div>
             </div>
           </div>
         </div>

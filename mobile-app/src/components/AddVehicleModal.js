@@ -33,10 +33,8 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
       return;
     }
 
-    // License Plate Format Regex (Supports standard formats e.g. 1AB 1234, 3CD 5678, 99-9999)
-    const plateRegex = /^([0-9]{1,2}[\u0E00-\u0E7Fa-zA-Z]{1,2}\s?[0-9]{1,4}|[\u0E00-\u0E7Fa-zA-Z]{1,3}\s?[0-9]{1,4}|[0-9]{2}-[0-9]{4}|[\u0E00-\u0E7Fa-zA-Z0-9\s-]+)$/;
-    if (!plateRegex.test(newPlate.trim())) {
-      alert('Invalid License Plate Format.\nPlease enter a valid license plate (e.g. 1AB 1234, 3CD 5678).');
+    if (/[a-zA-Z]/.test(newPlate.trim())) {
+      alert('⚠️ License plate letters must be in Thai characters.\n\nPlease enter Thai characters for the plate prefix (e.g., 1กข 1234 or 3กฮ 5678).');
       return;
     }
     const fullPlate = formatDisplayPlate(`${newPlate.trim().toUpperCase()} ${newProvince}`);
