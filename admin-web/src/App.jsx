@@ -105,7 +105,16 @@ export default function App() {
               isViolation: isV,
               penaltyApplied: item.penalty_applied,
               gate: gateName,
-              zone: item.zone || 'Zone A'
+              zone: item.zone || 'Zone A',
+              // Resolve local snapshot URLs to absolute localhost URL so the
+              // Admin Web browser can fetch them from the local FastAPI server.
+              // Records without image_url remain null and InspectionTable falls
+              // back to its existing Unsplash placeholder automatically.
+              imageUrl: item.image_url
+                ? (item.image_url.startsWith('http')
+                    ? item.image_url
+                    : `http://localhost:8000${item.image_url}`)
+                : null,
             };
           });
           setLogs(transformedLogs);
@@ -293,6 +302,7 @@ export default function App() {
                 gateType="ENTRY"
                 currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]}
                 onTriggerScan={() => handleTriggerScan('ENTRY')}
+                streamUrl="http://localhost:8000/cameras/stream/1"
               />
               <CameraStream
                 gateName="Gate 2 (Exit Gate)"

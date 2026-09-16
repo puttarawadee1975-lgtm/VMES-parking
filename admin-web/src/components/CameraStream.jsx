@@ -5,7 +5,8 @@ export default function CameraStream({
   camId = "CAM-01: ENTRY RAMP",
   gateType = "ENTRY",
   currentDetection,
-  onTriggerScan
+  onTriggerScan,
+  streamUrl = null
 }) {
   const isViolation = currentDetection?.isViolation;
   const isExit = gateType === "EXIT";
@@ -24,7 +25,24 @@ export default function CameraStream({
         </div>
       </div>
 
-      <div className="camera-viewport" style={{ minHeight: 220, backgroundColor: '#000000' }}>
+      <div className="camera-viewport" style={{ minHeight: 220, backgroundColor: '#000000', position: 'relative', overflow: 'hidden' }}>
+        {streamUrl ? (
+          <img
+            src={streamUrl}
+            alt={gateName}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block'
+            }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div className="camera-bg-grid" />
+        )}
         <div className="camera-overlay">
           <div className="cam-info">
             <span>{camId}</span>

@@ -16,6 +16,15 @@ API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/detections")
 GATE_TYPE = os.getenv("GATE_TYPE", "ENTRY")  # ENTRY or EXIT
 DEFAULT_ZONE = os.getenv("DEFAULT_ZONE", "Zone A (Building 1 - Car)")
 
+# Camera ID — use 1 for Gate 1 (ENTRY), 2 for Gate 2 (EXIT).
+# Supports future Camera 2 integration via environment variable.
+CAMERA_ID = os.getenv("CAMERA_ID", "1" if GATE_TYPE.upper() != "EXIT" else "2")
+
+# Local snapshot storage directory — served statically by FastAPI at /snapshots
+_BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+SNAPSHOTS_DIR = os.path.join(_BACKEND_DIR, "data", "snapshots")
+os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
+
 # Mac M1 Apple Silicon acceleration check
 DEVICE = "mps" if os.uname().sysname == "Darwin" and os.uname().machine == "arm64" else "cpu"
 print(f"[AI PIPELINE] Initializing on device: {DEVICE.upper()} (Apple Silicon M1 Acceleration)")
@@ -157,13 +166,56 @@ def extract_thai_plate(texts: list) -> str:
 
     return ""
 
-def post_detection_to_backend(plate: str, vehicle_type: str, helmet_detected: bool, zone: str = DEFAULT_ZONE):
+def save_event_snapshot(frame, plate: str, gate_type: str, cam_id: str) -> str | None:
+    """
+    Save exactly one JPEG snapshot of the current camera frame when an ENTRY or EXIT
+    event is confirmed by the existing plate-stability mechanism.
+
+    Returns the relative URL string  "/snapshots/<filename>"  for inclusion in the
+    detection payload, or None if the write fails.
+
+    A failure here MUST NOT prevent the parking event from being submitted to the API —
+    callers must handle a None return value gracefully.
+    """
+    try:
+        # Sanitize plate to safe ASCII/Thai filename characters
+        safe_plate = re.sub(r"[^a-zA-Z0-9ก-ฮ]", "", plate) or "unknown"
+        direction = gate_type.lower()
+        unix_ts = int(time.time())
+        filename = f"{direction}_cam{cam_id}_{unix_ts}_{safe_plate}.jpg"
+        filepath = os.path.join(SNAPSHOTS_DIR, filename)
+
+        encode_ok, buffer = cv2.imencode(
+            ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85]
+        )
+        if not encode_ok:
+            print(f"[SNAPSHOT ERROR] JPEG encode failed for plate {plate}. Detection will continue without photo.")
+            return None
+
+        with open(filepath, "wb") as f:
+            f.write(buffer.tobytes())
+
+        print(f"[SNAPSHOT] Saved {filename}")
+        return f"/snapshots/{filename}"
+    except Exception as e:
+        print(f"[SNAPSHOT ERROR] Could not save snapshot for plate {plate}: {e}. Detection will continue without photo.")
+        return None
+
+
+def post_detection_to_backend(
+    plate: str,
+    vehicle_type: str,
+    helmet_detected: bool,
+    zone: str = DEFAULT_ZONE,
+    image_url: str | None = None,
+):
     payload = {
         "license_plate": plate,
         "vehicle_type": vehicle_type,
         "helmet_detected": helmet_detected if vehicle_type == "motorcycle" else None,
         "gate_type": GATE_TYPE,
-        "zone": zone
+        "zone": zone,
+        "image_url": image_url,
     }
     try:
         res = requests.post(API_URL, json=payload, timeout=3.0)
@@ -349,11 +401,23 @@ while cap.isOpened():
                         else DEFAULT_ZONE
                     )
 
+                    # Capture one JPEG snapshot for this event.
+                    # save_event_snapshot() is fully exception-safe:
+                    # it always returns None on any error so the detection
+                    # below is never skipped due to a photo failure.
+                    event_image_url = save_event_snapshot(
+                        frame=frame,
+                        plate=stable_plate,
+                        gate_type=GATE_TYPE,
+                        cam_id=CAMERA_ID,
+                    )
+
                     post_detection_to_backend(
                         plate=stable_plate,
                         vehicle_type=v_type,
                         helmet_detected=stable_helmet_state if is_motorcycle else None,
-                        zone=zone_target
+                        zone=zone_target,
+                        image_url=event_image_url,
                     )
 
                     last_submitted_plate = stable_plate

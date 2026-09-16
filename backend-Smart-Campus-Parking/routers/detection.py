@@ -119,8 +119,7 @@ async def ingest_detection_event(payload: DetectionLogCreate):
 
     elif registered_vehicle:
         matched_user_name = registered_vehicle.get("user_email") or "Registered Vehicle"
-   
- # Insert into detection_logs collection
+    # Insert into detection_logs collection
     log_doc = {
         "license_plate": payload.license_plate,
         "vehicle_type": vehicle_type,
@@ -130,7 +129,9 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         "gate_type": payload.gate_type,
         "zone": payload.zone or "Zone A",
         "timestamp": now,
-        "matched_email": matched_user.get("email") if matched_user else None
+        "matched_email": matched_user.get("email") if matched_user else None,
+        # Optional event snapshot captured by ai_pipeline.py (local exhibition only)
+        "image_url": payload.image_url or None,
     }
 
     inserted_id = "mock_id"
@@ -148,7 +149,8 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         gate_type=payload.gate_type,
         zone=payload.zone,
         timestamp=now,
-        matched_user=matched_user_name
+        matched_user=matched_user_name,
+        image_url=payload.image_url or None,
     )
 
     IN_MEMORY_DETECTIONS.insert(0, log_response.model_dump())
@@ -222,7 +224,9 @@ async def get_all_detections(days: int = 30):
                     gate_type=doc.get("gate_type", "ENTRY"),
                     zone=doc.get("zone", "Zone A"),
                     timestamp=doc.get("timestamp", datetime.now(timezone.utc)),
-                    matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered"
+                    matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered",
+                    # Older records without image_url safely default to None
+                    image_url=doc.get("image_url") or doc.get("snapshot_url") or None,
                 ))
             return result
 
