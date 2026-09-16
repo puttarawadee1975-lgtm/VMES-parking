@@ -155,11 +155,15 @@ async def get_user_parking_spot(user_email: str = "demo@student.ac.th"):
 @router.delete("/clear-spot")
 async def clear_user_parking_spot(user_email: str = "demo@student.ac.th"):
     """
-    Clear/Remove saved parking spot location from MongoDB when exiting building.
+    Mark saved parking spot status as Exited in MongoDB (Permanent Data Retention Policy).
     """
     if saved_spots_collection is not None:
-        saved_spots_collection.delete_one({"user_email": user_email})
-    return {"message": "Parking spot cleared successfully"}
+        saved_spots_collection.update_many(
+            {"user_email": user_email, "status": "Active Parked"},
+            {"$set": {"status": "Exited", "exit_timestamp": datetime.now(timezone.utc)}}
+        )
+    return {"message": "Parking spot status updated to Exited (Retained in MongoDB)"}
+
 
 @router.post("/reserve-spot")
 async def reserve_parking_spot(data: SpotReservationCreate):

@@ -68,23 +68,9 @@ async def start_background_services():
     except Exception as e:
         print(f"[AUTO RESET STARTUP ERROR] {e}")
 
-    # 2. Automatic 30-Day Gate History & Image Cleanup
-    try:
-        from cleanup_service import cleanup_old_records_and_images
-        cleanup_old_records_and_images(30)
+    # 2. Data Retention Policy: Permanent Data & Image Storage (NO Deletion)
+    print("[DATA RETENTION POLICY] Permanent Data & Image Retention Enabled. All historical logs, spots, and images are stored permanently without auto-deletion.")
 
-        async def auto_30day_cleanup_loop():
-            while True:
-                await asyncio.sleep(86400)  # Run once every 24 hours
-                try:
-                    cleanup_old_records_and_images(30)
-                except Exception as err:
-                    print(f"[30-DAY RETENTION TASK ERROR] {err}")
-
-        asyncio.create_task(auto_30day_cleanup_loop())
-        print("[DATA RETENTION] Automatic 30-Day Gate History & Image Cleanup service active.")
-    except Exception as e:
-        print(f"[30-DAY RETENTION STARTUP ERROR] {e}")
 
 @app.get("/", tags=["Health"])
 async def root():
