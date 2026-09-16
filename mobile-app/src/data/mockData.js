@@ -27,12 +27,14 @@ export const DEMO_ACCOUNTS = {
     safetyScore: 100
   },
 
-  'security.gate1@university.ac.th': {
-    role: 'admin',
-    name: 'Officer Somchai',
-    studentId: 'SEC-01',
-    email: 'security.gate1@university.ac.th',
-    vehicles: [],
+  'faculty.staff@au.edu': {
+    role: 'staff',
+    name: 'Dr. Somchai',
+    staffId: 'STF-1024',
+    email: 'faculty.staff@au.edu',
+    vehicles: [
+      { plate: '1KK 1234 Bangkok', model: '🚗 Toyota Camry (White)' }
+    ],
     safetyScore: 100
   }
 };

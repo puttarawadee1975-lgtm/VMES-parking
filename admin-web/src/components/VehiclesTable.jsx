@@ -657,6 +657,21 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                   </div>
                 </div>
               )}
+
+              {selectedPhotoVehicle.student_id_photo_url && (
+                <div style={{ gridColumn: selectedPhotoVehicle.side_photo_url ? '1 / span 2' : 'auto', marginTop: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: selectedPhotoVehicle.owner_role === 'staff' ? '#6b21a8' : '#166534', marginBottom: 6 }}>
+                    🪪 3. {selectedPhotoVehicle.owner_role === 'staff' ? 'Faculty / Staff ID' : 'Student ID'} Photo (Identity Verification)
+                  </div>
+                  <div style={{ width: '100%', height: 200, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: `1px solid ${selectedPhotoVehicle.owner_role === 'staff' ? '#e9d5ff' : '#bbf7d0'}` }}>
+                    <img
+                      src={selectedPhotoVehicle.student_id_photo_url.startsWith('/') ? `http://localhost:8000${selectedPhotoVehicle.student_id_photo_url}` : selectedPhotoVehicle.student_id_photo_url}
+                      alt="ID Photo"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>

@@ -20,6 +20,8 @@ export default function GateHistoryModal({
 }) {
   const [selectedFilter, setSelectedFilter] = useState('ALL'); // 'ALL', 'TRIPS', 'VIOLATIONS'
   const [selectedDateFilter, setSelectedDateFilter] = useState('TODAY'); // Default to 'TODAY'
+  const [selectedCustomDate, setSelectedCustomDate] = useState(new Date());
+  const [pickerMonth, setPickerMonth] = useState(new Date());
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [liveHistory, setLiveHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,8 +39,15 @@ export default function GateHistoryModal({
     { key: 'ALL', label: 'All Dates', icon: 'calendar-outline' },
     { key: 'TODAY', label: 'Today', icon: 'today-outline' },
     { key: 'YESTERDAY', label: 'Yesterday', icon: 'time-outline' },
-    { key: 'WEEK', label: 'Last 7 Days', icon: 'stats-chart-outline' },
+    { key: 'CUSTOM', label: 'Select Date', icon: 'calendar' },
   ];
+
+  const getDateFilterLabel = () => {
+    if (selectedDateFilter === 'CUSTOM' && selectedCustomDate) {
+      return selectedCustomDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    return DATE_OPTIONS.find(o => o.key === selectedDateFilter)?.label || 'All Dates';
+  };
 
   const loadHistory = async () => {
     setLoading(true);
@@ -94,7 +103,6 @@ export default function GateHistoryModal({
   };
 
   const userPlates = (currentUser?.vehicles || []).map(v => v.plate);
-  const isAdmin = currentUser?.role === 'admin';
   const primaryPlate = userPlates[0] || '';
 
 
@@ -217,22 +225,21 @@ export default function GateHistoryModal({
       return false;
     }
 
-    if (dateFilter === 'WEEK') {
-      if (item.isToday || item.date === 'Today' || item.date === 'Yesterday' || (item.time && (item.time.startsWith('Today') || item.time.startsWith('Yesterday')))) {
-        return true;
-      }
-      if (itemDate) {
-        return itemDate >= sevenDaysAgo;
-      }
-      return true;
+    if (dateFilter === 'CUSTOM') {
+      if (!selectedCustomDate) return true;
+      if (item.isToday) return isSameDay(today, selectedCustomDate);
+      if (item.date === 'Today' || (item.time && item.time.startsWith('Today'))) return isSameDay(today, selectedCustomDate);
+      if (item.date === 'Yesterday' || (item.time && item.time.startsWith('Yesterday'))) return isSameDay(yesterday, selectedCustomDate);
+      if (itemDate) return isSameDay(itemDate, selectedCustomDate);
+      return false;
     }
 
     return true;
   };
 
   const filteredItems = displayHistory.filter(item => {
-    // 1. Filter by owner for violations: non-admin users only see violations for their registered vehicles
-    if (item.type === 'violation' && !isAdmin) {
+    // 1. Filter by owner for violations: users only see violations for their registered vehicles
+    if (item.type === 'violation') {
       if (userPlates.length > 0 && item.plate && !userPlates.includes(item.plate) && item.plate !== primaryPlate) {
         return false;
       }
@@ -313,13 +320,13 @@ export default function GateHistoryModal({
           >
             <Ionicons name="calendar-outline" size={14} color={selectedDateFilter !== 'ALL' ? '#2563eb' : '#475569'} />
             <Text style={{ fontSize: 12, fontWeight: '700', color: selectedDateFilter !== 'ALL' ? '#1d4ed8' : '#334155' }}>
-              {DATE_OPTIONS.find(o => o.key === selectedDateFilter)?.label || 'All Dates'}
+              {getDateFilterLabel()}
             </Text>
             <Ionicons name="chevron-down" size={14} color={selectedDateFilter !== 'ALL' ? '#2563eb' : '#64748b'} />
           </TouchableOpacity>
         </View>
 
-        {/* Date Selector Dropdown Modal */}
+        {/* Date Selector Dropdown Modal with Interactive Calendar */}
         <Modal
           visible={showDateDropdown}
           transparent={true}
@@ -327,20 +334,28 @@ export default function GateHistoryModal({
           onRequestClose={() => setShowDateDropdown(false)}
         >
           <TouchableOpacity
-            style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
+            style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
             activeOpacity={1}
             onPress={() => setShowDateDropdown(false)}
           >
-            <View style={{ backgroundColor: '#ffffff', borderRadius: 20, width: '100%', maxWidth: 340, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <TouchableOpacity
+              activeOpacity={1}
+              style={{ backgroundColor: '#ffffff', borderRadius: 24, width: '100%', maxWidth: 360, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                 <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>Filter by Date</Text>
                 <TouchableOpacity onPress={() => setShowDateDropdown(false)} style={{ padding: 4 }}>
                   <Ionicons name="close" size={18} color="#64748b" />
                 </TouchableOpacity>
               </View>
 
-              <View style={{ gap: 8 }}>
-                {DATE_OPTIONS.map(opt => {
+              {/* Quick Presets */}
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+                {[
+                  { key: 'ALL', label: 'All Dates' },
+                  { key: 'TODAY', label: 'Today' },
+                  { key: 'YESTERDAY', label: 'Yesterday' },
+                ].map(opt => {
                   const isSelected = selectedDateFilter === opt.key;
                   return (
                     <TouchableOpacity
@@ -351,31 +366,115 @@ export default function GateHistoryModal({
                       }}
                       activeOpacity={0.7}
                       style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        paddingVertical: 12,
-                        paddingHorizontal: 14,
+                        flex: 1,
+                        paddingVertical: 8,
                         borderRadius: 12,
-                        backgroundColor: isSelected ? '#eff6ff' : '#f8fafc',
+                        alignItems: 'center',
+                        backgroundColor: isSelected ? '#2563eb' : '#f8fafc',
                         borderWidth: 1,
-                        borderColor: isSelected ? '#bfdbfe' : '#f1f5f9'
+                        borderColor: isSelected ? '#2563eb' : '#e2e8f0'
                       }}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <Ionicons name={opt.icon} size={18} color={isSelected ? '#2563eb' : '#64748b'} />
-                        <Text style={{ fontSize: 14, fontWeight: isSelected ? '800' : '600', color: isSelected ? '#1d4ed8' : '#334155' }}>
-                          {opt.label}
-                        </Text>
-                      </View>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={18} color="#2563eb" />
-                      )}
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: isSelected ? '#ffffff' : '#475569' }}>
+                        {opt.label}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-            </View>
+
+              {/* Interactive Calendar Section */}
+              <View style={{ borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 14 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() - 1, 1))}
+                    style={{ padding: 6, backgroundColor: '#f8fafc', borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' }}
+                  >
+                    <Ionicons name="chevron-back" size={16} color="#475569" />
+                  </TouchableOpacity>
+
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>
+                    {pickerMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() => setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 1))}
+                    style={{ padding: 6, backgroundColor: '#f8fafc', borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' }}
+                  >
+                    <Ionicons name="chevron-forward" size={16} color="#475569" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Day Headers */}
+                <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d, i) => (
+                    <Text key={i} style={{ flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: '#94a3b8' }}>
+                      {d}
+                    </Text>
+                  ))}
+                </View>
+
+                {/* Calendar Days Grid */}
+                {(() => {
+                  const pYear = pickerMonth.getFullYear();
+                  const pMonth = pickerMonth.getMonth();
+                  const totalDays = new Date(pYear, pMonth + 1, 0).getDate();
+                  const startDay = new Date(pYear, pMonth, 1).getDay();
+
+                  const cells = [];
+                  for (let i = 0; i < startDay; i++) {
+                    cells.push(<View key={`empty-${i}`} style={{ width: '14.28%', height: 36 }} />);
+                  }
+
+                  const todayNow = new Date();
+                  for (let d = 1; d <= totalDays; d++) {
+                    const cellDate = new Date(pYear, pMonth, d);
+                    const isSelectedDay = selectedDateFilter === 'CUSTOM' && isSameDay(cellDate, selectedCustomDate);
+                    const isTodayDay = isSameDay(cellDate, todayNow);
+
+                    cells.push(
+                      <TouchableOpacity
+                        key={`day-${d}`}
+                        onPress={() => {
+                          setSelectedCustomDate(cellDate);
+                          setSelectedDateFilter('CUSTOM');
+                          setShowDateDropdown(false);
+                        }}
+                        activeOpacity={0.7}
+                        style={{
+                          width: '14.28%',
+                          height: 36,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 18,
+                          backgroundColor: isSelectedDay ? '#2563eb' : (isTodayDay ? '#eff6ff' : 'transparent'),
+                          borderWidth: isTodayDay && !isSelectedDay ? 1 : 0,
+                          borderColor: '#93c5fd'
+                        }}
+                      >
+                        <Text style={{
+                          fontSize: 13,
+                          fontWeight: isSelectedDay || isTodayDay ? '800' : '600',
+                          color: isSelectedDay ? '#ffffff' : (isTodayDay ? '#1d4ed8' : '#334155')
+                        }}>
+                          {d}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }
+
+                  const rows = [];
+                  for (let i = 0; i < cells.length; i += 7) {
+                    rows.push(
+                      <View key={`row-${i}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {cells.slice(i, i + 7)}
+                      </View>
+                    );
+                  }
+                  return <View style={{ gap: 2 }}>{rows}</View>;
+                })()}
+              </View>
+            </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
 

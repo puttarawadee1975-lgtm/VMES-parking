@@ -168,7 +168,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
       Alert.alert(
         '📷 Front License Plate Required',
         vehicleType === 'car'
-          ? 'สำหรับการลงทะเบียนรถยนต์ รูปด้านหน้าต้องถ่ายให้เห็นแผ่นป้ายทะเบียนหน้าอย่างชัดเจน'
+          ? 'For car registration, the front photo must clearly show the front license plate.'
           : 'Please provide Front photo of your vehicle.'
       );
       return;
@@ -310,7 +310,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                 />
                 {/[a-zA-Z]/.test(plateNumber) && (
                   <Text style={{ fontSize: 11, color: '#ef4444', fontWeight: '700', marginTop: 4 }}>
-                    ⚠️ หมวดตัวอักษรป้ายทะเบียนต้องเป็นภาษาไทยเท่านั้น (เช่น 1กข 1234)
+                    ⚠️ License plate letters must be in Thai characters (e.g. 1กข 1234)
                   </Text>
                 )}
               </View>
@@ -443,7 +443,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                     <View style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
                       <Ionicons name="alert-circle" size={15} color="#2563eb" style={{ marginRight: 6 }} />
                       <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '700', flex: 1 }}>
-                        รูปด้านหน้ารถยนต์ ต้องถ่ายให้เห็นแผ่นป้ายทะเบียนหน้าอย่างชัดเจน (Required)
+                        Front car photo must clearly show the front license plate.
                       </Text>
                     </View>
                   )}

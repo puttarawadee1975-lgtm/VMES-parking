@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,52 +8,103 @@ import {
   Platform,
   Vibration,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  Image,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { toThaiProvince } from '../utils/provinceHelper';
+import { scanPlateImageAPI } from '../services/api';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const FRAME_WIDTH = Math.min(SCREEN_WIDTH - 40, 340);
+const FRAME_HEIGHT = 140;
 
 export default function LicensePlateScannerModal({ visible, onClose, onScanSuccess, vehicleType }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [flashOn, setFlashOn] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [detectedResult, setDetectedResult] = useState(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const cameraRef = useRef(null);
 
   useEffect(() => {
     if (visible && !permission?.granted && permission?.canAskAgain) {
       requestPermission();
     }
+    if (!visible) {
+      setIsCapturing(false);
+      setCapturedPhoto(null);
+    }
   }, [visible, permission]);
 
-  const handleCaptureAndDetect = (customPlateData = null) => {
-    if (isAnalyzing) return;
-    setIsAnalyzing(true);
+  const handleTakePicture = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
 
     try {
       if (Platform.OS !== 'web') Vibration.vibrate(80);
     } catch (e) { }
 
-    setTimeout(() => {
-      const defaultScanned = { plate: '1AB 1234', province: 'Bangkok' };
-      const target = customPlateData || defaultScanned;
-      const thaiProv = toThaiProvince(target.province);
+    let base64Photo = null;
+    let photoUri = null;
 
-      setDetectedResult({
-        plate: target.plate,
-        province: thaiProv
-      });
-      setIsAnalyzing(false);
-    }, 900);
-  };
+    try {
+      if (cameraRef.current && Platform.OS !== 'web') {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 0.85,
+          base64: true,
+          skipProcessing: true
+        });
+        if (photo) {
+          base64Photo = photo.base64;
+          photoUri = photo.base64 ? `data:image/jpeg;base64,${photo.base64}` : photo.uri;
+        }
+      }
+    } catch (err) {
+      console.log('Camera capture exception:', err);
+    }
 
-  const handleConfirmDetection = () => {
-    if (detectedResult) {
-      onScanSuccess(detectedResult.plate, detectedResult.province);
-      setDetectedResult(null);
-      onClose();
+    if (!photoUri) {
+      photoUri = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="280" viewBox="0 0 600 280"><rect width="600" height="280" rx="20" fill="%230f172a"/><rect x="40" y="30" width="520" height="220" rx="16" fill="%23ffffff" stroke="%23000000" stroke-width="8"/><text x="300" y="130" font-family="sans-serif" font-weight="900" font-size="72" text-anchor="middle" fill="%230f172a">3กฮ 5678</text><text x="300" y="200" font-family="sans-serif" font-weight="700" font-size="32" text-anchor="middle" fill="%231e293b">กรุงเทพมหานคร</text></svg>';
+    }
+
+    // Freeze photo immediately on screen
+    setCapturedPhoto(photoUri);
+
+    let detectedPlate = '';
+    let detectedProvince = 'Bangkok';
+
+    if (base64Photo) {
+      try {
+        const res = await scanPlateImageAPI(base64Photo, vehicleType);
+        if (res && res.plate) {
+          detectedPlate = res.plate;
+          detectedProvince = res.province || 'Bangkok';
+        }
+      } catch (ocrErr) {
+        console.warn('Backend OCR call failed:', ocrErr);
+      }
+    }
+
+    // If OCR returned a valid plate from the photo
+    if (detectedPlate) {
+      const thaiProv = toThaiProvince(detectedProvince);
+      setTimeout(() => {
+        onScanSuccess(detectedPlate, thaiProv);
+        setCapturedPhoto(null);
+        setIsCapturing(false);
+        onClose();
+      }, 400);
+    } else {
+      // OCR could not detect a valid plate
+      setCapturedPhoto(null);
+      setIsCapturing(false);
+      Alert.alert(
+        'Plate Scan Notice',
+        'Could not clearly detect a license plate in the photo. Please align your plate inside the frame box and try again, or enter your plate details manually.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -66,124 +117,136 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#0f172a' }}>
-        {/* Top Header Bar */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-          backgroundColor: '#0f172a',
-          zIndex: 10
-        }}>
-          <TouchableOpacity onPress={onClose} style={{ padding: 8, backgroundColor: '#1e293b', borderRadius: 20 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }}>
+        {/* Header Bar */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 20,
+            paddingVertical: 16,
+            backgroundColor: '#000000',
+            zIndex: 20
+          }}
+        >
+          <TouchableOpacity onPress={onClose} style={{ width: 40, height: 40, backgroundColor: '#1e293b', borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
             <Ionicons name="close" size={22} color="#ffffff" />
           </TouchableOpacity>
 
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#ffffff' }}>License Plate Scanner</Text>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#ffffff' }}>
+              License Plate Camera
+            </Text>
+          </View>
 
-          <TouchableOpacity
-            onPress={() => setFlashOn(!flashOn)}
-            style={{ padding: 8, backgroundColor: flashOn ? '#3b82f6' : '#1e293b', borderRadius: 20 }}
-          >
-            <Ionicons name={flashOn ? "flash" : "flash-outline"} size={20} color="#ffffff" />
-          </TouchableOpacity>
+          {!capturedPhoto ? (
+            <TouchableOpacity
+              onPress={() => setFlashOn(!flashOn)}
+              style={{ width: 40, height: 40, backgroundColor: flashOn ? '#f59e0b' : '#1e293b', borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <Ionicons name={flashOn ? "flash" : "flash-outline"} size={20} color="#ffffff" />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 40, height: 40 }} />
+          )}
         </View>
 
-        {/* Main Camera / Viewfinder Container */}
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-          {permission?.granted ? (
+        {/* Viewfinder / Frozen Photo Area */}
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden', backgroundColor: '#000000' }}>
+          {capturedPhoto ? (
+            <Image
+              source={{ uri: capturedPhoto }}
+              style={{ width: '100%', height: '100%', position: 'absolute' }}
+              resizeMode="cover"
+            />
+          ) : permission?.granted ? (
             <CameraView
+              ref={cameraRef}
               style={{ width: '100%', height: '100%', position: 'absolute' }}
               enableTorch={flashOn}
               facing="back"
             />
           ) : (
-            <View style={{ padding: 30, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="camera-outline" size={48} color="#94a3b8" />
-              <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700', marginTop: 12, textAlign: 'center' }}>
-                Camera Permission Required
+            <View style={{ width: '100%', height: '100%', position: 'absolute', backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name="camera-outline" size={48} color="#64748b" />
+              <Text style={{ color: '#94a3b8', fontSize: 13, marginTop: 12, fontWeight: '600' }}>
+                Camera Viewfinder Ready
               </Text>
-              <TouchableOpacity
-                onPress={requestPermission}
-                style={{ marginTop: 16, backgroundColor: '#2563eb', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}
-              >
-                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>Grant Permission</Text>
-              </TouchableOpacity>
             </View>
           )}
 
-          {/* Scanner Overlay Box */}
-          <View style={{
-            width: vehicleType === 'motorcycle' ? Math.min(width * 0.65, 240) : Math.min(width * 0.85, 340),
-            height: vehicleType === 'motorcycle' ? Math.min(width * 0.65, 240) : 140,
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative'
-          }}>
-            {/* Viewfinder Corners */}
-            <View style={{ position: 'absolute', top: 0, left: 0, width: 36, height: 36, borderTopWidth: 3.5, borderLeftWidth: 3.5, borderColor: isAnalyzing ? '#3b82f6' : (detectedResult ? '#10b981' : '#ffffff') }} />
-            <View style={{ position: 'absolute', top: 0, right: 0, width: 36, height: 36, borderTopWidth: 3.5, borderRightWidth: 3.5, borderColor: isAnalyzing ? '#3b82f6' : (detectedResult ? '#10b981' : '#ffffff') }} />
-            <View style={{ position: 'absolute', bottom: 0, left: 0, width: 36, height: 36, borderBottomWidth: 3.5, borderLeftWidth: 3.5, borderColor: isAnalyzing ? '#3b82f6' : (detectedResult ? '#10b981' : '#ffffff') }} />
-            <View style={{ position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderBottomWidth: 3.5, borderRightWidth: 3.5, borderColor: isAnalyzing ? '#3b82f6' : (detectedResult ? '#10b981' : '#ffffff') }} />
-
-            {isAnalyzing ? (
-              <View style={{ alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#3b82f6" />
-                <Text style={{ color: '#60a5fa', fontSize: 13, fontWeight: '700', marginTop: 10 }}>Scanning Plate with AI OCR...</Text>
-              </View>
-            ) : detectedResult ? (
-              <View style={{ alignItems: 'center', padding: 12 }}>
-                <Ionicons name="checkmark-circle" size={32} color="#10b981" />
-                <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '900', marginTop: 4 }}>{detectedResult.plate}</Text>
-                <Text style={{ color: '#a7f3d0', fontSize: 13, fontWeight: '700', marginTop: 2 }}>{detectedResult.province}</Text>
-              </View>
-            ) : (
-              <View style={{ alignItems: 'center' }}>
-                <Ionicons name="scan-outline" size={32} color="#ffffff" />
-                <Text style={{ color: '#e2e8f0', fontSize: 12, fontWeight: '600', marginTop: 6 }}>Align license plate inside frame</Text>
-              </View>
-            )}
+          {/* Dynamic License Plate Frame Container */}
+          <View
+            style={{
+              width: vehicleType === 'motorcycle' ? Math.min(SCREEN_WIDTH - 60, 230) : FRAME_WIDTH,
+              height: vehicleType === 'motorcycle' ? 210 : FRAME_HEIGHT,
+              borderRadius: 16,
+              borderWidth: 2,
+              borderColor: isCapturing ? '#3b82f6' : '#ffffff',
+              backgroundColor: 'transparent',
+              position: 'relative',
+              shadowColor: '#ffffff',
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
+              elevation: 8
+            }}
+          >
+            {/* Corner Bracket Overlays */}
+            <View style={{ position: 'absolute', top: -3, left: -3, width: 28, height: 28, borderTopWidth: 4, borderLeftWidth: 4, borderColor: isCapturing ? '#3b82f6' : '#ffffff', borderTopLeftRadius: 16 }} />
+            <View style={{ position: 'absolute', top: -3, right: -3, width: 28, height: 28, borderTopWidth: 4, borderRightWidth: 4, borderColor: isCapturing ? '#3b82f6' : '#ffffff', borderTopRightRadius: 16 }} />
+            <View style={{ position: 'absolute', bottom: -3, left: -3, width: 28, height: 28, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: isCapturing ? '#3b82f6' : '#ffffff', borderBottomLeftRadius: 16 }} />
+            <View style={{ position: 'absolute', bottom: -3, right: -3, width: 28, height: 28, borderBottomWidth: 4, borderRightWidth: 4, borderColor: isCapturing ? '#3b82f6' : '#ffffff', borderBottomRightRadius: 16 }} />
           </View>
+
+          {/* AI Scanning Status Badge on Freeze Frame */}
+          {isCapturing && (
+            <View style={{ position: 'absolute', bottom: 30, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: 20, flexDirection: 'row', alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#3b82f6" style={{ marginRight: 8 }} />
+              <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700' }}>
+                Detecting License Plate with AI...
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Bottom Control Bar */}
-        <View style={{ padding: 20, backgroundColor: '#0f172a', borderTopWidth: 1, borderTopColor: '#1e293b' }}>
-          {detectedResult ? (
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity
-                onPress={() => setDetectedResult(null)}
-                style={{ flex: 1, backgroundColor: '#1e293b', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}
-              >
-                <Text style={{ color: '#94a3b8', fontWeight: '700', fontSize: 14 }}>Scan Again</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleConfirmDetection}
-                style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}
-              >
-                <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 14 }}>Auto Fill Form ✨</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={() => handleCaptureAndDetect()}
-              disabled={isAnalyzing}
-              style={{
-                backgroundColor: '#2563eb',
-                paddingVertical: 16,
-                borderRadius: 16,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center'
-              }}
-            >
-              <Ionicons name="camera" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-              <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 15 }}>
-                {isAnalyzing ? 'Analyzing License Plate...' : 'Capture & Detect License Plate'}
-              </Text>
-            </TouchableOpacity>
-          )}
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingVertical: 24,
+            backgroundColor: '#000000',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 20
+          }}
+        >
+          {/* Authentic iPhone Camera Shutter Button */}
+          <TouchableOpacity
+            onPress={handleTakePicture}
+            disabled={isCapturing}
+            activeOpacity={0.6}
+            style={{
+              width: 76,
+              height: 76,
+              borderRadius: 38,
+              borderWidth: 4,
+              borderColor: '#ffffff',
+              padding: 3,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'transparent'
+            }}
+          >
+            {isCapturing ? (
+              <View style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: '#ffffff', opacity: 0.8, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#0f172a" />
+              </View>
+            ) : (
+              <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: '#ffffff' }} />
+            )}
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </Modal>

@@ -15,6 +15,7 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import ProvincePickerModal from '../components/ProvincePickerModal';
 import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
+import IdCardScannerModal from '../components/IdCardScannerModal';
 import { formatDisplayPlate } from '../utils/provinceHelper';
 
 export default function VehicleRegistrationOnboardingScreen({
@@ -27,13 +28,22 @@ export default function VehicleRegistrationOnboardingScreen({
   const [province, setProvince] = useState('');
   const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
+  const [showIdCardScannerModal, setShowIdCardScannerModal] = useState(false);
   const [vehicleType, setVehicleType] = useState(null); // null | 'motorcycle' | 'car'
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [color, setColor] = useState('');
   const [frontPhoto, setFrontPhoto] = useState(null);
   const [sidePhoto, setSidePhoto] = useState(null);
+  const [studentIdPhoto, setStudentIdPhoto] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isStaff = currentUser?.role === 'staff';
+  const idTypeLabel = isStaff ? 'Faculty / Staff ID' : 'Student ID';
+
+  const handlePickStudentIdPhoto = () => {
+    setShowIdCardScannerModal(true);
+  };
 
   const handlePickPhoto = async (target = 'front', useCamera = false) => {
     try {
@@ -77,6 +87,14 @@ export default function VehicleRegistrationOnboardingScreen({
   };
 
   const handleFormSubmit = () => {
+    if (!studentIdPhoto && currentUser?.role !== 'guest') {
+      Alert.alert(
+        `🪪 ${idTypeLabel} Photo Required`,
+        `Please take or upload a photo of your ${idTypeLabel} card for identity verification.`
+      );
+      return;
+    }
+
     if (!vehicleType) {
       Alert.alert('Required Field', 'Please select your vehicle type (Motorcycle or Car).');
       return;
@@ -89,8 +107,8 @@ export default function VehicleRegistrationOnboardingScreen({
 
     if (/[a-zA-Z]/.test(plateNumber.trim())) {
       Alert.alert(
-        'หมวดอักษรป้ายทะเบียนต้องเป็นภาษาไทย',
-        'ตัวอักษรบนป้ายทะเบียนต้องเป็นภาษาไทยเท่านั้น (เช่น 1กข 1234 หรือ 3กฮ 5678) กรุณาเปลี่ยนภาษาป้อนข้อมูลเป็นภาษาไทย'
+        'Thai License Plate Letters Required',
+        'License plate letters must be in Thai characters (e.g. 1กข 1234 or 3กฮ 5678).'
       );
       return;
     }
@@ -119,14 +137,14 @@ export default function VehicleRegistrationOnboardingScreen({
       Alert.alert(
         '📷 Front License Plate Required',
         vehicleType === 'car'
-          ? 'สำหรับการลงทะเบียนรถยนต์ รูปด้านหน้าต้องถ่ายให้เห็นแผ่นป้ายทะเบียนหน้าอย่างชัดเจน'
-          : 'Please take or choose a FRONT photo of your vehicle for Admin verification.'
+          ? 'For car registration, the front photo must clearly show the front license plate.'
+          : 'Please take or choose a FRONT photo of your vehicle for campus verification.'
       );
       return;
     }
 
     if (!sidePhoto) {
-      Alert.alert('📷 Side Photo Required', 'Please take or choose a SIDE photo of your vehicle for Admin verification.');
+      Alert.alert('📷 Side Photo Required', 'Please take or choose a SIDE photo of your vehicle for campus verification.');
       return;
     }
 
@@ -138,7 +156,8 @@ export default function VehicleRegistrationOnboardingScreen({
     const success = onRegisterVehicle(fullPlate, fullModel, {
       vehicle_front_photo: frontPhoto,
       vehicle_side_photo: sidePhoto,
-      vehicle_photo: frontPhoto
+      vehicle_photo: frontPhoto,
+      student_id_photo: studentIdPhoto
     });
     setIsSubmitting(false);
   };
@@ -163,11 +182,12 @@ export default function VehicleRegistrationOnboardingScreen({
           {/* Header Bar with Logout */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                <Ionicons name="shield-checkmark" size={20} color="#2563eb" />
-              </View>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>VMES Parking</Text>
-
+              <Image
+                source={require('../../assets/logo.png')}
+                style={{ width: 34, height: 38, marginRight: 10 }}
+                resizeMode="contain"
+              />
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#0f172a' }}>VMES Parking</Text>
             </View>
 
             <TouchableOpacity
@@ -202,7 +222,7 @@ export default function VehicleRegistrationOnboardingScreen({
             <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#334155', flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="information-circle" size={16} color="#38bdf8" style={{ marginRight: 6 }} />
               <Text style={{ fontSize: 11, color: '#38bdf8', fontWeight: '700' }}>
-                Policy: 1 Registered Plate per Student Account
+                Policy: 1 Registered Plate per Account
               </Text>
             </View>
           </View>
@@ -222,6 +242,96 @@ export default function VehicleRegistrationOnboardingScreen({
               gap: 18
             }}
           >
+            {/* STEP 1: Identity Card Verification */}
+            {currentUser?.role !== 'guest' && (
+              <View style={{ gap: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1e293b' }}>
+                  STEP 1: {idTypeLabel} Verification <Text style={{ color: '#ef4444' }}>*</Text>
+                </Text>
+
+                <Text style={{ fontSize: 11, color: '#64748b', lineHeight: 16 }}>
+                  Please take or upload a clear photo of your {idTypeLabel} card. Ensure name and ID number are clearly visible.
+                </Text>
+
+                {studentIdPhoto ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: '#ffffff',
+                      borderWidth: 1,
+                      borderColor: '#cbd5e1',
+                      borderRadius: 14,
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      width: '100%',
+                      overflow: 'hidden',
+                      shadowColor: '#64748b',
+                      shadowOpacity: 0.04,
+                      shadowRadius: 4,
+                      elevation: 1
+                    }}
+                  >
+                    {/* Thumbnail & Status Text */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, marginRight: 6, gap: 8 }}>
+                      <View style={{ width: 44, height: 28, borderRadius: 5, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#cbd5e1', flexShrink: 0 }}>
+                        <Image source={{ uri: studentIdPhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                        <Ionicons name="checkmark-circle" size={14} color="#16a34a" style={{ marginRight: 4, flexShrink: 0 }} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#15803d', flexShrink: 1 }} numberOfLines={1}>
+                          Photo Attached
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Delete Action Button Only */}
+                    <TouchableOpacity
+                      onPress={() => setStudentIdPhoto(null)}
+                      activeOpacity={0.7}
+                      style={{ backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', flexShrink: 0 }}
+                    >
+                      <Ionicons name="trash-outline" size={12} color="#dc2626" style={{ marginRight: 3 }} />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#dc2626' }}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={handlePickStudentIdPhoto}
+                    activeOpacity={0.8}
+                    style={{
+                      backgroundColor: '#eff6ff',
+                      borderWidth: 1,
+                      borderColor: '#bfdbfe',
+                      borderRadius: 14,
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Ionicons name="camera" size={18} color="#2563eb" style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#1d4ed8' }}>
+                      Take {idTypeLabel} Photo
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Section Divider */}
+                <View style={{ height: 1, backgroundColor: '#e2e8f0', marginVertical: 6 }} />
+              </View>
+            )}
+
+            {/* STEP 2: Vehicle Information & Photos Header */}
+            <View style={{ marginBottom: -4 }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1e293b' }}>
+                STEP 2: Vehicle Information & Photos
+              </Text>
+            </View>
+
             {/* Vehicle Type Segmented Control */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 8 }}>
@@ -312,7 +422,7 @@ export default function VehicleRegistrationOnboardingScreen({
               />
               {/[a-zA-Z]/.test(plateNumber) && (
                 <Text style={{ fontSize: 11, color: '#ef4444', fontWeight: '700', marginTop: 4 }}>
-                  ⚠️ หมวดตัวอักษรป้ายทะเบียนต้องเป็นภาษาไทยเท่านั้น (เช่น 1กข 1234)
+                  ⚠️ License plate letters must be in Thai characters (e.g. 1กข 1234)
                 </Text>
               )}
             </View>
@@ -358,8 +468,8 @@ export default function VehicleRegistrationOnboardingScreen({
                   vehicleType === 'car'
                     ? "e.g. Toyota, Honda, Mazda"
                     : vehicleType === 'motorcycle'
-                    ? "e.g. Honda, Yamaha, Vespa"
-                    : "e.g. Toyota, Honda"
+                      ? "e.g. Honda, Yamaha, Vespa"
+                      : "e.g. Toyota, Honda"
                 }
                 placeholderTextColor="#94a3b8"
                 style={{
@@ -388,8 +498,8 @@ export default function VehicleRegistrationOnboardingScreen({
                   vehicleType === 'car'
                     ? "e.g. Camry, Civic, Mazda 3"
                     : vehicleType === 'motorcycle'
-                    ? "e.g. PCX 160, Click 160, Grand Filano"
-                    : "e.g. Civic, PCX 160"
+                      ? "e.g. PCX 160, Click 160, Grand Filano"
+                      : "e.g. Civic, PCX 160"
                 }
                 placeholderTextColor="#94a3b8"
                 style={{
@@ -443,7 +553,6 @@ export default function VehicleRegistrationOnboardingScreen({
               <View style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 14 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="camera" size={16} color="#2563eb" style={{ marginRight: 6 }} />
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
                       1. Front Photo (Vehicle Front & License Plate) <Text style={{ color: '#ef4444' }}>*</Text>
                     </Text>
@@ -459,17 +568,66 @@ export default function VehicleRegistrationOnboardingScreen({
                   <View style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="alert-circle" size={15} color="#2563eb" style={{ marginRight: 6 }} />
                     <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '700', flex: 1 }}>
-                      รูปด้านหน้ารถยนต์ ต้องถ่ายให้เห็นแผ่นป้ายทะเบียนหน้าอย่างชัดเจน (Required)
+                      Front car photo must clearly show the front license plate.
                     </Text>
                   </View>
                 )}
 
                 {frontPhoto ? (
-                  <View style={{ height: 130, borderRadius: 12, overflow: 'hidden', backgroundColor: '#0f172a', position: 'relative' }}>
-                    <Image source={{ uri: frontPhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                    <View style={{ position: 'absolute', bottom: 6, right: 6, backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }}>
-                      <Ionicons name="checkmark-circle" size={12} color="#ffffff" style={{ marginRight: 4 }} />
-                      <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Front Photo Set</Text>
+                  <View style={{ gap: 6 }}>
+                    <View
+                      style={{
+                        height: 140,
+                        borderRadius: 14,
+                        overflow: 'hidden',
+                        backgroundColor: '#f8fafc',
+                        borderWidth: 1.5,
+                        borderColor: '#2563eb',
+                        position: 'relative',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Image source={{ uri: frontPhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+
+                      {/* Top-Right Red Circular Delete Badge */}
+                      <TouchableOpacity
+                        onPress={() => setFrontPhoto(null)}
+                        activeOpacity={0.8}
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          width: 28,
+                          height: 28,
+                          borderRadius: 14,
+                          backgroundColor: '#ef4444',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          shadowColor: '#000',
+                          shadowOpacity: 0.25,
+                          shadowRadius: 4,
+                          elevation: 4
+                        }}
+                      >
+                        <Ionicons name="close" size={16} color="#ffffff" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="checkmark-circle" size={14} color="#2563eb" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af' }}>Front Photo Attached</Text>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => handlePickPhoto('front', false)}
+                        activeOpacity={0.8}
+                        style={{ flexDirection: 'row', alignItems: 'center' }}
+                      >
+                        <Ionicons name="camera-outline" size={13} color="#2563eb" style={{ marginRight: 3 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Change Photo</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 ) : (
@@ -499,24 +657,67 @@ export default function VehicleRegistrationOnboardingScreen({
               <View style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 14 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="car-outline" size={16} color="#2563eb" style={{ marginRight: 6 }} />
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
                       2. Side Photo (Vehicle Side View) <Text style={{ color: '#ef4444' }}>*</Text>
                     </Text>
                   </View>
-                  {sidePhoto && (
-                    <TouchableOpacity onPress={() => setSidePhoto(null)}>
-                      <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '700' }}>Remove</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
 
                 {sidePhoto ? (
-                  <View style={{ height: 130, borderRadius: 12, overflow: 'hidden', backgroundColor: '#0f172a', position: 'relative' }}>
-                    <Image source={{ uri: sidePhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                    <View style={{ position: 'absolute', bottom: 6, right: 6, backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }}>
-                      <Ionicons name="checkmark-circle" size={12} color="#ffffff" style={{ marginRight: 4 }} />
-                      <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Side Photo Set</Text>
+                  <View style={{ gap: 6 }}>
+                    <View
+                      style={{
+                        height: 140,
+                        borderRadius: 14,
+                        overflow: 'hidden',
+                        backgroundColor: '#f8fafc',
+                        borderWidth: 1.5,
+                        borderColor: '#2563eb',
+                        position: 'relative',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Image source={{ uri: sidePhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+
+                      {/* Top-Right Red Circular Delete Badge */}
+                      <TouchableOpacity
+                        onPress={() => setSidePhoto(null)}
+                        activeOpacity={0.8}
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          width: 28,
+                          height: 28,
+                          borderRadius: 14,
+                          backgroundColor: '#ef4444',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          shadowColor: '#000',
+                          shadowOpacity: 0.25,
+                          shadowRadius: 4,
+                          elevation: 4
+                        }}
+                      >
+                        <Ionicons name="close" size={16} color="#ffffff" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="checkmark-circle" size={14} color="#2563eb" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af' }}>Side Photo Attached</Text>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => handlePickPhoto('side', false)}
+                        activeOpacity={0.8}
+                        style={{ flexDirection: 'row', alignItems: 'center' }}
+                      >
+                        <Ionicons name="camera-outline" size={13} color="#2563eb" style={{ marginRight: 3 }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Change Photo</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 ) : (
@@ -562,7 +763,7 @@ export default function VehicleRegistrationOnboardingScreen({
               }}
             >
               <Text style={{ color: '#ffffff', fontSize: 15, fontWeight: '700' }}>
-                {isSubmitting ? 'Registering Vehicle...' : 'Save & Continue to App'}
+                {isSubmitting ? 'Registering Vehicle...' : 'Confirm'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -586,6 +787,15 @@ export default function VehicleRegistrationOnboardingScreen({
           if (scannedProvince) {
             setProvince(scannedProvince);
           }
+        }}
+      />
+
+      <IdCardScannerModal
+        visible={showIdCardScannerModal}
+        onClose={() => setShowIdCardScannerModal(false)}
+        idTypeLabel={idTypeLabel}
+        onCaptureSuccess={(photoBase64) => {
+          setStudentIdPhoto(photoBase64);
         }}
       />
     </SafeAreaView>

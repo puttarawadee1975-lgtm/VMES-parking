@@ -1,4 +1,2 @@
-web-admin
-Building Occupancy is still not finished.
-Live overview need to add more information after everything done.
-
+Collect data term by term after each term is end, it automatically delete data in mongoDB and Photo from Backend.
+Identify parking spot data is in save_spots file in mongoDB.

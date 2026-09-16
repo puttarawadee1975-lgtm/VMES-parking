@@ -6,9 +6,9 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-brand">
-        <div 
-          className="brand-logo" 
-          onClick={() => setIsCollapsed(!isCollapsed)} 
+        <div
+          className="brand-logo"
+          onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? "Click to Expand Sidebar" : "VMES Parking"}
           style={{ cursor: 'pointer' }}
         >
@@ -33,35 +33,35 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
 
       <nav className="sidebar-menu">
         {!isCollapsed && <div className="menu-label">Main Dashboard</div>}
-        <button 
-          onClick={() => setActiveTab('overview')} 
+        <button
+          onClick={() => setActiveTab('overview')}
           className={`menu-item ${activeTab === 'overview' ? 'active' : ''}`}
           title="Dashboard"
         >
           <i className="ri-dashboard-3-line"></i>
           {!isCollapsed && <span>Dashboard</span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('live-camera')} 
+        <button
+          onClick={() => setActiveTab('live-camera')}
           className={`menu-item ${activeTab === 'live-camera' ? 'active' : ''}`}
           title="Gate Camera"
         >
           <i className="ri-camera-lens-line"></i>
           {!isCollapsed && <span>Gate Camera</span>}
         </button>
-        <button 
+        <button
           onClick={() => {
             if (onClearViolationFilter) onClearViolationFilter();
             setActiveTab('access-history');
-          }} 
+          }}
           className={`menu-item ${activeTab === 'access-history' ? 'active' : ''}`}
           title="Gate Access & Violation History"
         >
           <i className="ri-history-line"></i>
           {!isCollapsed && <span>Gate Access & Violation History</span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('vehicles')} 
+        <button
+          onClick={() => setActiveTab('vehicles')}
           className={`menu-item ${activeTab === 'vehicles' ? 'active' : ''}`}
           title="Vehicle Directory"
         >
@@ -70,8 +70,8 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
         </button>
 
         {!isCollapsed && <div className="menu-label">Safety & Security</div>}
-        <button 
-          onClick={() => setActiveTab('safety-scores')} 
+        <button
+          onClick={() => setActiveTab('safety-scores')}
           className={`menu-item ${activeTab === 'safety-scores' ? 'active' : ''}`}
           title="Driving Score"
         >
@@ -80,16 +80,16 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
         </button>
 
         {!isCollapsed && <div className="menu-label">Operations</div>}
-        <button 
-          onClick={() => setActiveTab('parking-map')} 
+        <button
+          onClick={() => setActiveTab('parking-map')}
           className={`menu-item ${activeTab === 'parking-map' ? 'active' : ''}`}
           title="Building Occupancy"
         >
           <i className="ri-building-2-line"></i>
           {!isCollapsed && <span>Building Occupancy</span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('announcements')} 
+        <button
+          onClick={() => setActiveTab('announcements')}
           className={`menu-item ${activeTab === 'announcements' ? 'active' : ''}`}
           title="Announcements"
         >

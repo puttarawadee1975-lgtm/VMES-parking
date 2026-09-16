@@ -37,14 +37,17 @@ export default function AccountScreen({
   const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
 
   const isGuest = !currentUser || currentUser?.role === 'guest';
-  const isAdmin = currentUser?.role === 'admin';
+  const isStaff = currentUser?.role === 'staff';
   const isStudent = currentUser?.role === 'student';
 
-  const roleLabel = isAdmin ? 'Officer' : isStudent ? 'Student' : 'Guest';
-  const avatarInitial = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
+  const roleLabel = isStaff ? 'Faculty / Staff' : isStudent ? 'Student' : 'Guest';
+  const cleanName = (currentUser?.name || 'User')
+    .replace(/\s*\([^)]*(Faculty|Staff|Student)[^)]*\)/gi, '')
+    .trim();
+  const avatarInitial = cleanName ? cleanName.charAt(0).toUpperCase() : 'U';
   const rawId = currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '');
   const digitsOnlyId = rawId ? rawId.replace(/\D/g, '') : null;
-  const displayId = isAdmin ? (currentUser?.staffId || 'SEC-01') : (digitsOnlyId || (isStudent ? '65070042' : null));
+  const displayId = isStaff ? (currentUser?.staffId || (currentUser?.email ? currentUser.email.split('@')[0] : 'STF-1024')) : (digitsOnlyId || (isStudent ? '65070042' : null));
 
   return (
     <View className="flex-col gap-4">
@@ -63,35 +66,33 @@ export default function AccountScreen({
           </View>
         </View>
       ) : (
-        /* 2. Student or Officer/Admin: Show Name, Role Badge, Email, and ID */
-        <View className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+        /* 2. Student or Faculty/Staff: Show Name, Role Badge, Email, and ID */
+        <View className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm overflow-hidden">
           <View className="flex-row items-center">
             <View
-              className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 border-2 ${isAdmin
-                ? 'bg-amber-100 border-amber-500'
+              className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 border-2 ${isStaff
+                ? 'bg-blue-100 border-blue-600'
                 : 'bg-blue-100 border-blue-600'
                 }`}
             >
               <Text
-                className={`font-black text-2xl ${isAdmin ? 'text-amber-700' : 'text-blue-700'
+                className={`font-black text-2xl ${isStaff ? 'text-blue-700' : 'text-blue-700'
                   }`}
               >
                 {avatarInitial}
               </Text>
             </View>
 
-            <View className="flex-1 justify-center">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-slate-900 font-bold text-base" numberOfLines={1}>
-                  {currentUser?.name || 'User'}
+            <View className="flex-1 justify-center min-w-0">
+              <View className="flex-row items-center justify-between min-w-0">
+                <Text className="text-slate-900 font-bold text-base flex-1 mr-2" numberOfLines={1}>
+                  {cleanName}
                 </Text>
                 <View
-                  className={`px-2.5 py-0.5 rounded-full ${isAdmin ? 'bg-amber-100' : 'bg-blue-100'
-                    }`}
+                  className="px-2.5 py-0.5 rounded-full bg-blue-100 flex-shrink-0"
                 >
                   <Text
-                    className={`text-[10px] font-bold uppercase ${isAdmin ? 'text-amber-700' : 'text-blue-700'
-                      }`}
+                    className="text-[10px] font-bold uppercase text-blue-700"
                   >
                     {roleLabel}
                   </Text>
@@ -104,9 +105,9 @@ export default function AccountScreen({
                 </Text>
               ) : null}
 
-              {displayId ? (
+              {displayId && isStudent ? (
                 <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={1}>
-                  {isAdmin ? 'Staff ID' : 'Student ID'}: {displayId}
+                  Student ID: {displayId}
                 </Text>
               ) : null}
             </View>
@@ -189,7 +190,7 @@ export default function AccountScreen({
                 <Ionicons name="location-outline" size={20} color="#d97706" />
               </View>
               <View className="flex-1">
-                <Text className="text-slate-700 font-semibold text-sm">My Parking Location</Text>
+                <Text className="text-slate-700 font-semibold text-sm">Find My Parking</Text>
                 {parkedSpot && (
                   <Text className="text-slate-400 text-xs mt-0.5" numberOfLines={1}>
                     {`${(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VMES Building' : parkedSpot.building} (${parkedSpot.pillar})`}
