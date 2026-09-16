@@ -1,5 +1,29 @@
 import React, { useState } from 'react';
 
+const THAILAND_TIME_ZONE = 'Asia/Bangkok';
+
+const getThailandDateKey = (value = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) return '';
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: THAILAND_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(parts.map(({ type, value: partValue }) => [type, partValue]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
+const formatThailandDate = (value = new Date()) => {
+  const key = getThailandDateKey(value);
+  if (!key) return '';
+  const [year, month, day] = key.split('-');
+  return `${day}/${month}/${year}`;
+};
+
 export default function InspectionTable({
   logs,
   isOverview = false,
@@ -8,7 +32,7 @@ export default function InspectionTable({
   initialViolationFilter = 'all'
 }) {
   const [dateFilter, setDateFilter] = useState('today');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getThailandDateKey());
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [violationFilter, setViolationFilter] = useState(initialViolationFilter); // 'all' | 'violations_only' | 'pass_only'
   const [gateFilter, setGateFilter] = useState('all'); // 'all' | 'entry' | 'exit'
@@ -41,17 +65,18 @@ export default function InspectionTable({
     let dateMatch = true;
     if (item.rawDate || item.timestamp) {
       const itemDate = item.rawDate ? new Date(item.rawDate) : (item.timestamp ? new Date(item.timestamp) : new Date());
-      const today = new Date();
+      const todayKey = getThailandDateKey();
+      const yesterday = new Date();
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      const yesterdayKey = getThailandDateKey(yesterday);
+      const itemDateKey = getThailandDateKey(itemDate);
 
       if (dateFilter === 'today') {
-        dateMatch = itemDate.toDateString() === today.toDateString();
+        dateMatch = itemDateKey === todayKey;
       } else if (dateFilter === 'yesterday') {
-        const yest = new Date(today);
-        yest.setDate(yest.getDate() - 1);
-        dateMatch = itemDate.toDateString() === yest.toDateString();
+        dateMatch = itemDateKey === yesterdayKey;
       } else if (dateFilter === 'custom' && selectedDate) {
-        const [year, month, day] = selectedDate.split('-').map(Number);
-        dateMatch = itemDate.getFullYear() === year && (itemDate.getMonth() + 1) === month && itemDate.getDate() === day;
+        dateMatch = itemDateKey === selectedDate;
       }
     } else {
       dateMatch = dateFilter === 'today' || dateFilter === 'all';
@@ -247,10 +272,7 @@ export default function InspectionTable({
                   let d = new Date();
                   if (item.rawDate) d = new Date(item.rawDate);
                   else if (item.timestamp) d = new Date(item.timestamp);
-                  const day = String(d.getDate()).padStart(2, '0');
-                  const month = String(d.getMonth() + 1).padStart(2, '0');
-                  const year = d.getFullYear();
-                  return !isNaN(d.getTime()) ? `${day}/${month}/${year}` : new Date().toLocaleDateString('en-GB');
+                  return !isNaN(d.getTime()) ? formatThailandDate(d) : formatThailandDate();
                 })();
 
                 return (
@@ -323,10 +345,7 @@ export default function InspectionTable({
                     let d = new Date();
                     if (selectedSnapshot.rawDate) d = new Date(selectedSnapshot.rawDate);
                     else if (selectedSnapshot.timestamp) d = new Date(selectedSnapshot.timestamp);
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const year = d.getFullYear();
-                    const dateStr = !isNaN(d.getTime()) ? `${day}/${month}/${year}` : new Date().toLocaleDateString('en-GB');
+                    const dateStr = !isNaN(d.getTime()) ? formatThailandDate(d) : formatThailandDate();
                     return `${dateStr} • ${selectedSnapshot.time || ''}`;
                   })()}
                 </div>

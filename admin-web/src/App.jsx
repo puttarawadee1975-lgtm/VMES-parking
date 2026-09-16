@@ -67,7 +67,7 @@ export default function App() {
         if (Array.isArray(dataDet)) {
           const transformedLogs = dataDet.map(item => {
             const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
-            const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const timeStr = dateObj.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const isV = item.violation || false;
             const vType = isV ? (item.violation_type || (item.vehicle_type === 'car' ? 'Parked >30 Mins' : 'No Helmet')).replace(' (-10 pts)', '') : '-';
             const hText = isV ? (item.vehicle_type === 'car' ? 'Parked >30 Mins' : 'No Helmet') : '-';
