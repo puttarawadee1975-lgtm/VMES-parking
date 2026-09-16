@@ -10,35 +10,20 @@ from collections import Counter
 from ultralytics import YOLO
 from PIL import Image, ImageDraw, ImageFont
 
-# ================= Configuration =================
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/detections")
-GATE_TYPE = os.getenv("GATE_TYPE", "ENTRY")  # ENTRY or EXIT
-DEFAULT_ZONE = os.getenv("DEFAULT_ZONE", "Zone A (Building 1 - Car)")
-
-# Mac M1 Apple Silicon acceleration check
-DEVICE = "mps" if os.uname().sysname == "Darwin" and os.uname().machine == "arm64" else "cpu"
-print(f"[AI PIPELINE] Initializing on device: {DEVICE.upper()} (Apple Silicon M1 Acceleration)")
-
-# Load OCR & Models
-print("[AI PIPELINE] Loading EasyOCR (Thai + English)...")
-reader = easyocr.Reader(['th', 'en'], gpu=(DEVICE == "mps" or DEVICE == "cuda"))
-
-print("[AI PIPELINE] Loading YOLO Models...")
-helmet_model = YOLO("helmet_model.pt")
-# Optional general vehicle model if needed
-try:
-    vehicle_model = YOLO("yolov8n.pt")
-except Exception:
-    vehicle_model = None
-
-# Video Capture (Camera 1 or 0 or CLI arg)
+# Video Capture (Camera 1 or 2 or 0 or CLI arg)
 if len(sys.argv) > 1:
     cam_index = int(sys.argv[1])
 else:
     cam_index = int(os.getenv("VIDEO_SOURCE", "1"))
 
+CAMERA_ID = os.getenv("CAMERA_ID", f"{cam_index:02d}" if cam_index in [1, 2] else "01")
+GATE_TYPE = os.getenv("GATE_TYPE", "EXIT" if CAMERA_ID == "02" or cam_index == 2 else "ENTRY")
+DEFAULT_ZONE = os.getenv("DEFAULT_ZONE", "Zone A (Building 1 - Car)")
+
+print(f"[AI PIPELINE] Camera ID: {CAMERA_ID} | Gate Direction: {GATE_TYPE} | Zone: {DEFAULT_ZONE}")
 print(f"[AI PIPELINE] Opening video source camera index: {cam_index}")
 cap = cv2.VideoCapture(cam_index)
+
 
 if not cap.isOpened() and cam_index != 0:
     print(f"[AI PIPELINE WARNING] Camera index {cam_index} failed. Falling back to camera index 0...")
@@ -98,6 +83,7 @@ def post_detection_to_backend(plate: str, vehicle_type: str, helmet_detected: bo
         "license_plate": plate,
         "vehicle_type": vehicle_type,
         "helmet_detected": helmet_detected if vehicle_type == "motorcycle" else None,
+        "camera_id": CAMERA_ID,
         "gate_type": GATE_TYPE,
         "zone": zone
     }

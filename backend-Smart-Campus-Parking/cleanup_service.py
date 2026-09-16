@@ -126,3 +126,42 @@ def cleanup_old_records_and_images(retention_days: int = 30) -> dict:
     }
     print(f"[RETENTION CLEANUP COMPLETE] Summary: {summary}")
     return summary
+
+def cleanup_old_term_data(term_name: str) -> dict:
+    """
+    Deletes all detection logs and saved spots belonging to `term_name` (e.g. 2025-2, 2025-1)
+    from MongoDB Atlas AND removes all associated photo files from backend disk storage.
+    """
+    deleted_logs_count = 0
+    deleted_images_count = 0
+
+    if detection_logs_collection is not None:
+        try:
+            term_logs = list(detection_logs_collection.find({"term": term_name}))
+            log_ids = []
+            for doc in term_logs:
+                log_ids.append(doc["_id"])
+                for field in ["snapshot_url", "image_url", "photo_url", "evidence_url", "cctv_image_url"]:
+                    img_url = doc.get(field)
+                    if img_url and delete_local_image_file(img_url):
+                        deleted_images_count += 1
+            if log_ids:
+                res = detection_logs_collection.delete_many({"_id": {"$in": log_ids}})
+                deleted_logs_count = res.deleted_count
+        except Exception as err:
+            print(f"[TERM CLEANUP ERROR - detection_logs] {err}")
+
+    if saved_spots_collection is not None:
+        try:
+            saved_spots_collection.delete_many({"term": term_name})
+        except Exception as err:
+            print(f"[TERM CLEANUP ERROR - saved_spots] {err}")
+
+    summary = {
+        "status": "success",
+        "term": term_name,
+        "deleted_logs": deleted_logs_count,
+        "deleted_images": deleted_images_count
+    }
+    print(f"[TERM CLEANUP COMPLETE] Summary: {summary}")
+    return summary

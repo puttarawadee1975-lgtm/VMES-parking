@@ -34,11 +34,13 @@ class DetectionLogCreate(BaseModel):
     license_plate: str = Field(..., description="Detected license plate string")
     vehicle_type: Literal["car", "motorcycle"] = Field(..., description="'car' or 'motorcycle'")
     helmet_detected: Optional[bool] = Field(None, description="True/False for motorcycle; None for car")
-    gate_type: str = Field(default="ENTRY", description="Gate direction or location e.g. ENTRY or EXIT")
-    zone: Optional[str] = Field("Zone A", description="Parking zone associated with the gate")
+    camera_id: Optional[str] = Field(None, description="Camera ID e.g. '01' for Entry or '02' for Exit")
+    gate_type: Optional[str] = Field(default="ENTRY", description="Gate direction or location e.g. ENTRY or EXIT")
+    zone: Optional[str] = Field("-", description="Gate zone")
     violation: Optional[bool] = None  # Computed automatically if omitted
     image_url: Optional[str] = Field(None, description="URL or path to captured CCTV snapshot image")
     timestamp: Optional[datetime] = None
+
 
 class DetectionLogResponse(DetectionLogCreate):
     id: str

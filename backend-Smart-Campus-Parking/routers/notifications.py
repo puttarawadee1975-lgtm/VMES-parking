@@ -6,30 +6,72 @@ from database import (
     users_collection,
     detection_logs_collection,
     saved_spots_collection,
-    system_settings_collection
+    system_settings_collection,
+    notification_templates_collection
 )
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
+def get_template(noti_type: str, default_title: str, default_message: str, **kwargs) -> tuple:
+    """
+    Fetches dynamic notification template from MongoDB Atlas (notification_templates collection).
+    Falls back to default Python string if missing.
+    """
+    title = default_title
+    message = default_message
+
+    if notification_templates_collection is not None:
+        tpl = notification_templates_collection.find_one({"type": noti_type})
+        if tpl:
+            title = tpl.get("title", default_title)
+            message = tpl.get("message", default_message)
+
+    try:
+        if kwargs:
+            message = message.format(**kwargs)
+    except Exception:
+        pass
+
+    return title, message
+
 def is_enforcement_enabled() -> bool:
+
     if system_settings_collection is not None:
         setting = system_settings_collection.find_one({"key": "enforcement_system"})
         if setting and "active" in setting:
             return bool(setting["active"])
     return True
 
+def get_parking_policy() -> dict:
+    """
+    Fetches dynamic parking policy thresholds from MongoDB Atlas (system_settings collection).
+    """
+    if system_settings_collection is not None:
+        policy = system_settings_collection.find_one({"key": "parking_policy"})
+        if policy:
+            return policy
+    return {
+        "max_car_parking_minutes": 30,
+        "peak_hours_cutoff": "16:30",
+        "overtime_penalty_points": 10,
+        "helmet_penalty_points": 10
+    }
+
 def check_and_create_vmes_parking_notification(user_email: str, zone: str = "VMES Building") -> Optional[dict]:
     """
-    Evaluates Student VMES Parking Policy:
-    1. Mon-Fri Before 16:30:
-       - Initial entry notification: 30-minute parking grace period warning.
-       - Overtime check (> 30 mins): Deduct 10 safety points & generate overtime penalty notification (if Enforcement is Active).
-    2. Sat-Sun: Free & Unlimited parking anytime. No penalties or warnings.
+    Evaluates Student VMES Parking Policy dynamically from MongoDB Atlas settings.
     """
     if not user_email or notifications_collection is None:
         return None
 
+    policy = get_parking_policy()
+    max_minutes = policy.get("max_car_parking_minutes", 30)
+    overtime_points = policy.get("overtime_penalty_points", 10)
+
     user_email_clean = user_email.strip().lower()
+    if not is_enforcement_enabled():
+        print(f"[FREE PARKING EVENT MODE] Master toggle is OFF. Parking notifications & overtime penalties skipped for {user_email_clean}")
+        return None
     user_doc = None
     if users_collection is not None:
         user_doc = users_collection.find_one({"email": user_email_clean})
@@ -55,7 +97,7 @@ def check_and_create_vmes_parking_notification(user_email: str, zone: str = "VME
     is_before_430pm = (now.hour < 16) or (now.hour == 16 and now.minute < 30)
 
     if is_weekday and is_before_430pm:
-        # 1. Send Initial 30-Minute Grace Period Notification (Car Parking - Once Per Day Max)
+        # 1. Send Initial Grace Period Notification (Car Parking - Once Per Day Max)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         existing_warning = notifications_collection.find_one({
             "user_email": user_email_clean,
@@ -65,10 +107,15 @@ def check_and_create_vmes_parking_notification(user_email: str, zone: str = "VME
         
         created_noti = None
         if not existing_warning:
+            title, message = get_template(
+                "vmes_parking_30min_warning",
+                f"VMES Car Parking Limit: {max_minutes} Mins Max",
+                f"Student car parking at VMES is permitted for up to {max_minutes} minutes before 16:30 on weekdays. Exceeding {max_minutes} minutes for cars will result in a {overtime_points}-point safety deduction. Motorcycles park free & unlimited anytime."
+            )
             noti_doc = {
                 "user_email": user_email_clean,
-                "title": "VMES Car Parking Limit: 30 Mins Max",
-                "message": "Student car parking at VMES is permitted for up to 30 minutes before 16:30 on weekdays. Exceeding 30 minutes for cars will result in a 10-point safety deduction. Motorcycles park free & unlimited anytime.",
+                "title": title,
+                "message": message,
                 "type": "vmes_parking_30min_warning",
                 "category": "Parking Alert",
                 "zone": zone,
@@ -78,13 +125,13 @@ def check_and_create_vmes_parking_notification(user_email: str, zone: str = "VME
             res = notifications_collection.insert_one(noti_doc)
             noti_doc["_id"] = str(res.inserted_id)
             created_noti = noti_doc
-            print(f"[VMES NOTIFICATION] 30-minute car grace warning sent to {user_email_clean}")
+            print(f"[VMES NOTIFICATION] {max_minutes}-minute car grace warning sent to {user_email_clean}")
 
-        # 2. Check for Overtime Parking (> 30 Mins) and Apply 10-Point Deduction for Cars
-        thirty_mins_ago = now - timedelta(minutes=30)
+        # 2. Check for Overtime Parking (> max_minutes Mins) and Apply Points Deduction for Cars
+        thirty_mins_ago = now - timedelta(minutes=max_minutes)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Look for active parked spot or entry detection from > 30 minutes ago today
+        # Look for active parked spot or entry detection from > max_minutes ago today
         old_entry = None
         if saved_spots_collection is not None:
             old_entry = saved_spots_collection.find_one({
@@ -116,37 +163,45 @@ def check_and_create_vmes_parking_notification(user_email: str, zone: str = "VME
                     print(f"[FREE PARKING EVENT MODE] Master toggle is OFF. Overtime point deduction skipped for {user_email_clean}")
                     return created_noti
 
-                # Deduct 10 safety points for car overtime
+                # Deduct safety points for car overtime
                 current_score = user_doc.get("driving_score", 100)
-                new_score = max(0, current_score - 10)
+                new_score = max(0, current_score - overtime_points)
                 users_collection.update_one(
                     {"_id": user_doc["_id"]},
                     {"$set": {"driving_score": new_score}}
                 )
                 
+                title, message = get_template(
+                    "vmes_overtime_penalty",
+                    f"VMES Car Parking Overtime (-{overtime_points} Points)",
+                    f"Exceeded the {max_minutes}-minute weekday car parking limit at VMES Building before 16:30. {overtime_points} safety driving points have been deducted."
+                )
+
                 penalty_doc = {
                     "user_email": user_email_clean,
-                    "title": "VMES Car Parking Overtime (-10 Points)",
-                    "message": "Exceeded the 30-minute weekday car parking limit at VMES Building before 16:30. 10 safety driving points have been deducted.",
+                    "title": title,
+                    "message": message,
                     "type": "vmes_overtime_penalty",
                     "category": "Safety Alert",
-                    "scoreDeducted": 10,
+                    "scoreDeducted": overtime_points,
                     "zone": zone,
                     "timestamp": now,
                     "read": False
                 }
                 res = notifications_collection.insert_one(penalty_doc)
                 penalty_doc["_id"] = str(res.inserted_id)
-                print(f"[VMES OVERTIME DEDUCTION] Deducted 10 points from student car owner {user_email_clean}")
+                print(f"[VMES OVERTIME DEDUCTION] Deducted {overtime_points} points from student car owner {user_email_clean}")
                 return penalty_doc
 
         return created_noti
 
     return None
 
+
 def trigger_helmet_violation_notification(user_email: str, license_plate: str, gate_name: str = "VMES Entry Gate"):
     """
-    Creates MongoDB notification for No Helmet Violation & applies 10-point safety deduction if Enforcement System is Active.
+    Creates MongoDB notification for No Helmet Violation & applies 10-point safety deduction.
+    EXCEPTIONAL SAFETY RULE: Helmet detection is ALWAYS active 24/7 regardless of Parking Access Mode status.
     """
     if not user_email or notifications_collection is None:
         return None
@@ -154,8 +209,7 @@ def trigger_helmet_violation_notification(user_email: str, license_plate: str, g
     user_email_clean = user_email.strip().lower()
     now = datetime.now(timezone.utc)
     
-    score_deducted = 10 if is_enforcement_enabled() else 0
-    if is_enforcement_enabled() and users_collection is not None:
+    if users_collection is not None:
         user_doc = users_collection.find_one({"email": user_email_clean})
         if user_doc:
             current_score = user_doc.get("driving_score", 100)
@@ -163,13 +217,21 @@ def trigger_helmet_violation_notification(user_email: str, license_plate: str, g
             users_collection.update_one({"_id": user_doc["_id"]}, {"$set": {"driving_score": new_score}})
             print(f"[HELMET VIOLATION DEDUCTION] Deducted 10 points from {user_email_clean}")
 
+    title, message = get_template(
+        "helmet_violation",
+        "No Helmet Detected (-10 Points)",
+        "AI CCTV detected driving without a helmet at {gate_name} for plate {plate}. 10 safety points deducted.",
+        gate_name=gate_name,
+        plate=license_plate
+    )
+
     noti_doc = {
         "user_email": user_email_clean,
-        "title": "No Helmet Violation Detected" if score_deducted == 0 else "No Helmet Detected (-10 Points)",
-        "message": f"AI CCTV detected driving without a helmet at {gate_name} for plate {license_plate}." + (" (Event Mode: Point deduction paused)" if score_deducted == 0 else " 10 safety points deducted."),
+        "title": title,
+        "message": message,
         "type": "helmet_violation",
         "category": "Safety Alert",
-        "scoreDeducted": score_deducted,
+        "scoreDeducted": 10,
         "plate": license_plate,
         "zone": gate_name,
         "timestamp": now,

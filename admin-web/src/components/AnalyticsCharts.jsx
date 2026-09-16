@@ -18,7 +18,19 @@ export default function AnalyticsCharts() {
   const barOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const raw = context.raw || 0;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const pct = total > 0 ? ((raw / total) * 100).toFixed(1) : '0';
+            return `${context.dataset.label || 'Entries'}: ${raw.toLocaleString()} vehicles (${pct}%)`;
+          }
+        }
+      }
+    },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
       y: { grid: { color: '#202d4a' }, ticks: { color: '#94a3b8' } }

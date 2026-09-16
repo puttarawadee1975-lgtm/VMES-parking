@@ -6,291 +6,7 @@ const SAMPLE_ZONE_IMAGES = [
   { name: 'Faculty & Staff Car Deck', url: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80' }
 ];
 
-// Initial mock data of parking spots (Camera ALPR)
-const INITIAL_REGISTERED_PARKED_SPOTS = [
-  {
-    id: 'SPOT-65070042',
-    owner: 'Thanaphat S.',
-    studentId: '65070042',
-    ownerEmail: '65070042@student.university.ac.th',
-    role: 'Student',
-    plate: '1KB 1234',
-    province: 'Bangkok',
-    vehicleType: 'motorcycle',
-    vehicleName: 'Honda PCX 160 (Black)',
-    building: 'VMES Building',
-    zone: 'Zone B',
-    floor: 'Floor G',
-    pillar: 'Spot B-01',
-    entryTime: '08:24 AM (Gate 1 Entry)',
-    exitTime: 'Active (In Building)',
-    scannedTime: '08:24 AM',
-    entryGate: 'Gate 1 Entry at 08:24 AM',
-    safetyScore: 98,
-    status: 'Active Parked',
-    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'SPOT-65070088',
-    owner: 'Puttarawadee T.',
-    studentId: '65070088',
-    ownerEmail: 'puttarawadee@student.university.ac.th',
-    role: 'Student',
-    plate: '3KB 8924',
-    province: 'Bangkok',
-    vehicleType: 'car',
-    vehicleName: 'Toyota Yaris Ativ (Silver)',
-    building: 'VMES Building',
-    zone: 'Zone A',
-    floor: 'Floor G',
-    pillar: 'Spot A-02',
-    entryTime: '09:10 AM (Gate 1 Entry)',
-    exitTime: 'Active (In Building)',
-    scannedTime: '09:10 AM',
-    entryGate: 'Gate 1 Entry at 09:10 AM',
-    safetyScore: 100,
-    status: 'Active Parked',
-    imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'SPOT-SOMCHAI-P',
-    owner: 'Dr. Somchai P.',
-    studentId: 'SEC-01',
-    ownerEmail: 'somchai@university.ac.th',
-    role: 'Staff',
-    plate: '9KB 9999',
-    province: 'Samut Prakan',
-    vehicleType: 'car',
-    vehicleName: 'Toyota Camry (White)',
-    building: 'VMES Building',
-    zone: 'Zone C',
-    floor: 'Floor G',
-    pillar: 'Spot C-01',
-    entryTime: '08:10 AM (Gate 2 Entry)',
-    exitTime: 'Active (In Building)',
-    scannedTime: '08:10 AM',
-    entryGate: 'Gate 2 Entry at 08:10 AM',
-    safetyScore: 100,
-    status: 'Active Parked',
-    imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'SPOT-66070112',
-    owner: 'Cherie Anan',
-    studentId: '66070112',
-    ownerEmail: 'cherie.a@student.university.ac.th',
-    role: 'Student',
-    plate: '9KH 5512',
-    province: 'Bangkok',
-    vehicleType: 'car',
-    vehicleName: 'Mazda 2 Sedan (Red)',
-    building: 'VMES Building',
-    zone: 'Zone A',
-    floor: 'Floor G',
-    pillar: 'Spot A-03',
-    entryTime: '08:00 AM (Gate 1 Entry)',
-    exitTime: 'Active (In Building)',
-    scannedTime: '08:00 AM',
-    entryGate: 'Gate 1 (Main Entrance) at 08:00 AM',
-    safetyScore: 100,
-    status: 'Active Parked',
-    imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'SPOT-65070118',
-    owner: 'Nattapong K.',
-    studentId: '65070118',
-    ownerEmail: '65070118@student.university.ac.th',
-    role: 'Student',
-    plate: '3KH 5678',
-    province: 'Bangkok',
-    vehicleType: 'motorcycle',
-    vehicleName: 'Yamaha Grand Filano (Gray)',
-    building: 'VMES Building',
-    zone: 'Zone B',
-    floor: 'Floor G',
-    pillar: 'Spot B-02',
-    entryTime: '09:15 AM (Gate 1 Entry)',
-    exitTime: 'Active (In Building)',
-    scannedTime: '09:15 AM',
-    entryGate: 'Gate 1 Entry at 09:15 AM',
-    safetyScore: 80,
-    status: 'Active Parked',
-    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'SPOT-65070399',
-    owner: 'Pattarapon M.',
-    studentId: '65070399',
-    ownerEmail: '65070399@student.university.ac.th',
-    role: 'Student',
-    plate: '5KS 8888',
-    province: 'Bangkok',
-    vehicleType: 'car',
-    vehicleName: 'Honda Civic (Black)',
-    building: 'VMES Building',
-    zone: 'Zone A',
-    floor: 'Floor G',
-    pillar: 'Spot A-01',
-    entryTime: '10:25 AM (Gate 1 Entry)',
-    exitTime: 'Active (In Building)',
-    scannedTime: '10:25 AM',
-    entryGate: 'Gate 1 Entry at 10:25 AM',
-    safetyScore: 95,
-    status: 'Active Parked',
-    imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'SPOT-65070244',
-    owner: 'Chayanan T.',
-    studentId: '65070244',
-    ownerEmail: '65070244@student.university.ac.th',
-    role: 'Student',
-    plate: '2KB 4321',
-    province: 'Nonthaburi',
-    vehicleType: 'motorcycle',
-    vehicleName: 'Vespa Sprint 150 (White)',
-    building: 'VMES Building',
-    zone: 'Zone D',
-    floor: 'Floor G',
-    pillar: 'Spot D-01',
-    entryTime: '11:00 AM (Gate 2 Entry)',
-    exitTime: 'Active (In Building)',
-    scannedTime: '11:00 AM',
-    entryGate: 'Gate 2 Entry at 11:00 AM',
-    safetyScore: 100,
-    status: 'Active Parked',
-    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'SPOT-65070512',
-    owner: 'Kittisak W.',
-    studentId: '65070512',
-    ownerEmail: '65070512@student.university.ac.th',
-    role: 'Student',
-    plate: '4KM 7777',
-    province: 'Bangkok',
-    vehicleType: 'motorcycle',
-    vehicleName: 'GPX Drone 150 (Red)',
-    building: 'VMES Building',
-    zone: 'Zone B',
-    floor: 'Floor G',
-    pillar: 'Spot B-01',
-    entryTime: '07:45 AM (Gate 1 Entry)',
-    exitTime: 'Active (In Building)',
-    scannedTime: '07:45 AM',
-    entryGate: 'Gate 1 (Main Entrance) at 07:45 AM',
-    safetyScore: 50,
-    status: 'Active Parked',
-    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
-  }
-];
-
-// Historical parking records log
-const INITIAL_PARKING_HISTORY = [
-  {
-    id: 'HIST-1001',
-    date: '2026-09-14',
-    entryTime: '08:15 AM (Gate 1 Entry)',
-    exitTime: '12:45 PM (Exit Gate 1)',
-    duration: '4h 30m',
-    spot: 'Spot A-01',
-    zone: 'Zone A',
-    studentId: '65070088',
-    owner: 'Puttarawadee T.',
-    role: 'Student',
-    plate: '3KB 8924',
-    province: 'Bangkok',
-    vehicleName: 'Toyota Yaris Ativ (Silver)',
-    vehicleType: 'car',
-    status: 'Completed'
-  },
-  {
-    id: 'HIST-1002',
-    date: '2026-09-14',
-    entryTime: '07:50 AM (Gate 2 Entry)',
-    exitTime: '16:20 PM (Exit Gate 1)',
-    duration: '8h 30m',
-    spot: 'Spot C-01',
-    zone: 'Zone C',
-    studentId: 'SEC-01',
-    owner: 'Dr. Somchai P.',
-    role: 'Staff',
-    plate: '9KB 9999',
-    province: 'Samut Prakan',
-    vehicleName: 'Toyota Camry (White)',
-    vehicleType: 'car',
-    status: 'Completed'
-  },
-  {
-    id: 'HIST-1003',
-    date: '2026-09-14',
-    entryTime: '08:24 AM (Gate 1 Entry)',
-    exitTime: '12:30 PM (Exit Gate 2)',
-    duration: '4h 06m',
-    spot: 'Spot B-01',
-    zone: 'Zone B',
-    studentId: '65070042',
-    owner: 'Thanaphat S.',
-    role: 'Student',
-    plate: '1KB 1234',
-    province: 'Bangkok',
-    vehicleName: 'Honda PCX 160 (Black)',
-    vehicleType: 'motorcycle',
-    status: 'Completed'
-  },
-  {
-    id: 'HIST-1004',
-    date: '2026-09-13',
-    entryTime: '09:00 AM (Gate 1 Entry)',
-    exitTime: '15:10 PM (Exit Gate 1)',
-    duration: '6h 10m',
-    spot: 'Spot A-03',
-    zone: 'Zone A',
-    studentId: '66070112',
-    owner: 'Cherie Anan',
-    role: 'Student',
-    plate: '9KH 5512',
-    province: 'Bangkok',
-    vehicleName: 'Mazda 2 Sedan (Red)',
-    vehicleType: 'car',
-    status: 'Completed'
-  },
-  {
-    id: 'HIST-1005',
-    date: '2026-09-13',
-    entryTime: '10:15 AM (Gate 2 Entry)',
-    exitTime: '17:45 PM (Exit Gate 2)',
-    duration: '7h 30m',
-    spot: 'Spot D-01',
-    zone: 'Zone D',
-    studentId: '65070244',
-    owner: 'Chayanan T.',
-    role: 'Student',
-    plate: '2KB 4321',
-    province: 'Nonthaburi',
-    vehicleName: 'Vespa Sprint 150 (White)',
-    vehicleType: 'motorcycle',
-    status: 'Completed'
-  },
-  {
-    id: 'HIST-1006',
-    date: '2026-09-12',
-    entryTime: '08:30 AM (Gate 1 Entry)',
-    exitTime: '13:00 PM (Exit Gate 1)',
-    duration: '4h 30m',
-    spot: 'Spot A-02',
-    zone: 'Zone A',
-    studentId: '65070399',
-    owner: 'Puttarapon M.',
-    role: 'Student',
-    plate: '5KS 8888',
-    province: 'Bangkok',
-    vehicleName: 'Honda Civic (Black)',
-    vehicleType: 'car',
-    status: 'Completed'
-  }
-];
+// Zone layout structure for visual parking slot grid
 
 // Definition of zone layout spots for visual slot grid
 const ZONE_PILLAR_LAYOUTS = {
@@ -335,77 +51,51 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
 
 
   // Search & Date Filter Controls
+  const [selectedTerm, setSelectedTerm] = useState('2026-1');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedZoneId, setSelectedZoneId] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('today');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [reservationFilter, setReservationFilter] = useState('ACTIVE');
 
-  // Calculate live count from logs & occupancy
-  const estCars = occupied > 0 ? occupied : logs.filter(l => l.vehicle_type === 'car' || (l.vehicle && /car/i.test(l.vehicle))).length;
-  const estMotos = (logs || []).filter(l => l.vehicle_type === 'motorcycle' || (l.vehicle && /motorcycle|motorcycle/i.test(l.vehicle))).length;
+  // State for Registered Account Scanned & Admin Locked Parking Spots from MongoDB Atlas
+  const [parkedSpots, setParkedSpots] = useState([]);
 
-  const availableCarSpots = available > 0 ? available : Math.max(0, total - estCars);
-  const carRate = rate;
+  // Fetch real term-by-term parked vehicle spots from Backend MongoDB Atlas
+  React.useEffect(() => {
+    fetch(`http://localhost:8000/parking/occupied-spots?term=${selectedTerm}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        setParkedSpots(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        setParkedSpots([]);
+      });
+  }, [selectedTerm]);
 
-  // State for Registered Account Scanned & Admin Locked Parking Spots
-  const [parkedSpots, setParkedSpots] = useState(INITIAL_REGISTERED_PARKED_SPOTS);
+  // Dynamic Building Zones State (Loaded from MongoDB Atlas)
+  const [zones, setZones] = useState([]);
 
-  // Dynamic Building Zones State
-  const [zones, setZones] = useState([
-    {
-      id: 'Zone A',
-      name: 'Zone A',
-      tag: 'Cars Only',
-      badgeClass: 'badge-live',
-      location: 'Floor G - Automobile Deck A',
-      pillars: 'Spots A-01 - A-10',
-      capacity: '10 Car Spots',
-      imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80',
-      description: 'Automobile Deck A (A-01 to A-10).',
-      color: '#2563eb',
-      bgLight: '#eff6ff'
-    },
-    {
-      id: 'Zone B',
-      name: 'Zone B',
-      tag: 'Motorcycles',
-      badgeClass: 'badge-warning',
-      location: 'Floor G - Motorcycle Deck B',
-      pillars: 'Spots B-01, B-02 (2 Sides)',
-      capacity: '2 Motorcycle Sides',
-      imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80',
-      description: 'Motorcycle Deck B with 2 sides (B-01, B-02).',
-      color: '#d97706',
-      bgLight: '#fef3c7'
-    },
-    {
-      id: 'Zone C',
-      name: 'Zone C',
-      tag: 'Cars Only',
-      badgeClass: 'badge-live',
-      location: 'Floor G - Automobile Deck C',
-      pillars: 'Spots C-01 - C-08',
-      capacity: '8 Car Spots',
-      imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80',
-      description: 'Automobile Deck C (C-01 to C-08).',
-      color: '#9333ea',
-      bgLight: '#f3e8ff'
-    },
-    {
-      id: 'Zone D',
-      name: 'Zone D',
-      tag: 'Motorcycles',
-      badgeClass: 'badge-warning',
-      location: 'Floor G - Motorcycle Deck D',
-      pillars: 'Spot D-01',
-      capacity: '1 Motorcycle Spot',
-      imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80',
-      description: 'Single Motorcycle Deck D (D-01).',
-      color: '#059669',
-      bgLight: '#dcfce7'
-    }
-  ]);
+  // Fetch building zones from MongoDB Atlas on mount
+  React.useEffect(() => {
+    fetch('http://localhost:8000/parking/building-zones')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setZones(data);
+        }
+      })
+      .catch(err => console.warn('Failed to load building zones from MongoDB:', err));
+  }, []);
+
+  const syncZonesToMongoDB = (newZones) => {
+    fetch('http://localhost:8000/parking/building-zones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newZones)
+    }).catch(err => console.warn('Failed to sync building zones to MongoDB:', err));
+  };
+
 
   // Modal State for Adding/Editing Zone Config
   const [showZoneModal, setShowZoneModal] = useState(false);
@@ -474,9 +164,25 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     });
   }, [parkedSpots, searchQuery, selectedZoneId, dateFilter, selectedDate, reservationFilter]);
 
-  // Filtered Historical Parking Records
+  // Filtered Historical Parking Records from MongoDB Atlas Detection Logs
   const filteredHistory = useMemo(() => {
-    return INITIAL_PARKING_HISTORY.filter(item => {
+    return (logs || []).map((l, index) => ({
+      id: l.id || `HIST-${index + 1000}`,
+      date: l.rawDate ? l.rawDate.split('T')[0] : (l.timestamp ? new Date(l.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+      entryTime: l.time || '08:00 AM',
+      exitTime: l.status === 'Completed' ? 'Exit Gate 1' : 'Active (In Building)',
+      duration: 'Live',
+      spot: l.pillar || `Spot ${l.zone ? l.zone.replace('Zone ', '') : 'A'}-01`,
+      zone: l.zone || 'Zone A',
+      studentId: l.studentId || l.ownerEmail?.split('@')[0] || 'STUDENT',
+      owner: l.owner || 'Registered Driver',
+      role: l.role || 'Student',
+      plate: l.plate || l.license_plate || '-',
+      province: l.province || 'กรุงเทพมหานคร',
+      vehicleName: l.vehicle || l.vehicleName || 'Vehicle',
+      vehicleType: l.vehicle_type || l.vehicleType || 'car',
+      status: l.status || 'Completed'
+    })).filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q || (
         item.owner?.toLowerCase().includes(q) ||
@@ -488,24 +194,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       );
 
       const matchZone = selectedZoneId === 'ALL' || item.zone.toUpperCase().includes(selectedZoneId.toUpperCase());
-
-      let matchDate = true;
-      if (dateFilter !== 'all') {
-        const todayStr = new Date().toISOString().split('T')[0];
-        if (dateFilter === 'today') {
-          matchDate = item.date === todayStr;
-        } else if (dateFilter === 'yesterday') {
-          const yest = new Date();
-          yest.setDate(yest.getDate() - 1);
-          matchDate = item.date === yest.toISOString().split('T')[0];
-        } else if (dateFilter === 'custom' && selectedDate) {
-          matchDate = item.date === selectedDate;
-        }
-      }
-
-      return matchSearch && matchZone && matchDate;
+      return matchSearch && matchZone;
     });
-  }, [searchQuery, selectedZoneId, dateFilter, selectedDate]);
+  }, [logs, searchQuery, selectedZoneId]);
 
 
 
@@ -543,17 +234,21 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     if (formTag.toLowerCase().includes('staff') || formTag.toLowerCase().includes('faculty')) badgeClass = 'badge-secondary';
 
     if (editingZone) {
-      setZones(prev => prev.map(z => z.id === editingZone.id ? {
-        ...z,
-        name: formName.trim(),
-        tag: formTag.trim(),
-        badgeClass,
-        location: formLocation.trim(),
-        pillars: formPillars.trim(),
-        capacity: formCapacity.trim(),
-        imageUrl: formImageUrl.trim(),
-        description: formDescription.trim()
-      } : z));
+      setZones(prev => {
+        const next = prev.map(z => z.id === editingZone.id ? {
+          ...z,
+          name: formName.trim(),
+          tag: formTag.trim(),
+          badgeClass,
+          location: formLocation.trim(),
+          pillars: formPillars.trim(),
+          capacity: formCapacity.trim(),
+          imageUrl: formImageUrl.trim(),
+          description: formDescription.trim()
+        } : z);
+        syncZonesToMongoDB(next);
+        return next;
+      });
     } else {
       const newZoneObj = {
         id: formName.trim(),
@@ -568,23 +263,37 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
         color: '#2563eb',
         bgLight: '#eff6ff'
       };
-      setZones(prev => [...prev, newZoneObj]);
+      setZones(prev => {
+        const next = [...prev, newZoneObj];
+        syncZonesToMongoDB(next);
+        return next;
+      });
     }
     setShowZoneModal(false);
   };
 
   const handleDeleteZone = (zoneId) => {
     if (window.confirm('Are you sure you want to remove this Building Zone specification?')) {
-      setZones(prev => prev.filter(z => z.id !== zoneId));
+      setZones(prev => {
+        const next = prev.filter(z => z.id !== zoneId);
+        syncZonesToMongoDB(next);
+        return next;
+      });
     }
   };
+
 
   const totalActiveSpotsCount = parkedSpots.filter(s => s.status === 'Active Parked').length;
   const currentSelectedZoneObj = zones.find(z => z.name.toUpperCase() === selectedZoneId.toUpperCase() || z.id.toUpperCase() === selectedZoneId.toUpperCase());
   const isMotorcycleZone = currentSelectedZoneObj ? /motorcycle/i.test(currentSelectedZoneObj.tag || '') : false;
 
+  const totalCarCapacity = zones.filter(z => !z.tag.toLowerCase().includes('motorcycle')).reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0) || 18;
+  const occupiedCarsCount = parkedSpots.filter(s => s.status === 'Active Parked' && s.vehicleType !== 'motorcycle' && !s.zone?.includes('Zone B') && !s.zone?.includes('Zone D')).length;
+  const availableCarSpots = Math.max(0, totalCarCapacity - occupiedCarsCount);
+  const estMotos = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType === 'motorcycle' || s.zone?.includes('Zone B') || s.zone?.includes('Zone D'))).length;
+
   const todayStr = new Date().toISOString().split('T')[0];
-  const exitedTodayCount = INITIAL_PARKING_HISTORY.filter(h => h.date === todayStr).length;
+  const exitedTodayCount = (logs || []).filter(h => h.status === 'Completed' || (h.rawDate && h.rawDate.startsWith(todayStr))).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -597,7 +306,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Parked Vehicles</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{totalActiveSpotsCount}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{occupiedCarsCount}</div>
             <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Currently Inside Building</div>
           </div>
         </div>
@@ -741,6 +450,29 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                 />
               </div>
 
+              {/* Academic Term Select Dropdown */}
+              <select
+                value={selectedTerm}
+                onChange={(e) => setSelectedTerm(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#2563eb',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: 10,
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="2026-1">Semester 1 / 2026 (Current)</option>
+                <option value="2025-2">Semester 2 / 2025</option>
+                <option value="2025-1">Semester 1 / 2025</option>
+                <option value="2024-2">Semester 2 / 2024</option>
+                <option value="ALL">All Semester Terms</option>
+              </select>
+
               {/* Reservation Status Dropdown */}
               <select
                 value={reservationFilter}
@@ -883,7 +615,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                             {spot.zone}
                           </td>
                           <td style={{ padding: '14px 16px', fontSize: 12, color: '#0f172a', fontWeight: 600 }}>
-                            {spot.floor}{spot.pillar ? `, ${String(spot.pillar).replace(/\s*\([^)]*\)/gi, '').trim()}` : ''}
+                            {spot.floor === '-' || spot.pillar === '-' || spot.isSpotSaved === false ? '-' : `${spot.floor}${spot.pillar ? `, ${String(spot.pillar).replace(/\s*\([^)]*\)/gi, '').trim()}` : ''}`}
                           </td>
                           <td style={{ padding: '14px 16px', fontSize: 12, color: '#0f172a', fontWeight: 500 }}>
                             <div>
