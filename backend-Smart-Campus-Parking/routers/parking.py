@@ -11,7 +11,7 @@ router = APIRouter(prefix="/parking", tags=["Parking Status"])
 DEFAULT_ZONES = [
     {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 10, "occupied_slots": 1, "tag": "Cars Only", "is_unlimited": False},
     {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 0, "occupied_slots": 0, "tag": "Motorcycles", "is_unlimited": True},
-    {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 8, "occupied_slots": 0, "tag": "Cars Only", "is_unlimited": False},
+    {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 9, "occupied_slots": 0, "tag": "Cars Only", "is_unlimited": False},
     {"zone": "Zone D • Floor G (VMES Building)", "total_slots": 0, "occupied_slots": 0, "tag": "Motorcycles", "is_unlimited": True},
 ]
 
@@ -537,7 +537,8 @@ async def get_building_zones_from_mongodb():
         zones = list(building_zones_collection.find({}, {"_id": 0}))
         if zones:
             return zones
-    return []
+    from seed_configs_to_mongodb import DEFAULT_ZONES as DB_DEFAULT_ZONES
+    return DB_DEFAULT_ZONES
 
 @router.post("/building-zones")
 async def save_building_zones_to_mongodb(zones: list):

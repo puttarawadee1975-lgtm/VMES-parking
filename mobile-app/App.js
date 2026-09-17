@@ -165,7 +165,7 @@ function MainApp() {
   const [kpiScans, setKpiScans] = useState(1284);
   const [kpiViolations, setKpiViolations] = useState(146);
   const [kpiAvailable, setKpiAvailable] = useState(32);
-  const [kpiOccupied, setKpiOccupied] = useState(18);
+  const [kpiOccupied, setKpiOccupied] = useState(19);
   const [detectionLogs, setDetectionLogs] = useState(INITIAL_DETECTION_LOGS);
   const [toastMessage, setToastMessage] = useState(null);
 

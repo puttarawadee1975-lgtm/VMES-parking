@@ -34,7 +34,8 @@ const ZONE_PILLAR_LAYOUTS = {
     { pillar: 'Spot C-05', spotId: null, label: 'Spot C-05' },
     { pillar: 'Spot C-06', spotId: null, label: 'Spot C-06' },
     { pillar: 'Spot C-07', spotId: null, label: 'Spot C-07' },
-    { pillar: 'Spot C-08', spotId: null, label: 'Spot C-08' }
+    { pillar: 'Spot C-08', spotId: null, label: 'Spot C-08' },
+    { pillar: 'Spot C-09', spotId: null, label: 'Spot C-09' }
   ],
   'Zone D': [
     { pillar: 'Spot D-01', spotId: 'SPOT-65070244', label: 'Spot D-01' }
@@ -287,7 +288,15 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   const currentSelectedZoneObj = zones.find(z => z.name.toUpperCase() === selectedZoneId.toUpperCase() || z.id.toUpperCase() === selectedZoneId.toUpperCase());
   const isMotorcycleZone = currentSelectedZoneObj ? /motorcycle/i.test(currentSelectedZoneObj.tag || '') : false;
 
-  const totalCarCapacity = zones.filter(z => !z.tag.toLowerCase().includes('motorcycle')).reduce((sum, z) => sum + (parseInt(z.capacity) || 0), 0) || 18;
+  const totalCarCapacity = useMemo(() => {
+    if (!Array.isArray(zones) || zones.length === 0) return 19;
+    const carZones = zones.filter(z => z.tag && !z.tag.toLowerCase().includes('motorcycle'));
+    const sum = carZones.reduce((acc, z) => {
+      const cap = (z.numericCapacity !== undefined && z.numericCapacity !== null) ? z.numericCapacity : (parseInt(z.capacity) || 0);
+      return acc + cap;
+    }, 0);
+    return sum > 0 ? sum : 19;
+  }, [zones]);
   const occupiedCarsCount = parkedSpots.filter(s => s.status === 'Active Parked' && s.vehicleType !== 'motorcycle' && !s.zone?.includes('Zone B') && !s.zone?.includes('Zone D')).length;
   const availableCarSpots = Math.max(0, totalCarCapacity - occupiedCarsCount);
   const estMotos = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType === 'motorcycle' || s.zone?.includes('Zone B') || s.zone?.includes('Zone D'))).length;
@@ -319,7 +328,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Available Parking Spots</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{availableCarSpots}</div>
-            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Campus Building (18 Car Spots)</div>
+            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Campus Building ({totalCarCapacity} Car Spots)</div>
           </div>
         </div>
 

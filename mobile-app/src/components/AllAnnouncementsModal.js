@@ -33,6 +33,33 @@ export default function AllAnnouncementsModal({
     onClose();
   };
 
+  const sortedAnnouncements = React.useMemo(() => {
+    return [...announcements].sort((a, b) => {
+      const prioA = a.priority === 'high' ? 0 : 1;
+      const prioB = b.priority === 'high' ? 0 : 1;
+      if (prioA !== prioB) return prioA - prioB;
+
+      const getTime = (item) => {
+        if (item.created_at) {
+          const t = new Date(item.created_at).getTime();
+          if (!isNaN(t)) return t;
+        }
+        if (item.date) {
+          const t = new Date(item.date).getTime();
+          if (!isNaN(t)) return t;
+          const match = String(item.date).match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+          if (match) {
+            const t2 = new Date(`${match[1]}-${match[2]}-${match[3]}`).getTime();
+            if (!isNaN(t2)) return t2;
+          }
+        }
+        const idMatch = String(item.id || '').match(/\d+/);
+        return idMatch ? parseInt(idMatch[0], 10) : 0;
+      };
+      return getTime(b) - getTime(a);
+    });
+  }, [announcements]);
+
   return (
     <Modal
       visible={Boolean(visible)}
@@ -81,7 +108,7 @@ export default function AllAnnouncementsModal({
           showsVerticalScrollIndicator={false}
         >
           <View style={{ gap: 12, maxWidth: 640, width: '100%', alignSelf: 'center' }}>
-            {announcements.length === 0 ? (
+            {sortedAnnouncements.length === 0 ? (
               <View
                 style={{
                   backgroundColor: '#ffffff',
@@ -103,7 +130,7 @@ export default function AllAnnouncementsModal({
                 </Text>
               </View>
             ) : (
-              announcements.map((item) => (
+              sortedAnnouncements.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   activeOpacity={0.75}

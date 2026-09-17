@@ -8,9 +8,9 @@ export default function KpiCards({ totalScans, violationsCount, availableSpots, 
           <i className="ri-scan-2-line"></i>
         </div>
         <div className="kpi-details">
-          <span className="kpi-title">Today's Gate Traffic (In & Out)</span>
+          <span className="kpi-title">Today's Gate Traffic (Trips)</span>
           <h3 className="kpi-value">{totalScans.toLocaleString()}</h3>
-          <span className="kpi-sub text-muted">Live detection records</span>
+          <span className="kpi-sub text-muted">Vehicle trips (In + Out = 1 Trip)</span>
         </div>
       </div>
 
@@ -35,7 +35,7 @@ export default function KpiCards({ totalScans, violationsCount, availableSpots, 
         <div className="kpi-details">
           <span className="kpi-title">Available Parking Spots</span>
           <h3 className="kpi-value">{availableSpots}</h3>
-          <span className="kpi-sub text-muted">Campus Building (18 Car Spots)</span>
+          <span className="kpi-sub text-muted">Campus Building (19 Car Spots)</span>
         </div>
       </div>
     </div>

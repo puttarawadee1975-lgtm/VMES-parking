@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ZoneCDetails({ parkedSpot }) {
-  const zoneSlots = ['G11', 'G12', 'G13', 'G14', 'G15', 'G11-G15', 'C-01', 'C-02'];
+  const zoneSlots = ['C-01', 'C-02', 'C-03', 'C-04', 'C-05', 'C-06', 'C-07', 'C-08', 'C-09'];
   
   return (
     <View className="bg-slate-900 rounded-2xl p-4 overflow-hidden border border-slate-800 mb-6">

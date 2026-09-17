@@ -41,11 +41,11 @@ ZONES_DATA = [
         "floor": "Floor G",
         "tag": "Cars Only",
         "location": "Floor G - Automobile Deck C",
-        "pillars": "Spots C-01 - C-08",
-        "total_slots": 8,
+        "pillars": "Spots C-01 - C-09",
+        "total_slots": 9,
         "occupied_slots": 3,
-        "available_slots": 5,
-        "capacity": "8 Car Spots",
+        "available_slots": 6,
+        "capacity": "9 Car Spots",
         "last_updated": datetime.now(timezone.utc)
     },
     {

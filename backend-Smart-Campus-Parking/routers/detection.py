@@ -193,7 +193,7 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         zone_doc = parking_status_collection.find_one({"zone": zone_name})
         if zone_doc:
             occupied = zone_doc.get("occupied_slots", 0)
-            total = zone_doc.get("total_slots", 18)
+            total = zone_doc.get("total_slots", 19)
             if resolved_gate_type == "ENTRY":
                 occupied = min(total, occupied + 1)
             elif resolved_gate_type == "EXIT":

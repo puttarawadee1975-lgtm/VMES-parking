@@ -19,12 +19,40 @@ export default function AnnouncementsTable() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const sortAnnouncements = (list) => {
+    if (!Array.isArray(list)) return [];
+    return [...list].sort((a, b) => {
+      const prioA = a.priority === 'high' ? 0 : 1;
+      const prioB = b.priority === 'high' ? 0 : 1;
+      if (prioA !== prioB) return prioA - prioB;
+
+      const getTime = (item) => {
+        if (item.created_at) {
+          const t = new Date(item.created_at).getTime();
+          if (!isNaN(t)) return t;
+        }
+        if (item.date) {
+          const t = new Date(item.date).getTime();
+          if (!isNaN(t)) return t;
+          const match = String(item.date).match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+          if (match) {
+            const t2 = new Date(`${match[1]}-${match[2]}-${match[3]}`).getTime();
+            if (!isNaN(t2)) return t2;
+          }
+        }
+        const idMatch = String(item.id || '').match(/\d+/);
+        return idMatch ? parseInt(idMatch[0], 10) : 0;
+      };
+      return getTime(b) - getTime(a);
+    });
+  };
+
   const fetchAnnouncements = async () => {
     try {
       const res = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/announcements');
       if (res.ok) {
         const data = await res.json();
-        setAnnouncements(data);
+        setAnnouncements(sortAnnouncements(data));
       }
     } catch (e) {
       console.warn('Error fetching announcements:', e);
@@ -40,7 +68,7 @@ export default function AnnouncementsTable() {
     setTitle('');
     setContent('');
     setPriority('normal');
-    setTargetAudience('all');
+    setTargetAudience('');
     setTargetUser('');
     setExpireDate(getDefaultExpireDate());
     setShowModal(true);
@@ -59,7 +87,7 @@ export default function AnnouncementsTable() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || !expireDate) return;
+    if (!title.trim() || !content.trim() || !targetAudience || !expireDate) return;
 
     setSubmitting(true);
     try {
@@ -237,48 +265,16 @@ export default function AnnouncementsTable() {
                   Target Audience / Recipient <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <select 
+                  required
                   value={targetAudience}
                   onChange={e => setTargetAudience(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
+                  style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: targetAudience ? '#0f172a' : '#94a3b8', fontSize: 13, fontWeight: 600 }}
                 >
+                  <option value="" disabled hidden>-- Select Target Audience --</option>
                   <option value="all">All Campus Users (Including Staff)</option>
                   <option value="all_students">All Students</option>
-                  <option value="individual_staff">Specific Staff / Lecturer</option>
-                  <option value="individual_student">Specific Student</option>
                 </select>
               </div>
-
-              {(targetAudience === 'individual_student' || targetAudience === 'individual') && (
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
-                    Student ID or Email <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <input 
-                    type="text"
-                    required
-                    placeholder="e.g. 65070042@student.university.ac.th or 65070042"
-                    value={targetUser}
-                    onChange={e => setTargetUser(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
-                  />
-                </div>
-              )}
-
-              {targetAudience === 'individual_staff' && (
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
-                    Staff / Lecturer ID or Email <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <input 
-                    type="text"
-                    required
-                    placeholder="e.g. staff.somchai@university.ac.th or STF-1024"
-                    value={targetUser}
-                    onChange={e => setTargetUser(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
-                  />
-                </div>
-              )}
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>

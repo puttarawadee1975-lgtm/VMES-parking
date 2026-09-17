@@ -23,37 +23,37 @@ def seed_academic_terms_and_resets():
         {
             "term_id": 1,
             "name": "Semester 1",
-            "months_display": "June - November",
+            "months_display": "1 June - 31 October",
             "start_month": 6,
-            "end_month": 11,
+            "end_month": 10,
             "reset_date_str": "1 June",
             "reset_day": 1,
             "reset_month": 6,
-            "description": "First Semester (June to November). Driver safety scores automatically reset to 100 on 1 June.",
+            "description": "First Semester (1 June to 31 October). Driver safety scores automatically reset to 100 on 1 June every year.",
             "is_active": True
         },
         {
             "term_id": 2,
             "name": "Semester 2",
-            "months_display": "November - March",
+            "months_display": "1 November - 31 March",
             "start_month": 11,
             "end_month": 3,
             "reset_date_str": "1 November",
             "reset_day": 1,
             "reset_month": 11,
-            "description": "Second Semester (November to March). Driver safety scores automatically reset to 100 on 1 November.",
+            "description": "Second Semester (1 November to 31 March). Driver safety scores automatically reset to 100 on 1 November every year.",
             "is_active": True
         },
         {
             "term_id": 3,
             "name": "Semester 3 (Summer)",
-            "months_display": "April - May",
+            "months_display": "1 April - 31 May",
             "start_month": 4,
             "end_month": 5,
             "reset_date_str": "1 April",
             "reset_day": 1,
             "reset_month": 4,
-            "description": "Summer Semester (April to May). Driver safety scores automatically reset to 100 on 1 April.",
+            "description": "Summer Semester (1 April to 31 May). Driver safety scores automatically reset to 100 on 1 April every year.",
             "is_active": True
         }
     ]

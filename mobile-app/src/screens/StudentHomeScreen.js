@@ -61,6 +61,33 @@ export default function StudentHomeScreen({
         badgeBg: ann.priority === 'high' ? '#fef2f2' : '#eff6ff',
         badgeColor: ann.priority === 'high' ? '#dc2626' : '#2563eb'
       }));
+
+      // Sort announcements: High priority first, then date descending (newest first)
+      filteredAnns.sort((a, b) => {
+        const prioA = a.priority === 'high' ? 0 : 1;
+        const prioB = b.priority === 'high' ? 0 : 1;
+        if (prioA !== prioB) return prioA - prioB;
+
+        const getTime = (item) => {
+          if (item.created_at) {
+            const t = new Date(item.created_at).getTime();
+            if (!isNaN(t)) return t;
+          }
+          if (item.date) {
+            const t = new Date(item.date).getTime();
+            if (!isNaN(t)) return t;
+            const match = String(item.date).match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+            if (match) {
+              const t2 = new Date(`${match[1]}-${match[2]}-${match[3]}`).getTime();
+              if (!isNaN(t2)) return t2;
+            }
+          }
+          const idMatch = String(item.id || '').match(/\d+/);
+          return idMatch ? parseInt(idMatch[0], 10) : 0;
+        };
+        return getTime(b) - getTime(a);
+      });
+
       setAnnouncements(filteredAnns);
     }
   };
