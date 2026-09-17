@@ -8,6 +8,12 @@ from schemas import DetectionLogCreate, DetectionLogResponse
 
 router = APIRouter(prefix="/detections", tags=["AI Detections"])
 
+def ensure_utc(value: datetime) -> datetime:
+    """Treat timezone-naive MongoDB datetimes as UTC for API serialization."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
 @router.post("", response_model=DetectionLogResponse, status_code=status.HTTP_201_CREATED)
 async def ingest_detection_event(payload: DetectionLogCreate):
     """
@@ -248,7 +254,7 @@ async def get_all_detections(days: int = 30):
                     penalty_applied=doc.get("penalty_applied"),
                     gate_type=doc.get("gate_type", "ENTRY"),
                     zone=doc.get("zone", "-"),
-                    timestamp=doc.get("timestamp", datetime.now(timezone.utc)),
+                    timestamp=ensure_utc(doc.get("timestamp", datetime.now(timezone.utc))),
                     matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered",
                     # Older records without image_url safely default to None
                     image_url=doc.get("image_url") or doc.get("snapshot_url") or None,
