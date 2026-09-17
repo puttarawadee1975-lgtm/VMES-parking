@@ -18,7 +18,7 @@ vehicle_photos_dir = os.path.join(os.path.dirname(__file__), "data", "vehicle_ph
 os.makedirs(vehicle_photos_dir, exist_ok=True)
 
 app = FastAPI(
-    title="VMES Parking & Helmet Detection API",
+    title="VMES Parking & Helmet Detection API (Active)",
     description="Backend API for VMES Parking, AI Helmet Detection, and Microsoft Entra RBAC",
     version="1.0.0"
 )

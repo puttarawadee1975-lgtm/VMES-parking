@@ -613,6 +613,15 @@ async def manual_purge_30day_history(days: int = 30):
     summary = cleanup_old_records_and_images(days)
     return summary
 
+@router.post("/purge-term-data")
+async def manual_purge_term_data(term: str = "2025-2"):
+    """
+    Admin endpoint: Automatically purge all MongoDB records and backend photo files for a completed term.
+    """
+    from cleanup_service import cleanup_old_term_data
+    summary = cleanup_old_term_data(term)
+    return summary
+
 @router.get("/enforcement-status")
 async def get_enforcement_system_status():
     """

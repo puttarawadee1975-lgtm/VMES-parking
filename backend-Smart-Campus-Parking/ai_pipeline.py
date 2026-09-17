@@ -13,12 +13,12 @@ from PIL import Image, ImageDraw, ImageFont
 
 # ================= Configuration =================
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/detections")
-GATE_TYPE = os.getenv("GATE_TYPE", "ENTRY")  # ENTRY or EXIT
 DEFAULT_ZONE = os.getenv("DEFAULT_ZONE", "Zone A (Building 1 - Car)")
 
-# Camera ID — use 1 for Gate 1 (ENTRY), 2 for Gate 2 (EXIT).
-# Supports future Camera 2 integration via environment variable.
-CAMERA_ID = os.getenv("CAMERA_ID", "1" if GATE_TYPE.upper() != "EXIT" else "2")
+# Camera IDs follow the backend camera-order convention: 01 = ENTRY, 02 = EXIT.
+_requested_gate = os.getenv("GATE_TYPE", "ENTRY").upper()
+CAMERA_ID = os.getenv("CAMERA_ID", "02" if _requested_gate == "EXIT" else "01")
+GATE_TYPE = os.getenv("GATE_TYPE", "EXIT" if CAMERA_ID == "02" else "ENTRY").upper()
 
 # Local snapshot storage directory — served statically by FastAPI at /snapshots
 _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -215,6 +215,7 @@ def post_detection_to_backend(
         "helmet_detected": helmet_detected if vehicle_type == "motorcycle" else None,
         "gate_type": GATE_TYPE,
         "zone": zone,
+        "camera_id": CAMERA_ID,
         "image_url": image_url,
     }
     try:

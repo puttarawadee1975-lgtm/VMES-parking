@@ -68,5 +68,8 @@ semester_resets_collection = db["semester_resets"] if db is not None else None
 academic_terms_collection = db["academic_terms"] if db is not None else None
 notifications_collection = db["notifications"] if db is not None else None
 system_settings_collection = db["system_settings"] if db is not None else None
+notification_templates_collection = db["notification_templates"] if db is not None else None
+building_zones_collection = db["building_zones"] if db is not None else None
+registered_gates_collection = db["registered_gates"] if db is not None else None
 
 

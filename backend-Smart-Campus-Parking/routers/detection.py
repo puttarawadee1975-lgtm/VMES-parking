@@ -19,7 +19,27 @@ async def ingest_detection_event(payload: DetectionLogCreate):
     now = payload.timestamp or datetime.now(timezone.utc)
     vehicle_type = payload.vehicle_type.lower()
 
+    # Automatic Camera Mapping Rule:
+    # Camera 01 / Cam 1 -> ENTRY Gate
+    # Camera 02 / Cam 2 -> EXIT Gate
+    camera_id = (payload.camera_id or "").strip()
+    raw_gate = (payload.gate_type or "").strip().upper()
+
+    if camera_id in ["01", "1"] or "01" in raw_gate or "CAM1" in raw_gate or "GATE 1" in raw_gate:
+        resolved_gate_type = "ENTRY"
+        gate_name = "VMES Entry Gate (Cam 01)"
+        camera_id = "01"
+    elif camera_id in ["02", "2"] or "02" in raw_gate or "CAM2" in raw_gate or "GATE 2" in raw_gate:
+        resolved_gate_type = "EXIT"
+        gate_name = "VMES Exit Gate (Cam 02)"
+        camera_id = "02"
+    else:
+        resolved_gate_type = raw_gate if raw_gate in ["ENTRY", "EXIT"] else "ENTRY"
+        camera_id = "01" if resolved_gate_type == "ENTRY" else "02"
+        gate_name = f"VMES {resolved_gate_type.capitalize()} Gate (Cam {camera_id})"
+
     # Apply Business Logic for Helmet & Violations
+
     if vehicle_type == "car":
         helmet_detected = None
         is_violation = False
@@ -89,8 +109,8 @@ async def ingest_detection_event(payload: DetectionLogCreate):
             if setting and "active" in setting:
                 enforcement_enabled = setting["active"]
 
-        # Deduct driving score at most once per day IF enforcement is enabled
-        if is_violation and enforcement_enabled:
+        # Helmet detection is an EXCEPTION: Always active 24/7 (always deduct points & notify even if Parking Access Mode is OFF)
+        if is_violation:
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
@@ -126,8 +146,10 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         "helmet_detected": helmet_detected,
         "violation": is_violation,
         "penalty_applied": penalty_applied,
-        "gate_type": payload.gate_type,
-        "zone": payload.zone or "Zone A",
+        "gate_type": resolved_gate_type,
+        "camera_id": camera_id,
+        "gate_name": gate_name,
+        "zone": payload.zone or "-",
         "timestamp": now,
         "matched_email": matched_user.get("email") if matched_user else None,
         # Optional event snapshot captured by ai_pipeline.py (local exhibition only)
@@ -146,8 +168,8 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         helmet_detected=helmet_detected,
         violation=is_violation,
         penalty_applied=penalty_applied,
-        gate_type=payload.gate_type,
-        zone=payload.zone,
+        gate_type=resolved_gate_type,
+        zone=payload.zone or "-",
         timestamp=now,
         matched_user=matched_user_name,
         image_url=payload.image_url or None,
@@ -164,10 +186,11 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         if zone_doc:
             occupied = zone_doc.get("occupied_slots", 0)
             total = zone_doc.get("total_slots", 18)
-            if payload.gate_type == "ENTRY":
+            if resolved_gate_type == "ENTRY":
                 occupied = min(total, occupied + 1)
-            elif payload.gate_type == "EXIT":
+            elif resolved_gate_type == "EXIT":
                 occupied = max(0, occupied - 1)
+
 
             parking_status_collection.update_one(
                 {"zone": zone_name},
@@ -222,7 +245,7 @@ async def get_all_detections(days: int = 30):
                     violation=doc.get("violation", False),
                     penalty_applied=doc.get("penalty_applied"),
                     gate_type=doc.get("gate_type", "ENTRY"),
-                    zone=doc.get("zone", "Zone A"),
+                    zone=doc.get("zone", "-"),
                     timestamp=doc.get("timestamp", datetime.now(timezone.utc)),
                     matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered",
                     # Older records without image_url safely default to None

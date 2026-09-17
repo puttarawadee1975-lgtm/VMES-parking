@@ -58,22 +58,6 @@ export default function NotificationsModal({
         }
 
         const anns = await getAnnouncements();
-        
-        // Add safety warning if student has penalty
-        if (currentUser?.safetyScore !== undefined && currentUser?.safetyScore < 100) {
-          notiList.unshift({
-            id: 'NOTI-SAFETY-01',
-            title: 'No Helmet Violation Detected (-10 Points)',
-            type: 'warning',
-            category: 'Safety Alert',
-            message: `AI CCTV detected driving without a helmet at ${currentUser?.gateName || 'VMES Entry Gate'}. 10-point safety deduction applied.`,
-            date: currentUser.violationDate || 'Today',
-            location: 'VMES Entry Gate',
-            plate: currentUser.plate || 'Campus Pass',
-            scoreDeducted: 10,
-            unread: true
-          });
-        }
 
         if (Array.isArray(anns) && anns.length > 0) {
           anns.forEach(ann => {
@@ -118,56 +102,7 @@ export default function NotificationsModal({
     loadNotis();
   }, [visible, currentUser]);
 
-  const notifications = dynamicNotis.length > 0 ? dynamicNotis : [
-    {
-      id: 'NOTI-VMES-OVERTIME',
-      title: 'VMES Car Parking Overtime (-10 Points)',
-      type: 'warning',
-      category: 'Safety Alert',
-      message: 'Exceeded the 30-minute weekday car parking limit at VMES Building before 16:30. 10 safety driving points have been deducted.',
-      date: '10:45 AM (30+ mins)',
-      location: 'VMES Building',
-      plate: '3KH 5678',
-      scoreDeducted: 10,
-      unread: true
-    },
-    {
-      id: 'NOTI-VMES-30MIN',
-      title: 'VMES Car Parking Limit: 30 Mins Max',
-      type: 'warning',
-      category: 'Parking Alert',
-      message: 'Student car parking at VMES is permitted for up to 30 minutes before 16:30 on weekdays. Exceeding 30 minutes for cars will result in a 10-point safety deduction. Motorcycles park free & unlimited anytime.',
-      date: '10:15 AM',
-      location: 'VMES Building',
-      plate: '3KH 5678',
-      scoreDeducted: 0,
-      unread: false
-    },
-    {
-      id: 'NOTI-101',
-      title: 'No Helmet Violation Detected (-10 Points)',
-      type: 'warning',
-      category: 'Safety Alert',
-      message: 'AI CCTV detected driving without a helmet at VMES Entry Gate. 10-point safety deduction applied.',
-      date: '08:22 AM',
-      location: 'VMES Entry Gate',
-      plate: '3KH 5678',
-      scoreDeducted: 10,
-      unread: true
-    },
-    {
-      id: 'NOTI-102',
-      title: 'Campus Parking Maintenance Notice',
-      type: 'announcement',
-      category: 'Admin Announcement',
-      message: 'Zone B Floor 2 will be temporarily closed for sensor maintenance tomorrow from 09:00 AM to 02:00 PM. Please park at Zone A or Zone C.',
-      date: 'Yesterday',
-      location: 'VMES Building Zone B',
-      plate: 'System Announcement',
-      scoreDeducted: 0,
-      unread: false
-    }
-  ];
+  const notifications = dynamicNotis;
 
   const filteredNotis = notifications.filter(n => {
     if (selectedFilter === 'SAFETY') {

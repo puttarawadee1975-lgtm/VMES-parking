@@ -123,9 +123,19 @@ export default function LiveOverviewDashboard({
       .catch(() => { });
   }, []);
 
+  const [hoveredBar, setHoveredBar] = useState(null);
+
   const currentTermData = useMemo(() => {
     return SEMESTER_DATA[selectedTerm] || SEMESTER_DATA['2026-1'];
   }, [selectedTerm]);
+
+  const totalTermTraffic = useMemo(() => {
+    return (currentTermData?.monthlyTrend || []).reduce((acc, m) => acc + (m.traffic || 0), 0);
+  }, [currentTermData]);
+
+  const totalTermViolations = useMemo(() => {
+    return (currentTermData?.monthlyTrend || []).reduce((acc, m) => acc + (m.violations || 0), 0);
+  }, [currentTermData]);
 
   // Compute metrics from vehicles data
   const highRiskDrivers = useMemo(() => {
@@ -394,142 +404,142 @@ export default function LiveOverviewDashboard({
             </div>
 
             {/* Bar Chart Visual */}
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${currentTermData.monthlyTrend.length}, 1fr)`, gap: 16, height: 180, alignItems: 'flex-end', paddingTop: 20 }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${currentTermData.monthlyTrend.length}, 1fr)`,
+              gap: 16,
+              height: 220,
+              alignItems: 'flex-end',
+              paddingTop: 36,
+              position: 'relative'
+            }}>
               {currentTermData.monthlyTrend.map((m, idx) => {
-                const trafficHeightPercent = Math.round((m.traffic / maxTrafficInTrend) * 100);
-                const violationHeightPercent = Math.min(100, Math.round((m.violations / 60) * 100));
+                const trafficHeightPercent = Math.max(12, Math.round((m.traffic / maxTrafficInTrend) * 100));
+                const violationHeightPercent = Math.max(12, Math.min(100, Math.round((m.violations / 60) * 100)));
+
+                const trafficPercent = totalTermTraffic > 0 ? ((m.traffic / totalTermTraffic) * 100).toFixed(1) : '0';
+                const violationRate = m.traffic > 0 ? ((m.violations / m.traffic) * 100).toFixed(2) : '0';
+
+                const isHovered = hoveredBar?.idx === idx;
+                const isTrafficHovered = isHovered && hoveredBar?.type === 'traffic';
+                const isViolationHovered = isHovered && hoveredBar?.type === 'violation';
 
                 return (
-                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end' }}>
-                    <div style={{ display: 'flex', items: 'flex-end', gap: 6, height: '80%', alignItems: 'flex-end', width: '100%', justifyContent: 'center' }}>
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 8,
+                      height: '100%',
+                      justify: 'flex-end',
+                      position: 'relative',
+                      borderRadius: 12,
+                      padding: '8px 4px',
+                      transition: 'background 0.2s ease',
+                      background: isHovered ? 'rgba(241, 245, 249, 0.6)' : 'transparent'
+                    }}
+                    onMouseLeave={() => setHoveredBar(null)}
+                  >
+                    <div style={{ display: 'flex', items: 'flex-end', gap: 6, height: '75%', alignItems: 'flex-end', width: '100%', justifyContent: 'center' }}>
                       {/* Traffic Bar */}
-                      <div style={{
-                        width: 22,
-                        height: `${trafficHeightPercent}%`,
-                        background: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)',
-                        borderRadius: '6px 6px 0 0',
-                        position: 'relative'
-                      }} title={`Traffic: ${m.traffic} scans`}>
+                      <div
+                        onMouseEnter={(e) => {
+                          e.stopPropagation();
+                          setHoveredBar({ idx, type: 'traffic' });
+                        }}
+                        style={{
+                          width: 24,
+                          height: `${trafficHeightPercent}%`,
+                          background: isTrafficHovered
+                            ? 'linear-gradient(180deg, #60a5fa 0%, #1d4ed8 100%)'
+                            : 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)',
+                          borderRadius: '6px 6px 0 0',
+                          position: 'relative',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          transform: isTrafficHovered ? 'translateY(-2px)' : 'none',
+                          boxShadow: isTrafficHovered ? '0 4px 12px rgba(59, 130, 246, 0.4)' : 'none'
+                        }}
+                        title={`Traffic: ${m.traffic.toLocaleString()} scans (${trafficPercent}% of term total)`}
+                      >
+                        {isTrafficHovered && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '100%',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            marginBottom: 4,
+                            background: '#2563eb',
+                            color: '#ffffff',
+                            fontSize: 10,
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: 6,
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
+                            pointerEvents: 'none',
+                            transition: 'all 0.15s ease',
+                            zIndex: 10
+                          }}>
+                            {m.traffic.toLocaleString()} ({trafficPercent}%)
+                          </div>
+                        )}
                       </div>
 
                       {/* Violation Bar */}
-                      <div style={{
-                        width: 22,
-                        height: `${violationHeightPercent}%`,
-                        background: 'linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)',
-                        borderRadius: '6px 6px 0 0',
-                        position: 'relative'
-                      }} title={`Violations: ${m.violations}`}>
+                      <div
+                        onMouseEnter={(e) => {
+                          e.stopPropagation();
+                          setHoveredBar({ idx, type: 'violation' });
+                        }}
+                        style={{
+                          width: 24,
+                          height: `${violationHeightPercent}%`,
+                          background: isViolationHovered
+                            ? 'linear-gradient(180deg, #f87171 0%, #b91c1c 100%)'
+                            : 'linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)',
+                          borderRadius: '6px 6px 0 0',
+                          position: 'relative',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          transform: isViolationHovered ? 'translateY(-2px)' : 'none',
+                          boxShadow: isViolationHovered ? '0 4px 12px rgba(239, 68, 68, 0.4)' : 'none'
+                        }}
+                        title={`Violations: ${m.violations} cases (${violationRate}% rate)`}
+                      >
+                        {isViolationHovered && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '100%',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            marginBottom: 4,
+                            background: '#dc2626',
+                            color: '#ffffff',
+                            fontSize: 10,
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: 6,
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)',
+                            pointerEvents: 'none',
+                            transition: 'all 0.15s ease',
+                            zIndex: 10
+                          }}>
+                            {m.violations} ({violationRate}%)
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{m.month}</div>
-                    <div style={{ fontSize: 10, color: '#64748b', marginTop: -4 }}>{m.traffic} scans</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: isHovered ? '#1e293b' : '#0f172a' }}>{m.month}</div>
+                    <div style={{ fontSize: 10, color: isHovered ? '#2563eb' : '#64748b', marginTop: -4, fontWeight: isHovered ? 700 : 400 }}>
+                      {m.traffic.toLocaleString()} scans
+                    </div>
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Recent Gate Access & Audit Table */}
-          <div className="card" style={{
-            background: '#ffffff',
-            borderRadius: 20,
-            border: '1px solid #e2e8f0',
-            padding: 24,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
-                  Gate Access & Audit Log Summary
-                </h3>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                  Real-time & recent CCTV gate detection records
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div className="search-box" style={{ width: 220 }}>
-                  <i className="ri-search-line"></i>
-                  <input
-                    type="text"
-                    placeholder="Search plate or name..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => onNavigate && onNavigate('access-history')}
-                  style={{ fontSize: 12, padding: '6px 12px' }}
-                >
-                  View All History →
-                </button>
-              </div>
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                    <th style={{ padding: '10px 12px', fontWeight: 700, color: '#475569' }}>Time</th>
-                    <th style={{ padding: '10px 12px', fontWeight: 700, color: '#475569' }}>Plate Number</th>
-                    <th style={{ padding: '10px 12px', fontWeight: 700, color: '#475569' }}>Vehicle & Owner</th>
-                    <th style={{ padding: '10px 12px', fontWeight: 700, color: '#475569' }}>Violation</th>
-                    <th style={{ padding: '10px 12px', fontWeight: 700, color: '#475569' }}>Gate</th>
-                    <th style={{ padding: '10px 12px', fontWeight: 700, color: '#475569' }}>CCTV Photo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: 30, color: '#94a3b8' }}>
-                        No gate access records found for search filter.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredLogs.map((item, idx) => {
-                      const isCar = (item.vehicle || '').toLowerCase().includes('car');
-                      const snapshotUrl = item.imageUrl || item.image || (isCar
-                        ? 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80'
-                        : 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80');
-
-                      return (
-                        <tr key={item.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '10px 12px', fontWeight: 600, color: '#0f172a' }}>{item.time}</td>
-                          <td style={{ padding: '10px 12px', fontWeight: 700, color: '#0f172a' }}>
-                            {item.plate} {item.province && !item.plate?.includes(item.province) ? item.province : ''}
-                          </td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.owner}</div>
-                            <div style={{ fontSize: 11, color: '#64748b' }}>{item.vehicle}</div>
-                          </td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <span style={{ color: '#0f172a', fontWeight: 600 }}>
-                              {item.isViolation
-                                ? (isCar ? 'Parked >30 Mins' : 'No Helmet')
-                                : '-'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '10px 12px', fontWeight: 500, color: '#0f172a' }}>{item.gate}</td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, padding: '4px 10px' }}
-                              onClick={() => setSelectedSnapshot({ ...item, snapshotUrl })}
-                            >
-                              View Photo
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
@@ -603,78 +613,7 @@ export default function LiveOverviewDashboard({
             </div>
           </div>
 
-          {/* Card 3: At-Risk Student Drivers (Term Summary) */}
-          <div className="card" style={{
-            background: '#ffffff',
-            borderRadius: 20,
-            border: '1px solid #e2e8f0',
-            padding: 20,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
-                Drivers Needing Safety Review
-              </h4>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => onNavigate && onNavigate('safety-scores')}
-                style={{ fontSize: 11, padding: '2px 8px' }}
-              >
-                View Scores
-              </button>
-            </div>
 
-            {highRiskDrivers.length === 0 ? (
-              <div style={{ fontSize: 12, color: '#64748b', textAlign: 'center', padding: '16px 0' }}>
-                ✅ All student drivers are above 70 safety points!
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {highRiskDrivers.slice(0, 3).map((v, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef2f2', border: '1px solid #fecaca', padding: '8px 12px', borderRadius: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: '#991b1b' }}>{v.owner || 'Student Driver'}</div>
-                      <div style={{ fontSize: 11, color: '#b91c1c' }}>{v.plate} • {v.model}</div>
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 900, color: '#dc2626' }}>
-                      {v.score ?? 100} pts
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Card 4: Official Campus Announcements */}
-          <div className="card" style={{
-            background: '#ffffff',
-            borderRadius: 20,
-            border: '1px solid #e2e8f0',
-            padding: 20,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
-                Campus Announcements
-              </h4>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => onNavigate && onNavigate('announcements')}
-                style={{ fontSize: 11, padding: '2px 8px' }}
-              >
-                Manage
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {announcements.slice(0, 2).map((anc, i) => (
-                <div key={anc.id || i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{anc.title}</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{anc.content}</div>
-                </div>
-              ))}
-            </div>
-          </div>
 
         </div>
       </div>

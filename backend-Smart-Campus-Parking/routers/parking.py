@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends
-from database import parking_status_collection
+from database import parking_status_collection, saved_spots_collection, detection_logs_collection, registered_vehicles_collection, users_collection, building_zones_collection
 from schemas import ParkingStatusResponse, ParkingStatusUpdate, SpotReservationCreate
 from auth import require_roles
 
@@ -89,17 +89,49 @@ async def save_user_parking_spot(data: SavedSpotCreate, user_email: str = "demo@
     Save or update user's parked spot location in MongoDB.
     """
     now = datetime.now(timezone.utc)
+
+    owner_name = "Registered Driver"
+    plate_num = "-"
+    role_str = "Student"
+    province_str = "กรุงเทพมหานคร"
+    v_type = "car"
+
+    if users_collection is not None:
+        user_doc = users_collection.find_one({"email": user_email.strip().lower()}, {"_id": 0})
+        if user_doc:
+            owner_name = user_doc.get("name", owner_name)
+            role_str = user_doc.get("role", role_str)
+            if user_doc.get("vehicles"):
+                first_v = user_doc["vehicles"][0]
+                plate_num = first_v.get("plate", plate_num)
+                province_str = first_v.get("province", province_str)
+                v_type = first_v.get("vehicle_type", v_type)
+
+    if registered_vehicles_collection is not None and plate_num == "-":
+        rv_doc = registered_vehicles_collection.find_one({"user_email": user_email}, {"_id": 0})
+        if rv_doc:
+            plate_num = rv_doc.get("plate", plate_num)
+            role_str = rv_doc.get("role", role_str)
+
     doc = {
         "user_email": user_email,
+        "owner": owner_name,
+        "studentId": user_email.split("@")[0].upper() if "@" in user_email else "STUDENT",
+        "role": role_str,
+        "plate": plate_num,
+        "province": province_str,
+        "vehicleType": v_type,
         "zone": data.zone,
         "building": data.building or "VMES Building",
         "floor": data.floor or "Floor G",
         "pillar": data.pillar,
-        "savedDate": data.savedDate,
-        "savedTime": data.savedTime,
+        "savedDate": data.savedDate or now.strftime("%Y-%m-%d"),
+        "savedTime": data.savedTime or now.strftime("%I:%M %p"),
+        "status": "Active Parked",
+        "term": "2026-1",
         "timestamp": now
     }
-    
+
     if saved_spots_collection is not None:
         saved_spots_collection.update_one(
             {"user_email": user_email},
@@ -117,7 +149,7 @@ async def get_user_parking_spot(user_email: str = "demo@student.ac.th"):
         doc = saved_spots_collection.find_one({"user_email": user_email}, {"_id": 0})
         if doc:
             return doc
-    
+
     raise HTTPException(status_code=404, detail="No saved parking spot found for user")
 
 @router.delete("/clear-spot")
@@ -146,9 +178,10 @@ async def reserve_parking_spot(data: SpotReservationCreate):
         "reserved_at": now.isoformat(),
         "locked_until": locked_until.isoformat(),
         "plate": data.plate,
-        "status": "Reserved"
+        "status": "Reserved",
+        "term": "2026-1"
     }
-    
+
     if saved_spots_collection is not None:
         saved_spots_collection.update_one(
             {"user_email": data.user_email},
@@ -167,6 +200,122 @@ async def get_all_spot_reservations():
         return results
     return []
 
+@router.get("/occupied-spots")
+async def get_occupied_parking_spots(term: str = "2026-1"):
+    """
+    Public / Admin endpoint: Get parked vehicle spots dynamically from MongoDB Atlas.
+    - If user saved their parking spot (saved_spots_collection), show their specific saved floor & pillar.
+    - If car entered via CCTV gate (detection_logs_collection) but did NOT save spot, display location as '-'.
+    """
+    results = []
+    seen_plates = set()
+    seen_emails = set()
+
+    # 1. Fetch saved spots from MongoDB saved_spots_collection (Users who scanned & saved spot)
+    if saved_spots_collection is not None:
+        try:
+            saved_docs = list(saved_spots_collection.find({}, {"_id": 0}))
+            for item in saved_docs:
+                item_term = item.get("term", "2026-1")
+                if term != "ALL" and item_term != term:
+                    continue
+                spot_id = item.get("id") or f"SPOT-{item.get('user_email', 'anon').split('@')[0]}"
+                plate_str = item.get("plate", "-")
+                email_str = item.get("user_email", "")
+                if plate_str != "-":
+                    seen_plates.add(plate_str)
+                if email_str:
+                    seen_emails.add(email_str)
+
+                results.append({
+                    "id": spot_id,
+                    "owner": item.get("owner") or item.get("name") or "Registered Driver",
+                    "studentId": item.get("studentId") or (email_str.split("@")[0].upper() if "@" in email_str else "STUDENT"),
+                    "ownerEmail": email_str or "user@student.ac.th",
+                    "role": item.get("role", "Student"),
+                    "plate": plate_str,
+                    "province": item.get("province", "กรุงเทพมหานคร"),
+                    "vehicleType": item.get("vehicleType", item.get("vehicle_type", "car")),
+                    "vehicleName": item.get("vehicleName", item.get("model", "Vehicle")),
+                    "building": item.get("building", "VMES Building"),
+                    "zone": item.get("zone", "Zone A"),
+                    "floor": item.get("floor", "Floor G"),
+                    "pillar": item.get("pillar", "Spot A-01"),
+                    "entryTime": item.get("savedTime") or "Active Parked",
+                    "exitTime": "Active (In Building)",
+                    "scannedTime": item.get("savedTime", "Now"),
+                    "entryGate": "Gate 1 Entry",
+                    "safetyScore": item.get("safetyScore", 100),
+                    "status": item.get("status", "Active Parked"),
+                    "imageUrl": item.get("imageUrl") or "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80",
+                    "term": item_term,
+                    "isSpotSaved": True
+                })
+        except Exception as err:
+            print(f"[OCCUPIED SPOTS FETCH ERROR - saved_spots] {err}")
+
+    # 2. Fetch CCTV gate entry detection logs (Users who entered building but did NOT save spot)
+    from database import detection_logs_collection
+    if detection_logs_collection is not None:
+        try:
+            logs = list(detection_logs_collection.find({}, {"_id": 0}).sort("timestamp", -1).limit(100))
+            for l in logs:
+                l_term = l.get("term", "2026-1")
+                if term != "ALL" and l_term != term:
+                    continue
+                gate_str = str(l.get("gate_type") or l.get("gate") or "").lower()
+                if "exit" in gate_str:
+                    continue
+
+                l_plate = l.get("plate") or l.get("license_plate") or "-"
+                l_email = l.get("matched_email") or l.get("ownerEmail") or ""
+
+                if (l_plate != "-" and l_plate in seen_plates) or (l_email and l_email in seen_emails):
+                    continue
+
+                if l_plate != "-":
+                    seen_plates.add(l_plate)
+
+                ts = l.get("timestamp")
+                entry_time_str = "Active Parked"
+                if ts:
+                    if isinstance(ts, datetime):
+                        entry_time_str = ts.strftime("%I:%M %p")
+                    else:
+                        entry_time_str = str(ts)
+                elif l.get("time"):
+                    entry_time_str = str(l.get("time"))
+
+                spot_id = l.get("id") or f"LOG-{l_plate}"
+                results.append({
+                    "id": spot_id,
+                    "owner": l.get("matched_user") or l.get("owner") or "Gate Entry Driver",
+                    "studentId": (l_email.split("@")[0].upper() if "@" in l_email else "STUDENT"),
+                    "ownerEmail": l_email or "driver@student.ac.th",
+                    "role": l.get("role", "Student"),
+                    "plate": l_plate,
+                    "province": l.get("province", "กรุงเทพมหานคร"),
+                    "vehicleType": l.get("vehicle_type") or l.get("vehicleType", "car"),
+                    "vehicleName": l.get("vehicle") or l.get("vehicleName", "Scanned Vehicle"),
+                    "building": "VMES Building",
+                    "zone": "-",
+                    "floor": "-",
+                    "pillar": "-",
+                    "entryTime": entry_time_str,
+                    "exitTime": "Active (In Building)",
+                    "scannedTime": entry_time_str,
+                    "entryGate": "Gate 1 Entry",
+                    "safetyScore": 100,
+                    "status": "Active Parked",
+                    "imageUrl": l.get("photo") or l.get("cctv_image_url") or "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80",
+                    "term": l_term,
+                    "isSpotSaved": False
+                })
+        except Exception as err:
+            print(f"[OCCUPIED SPOTS FETCH ERROR - detection_logs] {err}")
+
+    return results
+
 # --- Vehicle Registration MongoDB Endpoints ---
 from database import registered_vehicles_collection, users_collection
 from schemas import VehicleRegisterCreate
@@ -180,7 +329,7 @@ async def register_vehicle_in_mongodb(data: VehicleRegisterCreate):
     """
     if not data.user_email:
         raise HTTPException(status_code=400, detail="user_email is required for vehicle registration")
-    
+
     import re
     if re.search(r'[a-zA-Z]', data.plate or ""):
         raise HTTPException(
@@ -299,4 +448,27 @@ async def delete_vehicle_from_mongodb(user_email: str = "", plate: str = ""):
         registered_vehicles_collection.delete_one({"user_email": user_email, "plate": plate})
         return {"status": "success", "message": f"Vehicle {plate} deleted from MongoDB"}
     return {"status": "error", "message": "Vehicle plate or user_email missing or DB unavailable"}
+
+@router.get("/building-zones")
+async def get_building_zones_from_mongodb():
+    """
+    Retrieve dynamic building zones configuration from MongoDB Atlas.
+    """
+    if building_zones_collection is not None:
+        zones = list(building_zones_collection.find({}, {"_id": 0}))
+        if zones:
+            return zones
+    return []
+
+@router.post("/building-zones")
+async def save_building_zones_to_mongodb(zones: list):
+    """
+    Save/sync building zones configuration into MongoDB Atlas.
+    """
+    if building_zones_collection is not None and isinstance(zones, list):
+        building_zones_collection.delete_many({})
+        if zones:
+            building_zones_collection.insert_many(zones)
+        return {"status": "success", "message": "Building zones updated in MongoDB Atlas"}
+    return {"status": "error", "message": "Failed to update building zones in MongoDB Atlas"}
 

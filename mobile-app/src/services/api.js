@@ -43,25 +43,11 @@ export const getAnnouncements = async () => {
       headers: getHeaders(),
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   } catch (err) {
-    console.warn('[API] Failed to fetch announcements:', err);
-    return [
-      {
-        id: 'ANN-01',
-        title: 'Zone B Maintenance Notice',
-        content: 'Zone B Floor 2 will be temporarily closed for sensor maintenance tomorrow from 09:00 AM to 02:00 PM. Please park at Zone A or Zone C.',
-        date: 'Today, 09:00 AM',
-        priority: 'high'
-      },
-      {
-        id: 'ANN-02',
-        title: 'Helmet Safety Policy Reminder',
-        content: 'All motorcycle drivers must wear a safety helmet when entering university gates. AI CCTV cameras will deduct 10 safety points for non-compliance.',
-        date: 'Yesterday',
-        priority: 'normal'
-      }
-    ];
+    console.warn('[API] Failed to fetch announcements from MongoDB:', err);
+    return [];
   }
 };
 
@@ -284,47 +270,11 @@ export const getUserNotifications = async (userEmail) => {
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) return data;
+    if (Array.isArray(data)) return data;
   } catch (err) {
     console.warn('[API] Failed to fetch user notifications from MongoDB:', err);
   }
-
-  // Guaranteed fallback notifications so the user sees live overtime & penalty cards
-  return [
-    {
-      id: 'NOTI-VMES-OVERTIME-01',
-      title: 'VMES Car Parking Overtime (-10 Points)',
-      message: 'Exceeded the 30-minute weekday car parking limit at VMES Building before 16:30. 10 safety driving points have been deducted.',
-      type: 'vmes_overtime_penalty',
-      category: 'Parking Alert',
-      scoreDeducted: 10,
-      zone: 'VMES Building',
-      timestamp: new Date().toISOString(),
-      read: false
-    },
-    {
-      id: 'NOTI-VMES-30MIN-01',
-      title: 'VMES Car Parking Limit: 30 Mins Max',
-      message: 'Student car parking at VMES is permitted for up to 30 minutes before 16:30 on weekdays. Exceeding 30 minutes for cars will result in a 10-point safety deduction. Motorcycles park free & unlimited anytime.',
-      type: 'vmes_parking_30min_warning',
-      category: 'Parking Alert',
-      scoreDeducted: 0,
-      zone: 'VMES Building',
-      timestamp: new Date().toISOString(),
-      read: false
-    },
-    {
-      id: 'NOTI-HELMET-01',
-      title: 'No Helmet Violation Detected (-10 Points)',
-      message: 'AI CCTV detected motorcycle entry without a safety helmet at gate. 10 safety driving points deducted.',
-      type: 'helmet_violation',
-      category: 'Safety Alert',
-      scoreDeducted: 10,
-      zone: 'VMES Entry Gate',
-      timestamp: new Date().toISOString(),
-      read: false
-    }
-  ];
+  return [];
 };
 
 
