@@ -1,10 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Header({ insets, currentUser, onLogout, onOpenNotifications }) {
-  const isAdmin = currentUser?.role === 'admin';
-
   return (
     <View
       style={{ paddingTop: Math.max(insets.top, 12) }}
@@ -12,12 +10,14 @@ export default function Header({ insets, currentUser, onLogout, onOpenNotificati
     >
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center flex-1 mr-2">
-          <View className="w-9 h-9 bg-blue-600 rounded-xl items-center justify-center mr-2.5 shadow-sm shadow-blue-500/30">
-            <Ionicons name="shield-checkmark" size={20} color="#fff" />
-          </View>
-          <View>
-            <Text className="text-slate-900 font-black text-base">VMES Parking</Text>
-
+          <Image
+            source={require('../../assets/logo.png')}
+            style={{ width: 34, height: 38 }}
+            resizeMode="contain"
+            className="mr-2.5"
+          />
+          <View className="justify-center">
+            <Text className="text-slate-900 font-black text-lg tracking-tight">VMES Parking</Text>
           </View>
         </View>
 
@@ -40,12 +40,16 @@ export default function Header({ insets, currentUser, onLogout, onOpenNotificati
           )}
 
           {/* User Name Tag */}
-          <View className="bg-slate-100 py-1.5 px-2.5 sm:px-3 rounded-full border border-slate-200 flex-row items-center max-w-[150px]">
-            <View className={`w-5 h-5 rounded-full items-center justify-center mr-1.5 ${isAdmin ? 'bg-amber-500' : 'bg-blue-600'}`}>
-              <Text className="text-white text-[10px] font-bold">{currentUser?.name?.charAt(0)}</Text>
+          {currentUser?.name ? (
+            <View className="bg-slate-100 py-1.5 px-2.5 sm:px-3 rounded-full border border-slate-200 flex-row items-center max-w-[170px]">
+              <View className={`w-5 h-5 rounded-full items-center justify-center mr-1.5 ${currentUser?.role === 'staff' ? 'bg-blue-600' : 'bg-blue-600'}`}>
+                <Text className="text-white text-[10px] font-bold">{currentUser?.name?.charAt(0)}</Text>
+              </View>
+              <Text className="text-slate-800 text-xs font-semibold" numberOfLines={1}>
+                {currentUser.name.replace(/\s*\([^)]*(Faculty|Staff|Student)[^)]*\)/gi, '').trim()}
+              </Text>
             </View>
-            <Text className="text-slate-800 text-xs font-semibold" numberOfLines={1}>{currentUser?.name}</Text>
-          </View>
+          ) : null}
         </View>
       </View>
     </View>

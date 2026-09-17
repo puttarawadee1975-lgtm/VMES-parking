@@ -33,7 +33,7 @@ export default function MyVehicleScreen({
 
   const isGuest = currentUser?.role === 'guest';
   const isStudent = currentUser?.role === 'student';
-  const isAdmin = currentUser?.role === 'admin';
+  const isStaff = currentUser?.role === 'staff';
 
   const handlePickVehiclePhoto = async (useCamera = false) => {
     try {
@@ -387,11 +387,11 @@ export default function MyVehicleScreen({
       {/* Title */}
       <View className="mb-1">
         <Text className="text-xl font-bold text-slate-900">
-          {isAdmin ? 'Staff Access & Vehicles' : 'My Vehicles & Campus Pass'}
+          {isStaff ? 'Faculty & Staff Access & Vehicles' : 'My Vehicles & Campus Pass'}
         </Text>
         <Text className="text-slate-500 text-xs mt-0.5">
-          {isAdmin
-            ? 'Manage university staff parking credentials & logs'
+          {isStaff
+            ? 'Manage university faculty & staff parking credentials'
             : 'Manage your registered vehicles and parking spot status'}
         </Text>
       </View>
@@ -425,18 +425,18 @@ export default function MyVehicleScreen({
                 {currentUser?.name}
               </Text>
               <Text className="text-slate-400 text-xs mt-0.5">
-                {isAdmin ? `Staff ID: ${currentUser?.staffId || 'SEC-01'}` : isStudent ? `Student ID: ${(currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')).replace(/\D/g, '')}` : 'Temporary Visitor Pass'}
+                {isStaff ? `Staff ID: ${currentUser?.staffId || (currentUser?.email ? currentUser.email.split('@')[0] : 'STF-1024')}` : isStudent ? `Student ID: ${(currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')).replace(/\D/g, '')}` : 'Temporary Visitor Pass'}
               </Text>
             </View>
-            <View className={`px-2.5 py-1 rounded-full border ${isAdmin
+            <View className={`px-2.5 py-1 rounded-full border ${isStaff
                 ? 'bg-purple-900/60 border-purple-500/50'
                 : isStudent
                   ? 'bg-blue-900/60 border-blue-500/50'
                   : 'bg-amber-900/60 border-amber-500/50'
               }`}>
-              <Text className={`text-[10px] font-black uppercase ${isAdmin ? 'text-purple-300' : isStudent ? 'text-blue-300' : 'text-amber-300'
+              <Text className={`text-[10px] font-black uppercase ${isStaff ? 'text-purple-300' : isStudent ? 'text-blue-300' : 'text-amber-300'
                 }`}>
-                {currentUser?.role}
+                {currentUser?.role === 'staff' ? 'Faculty / Staff' : (currentUser?.role || 'Guest')}
               </Text>
             </View>
           </View>
@@ -448,7 +448,7 @@ export default function MyVehicleScreen({
             <Text className="text-slate-700 text-xs font-semibold mt-0.5" numberOfLines={1}>{currentUser?.email}</Text>
             {currentUser?.role !== 'guest' && (
               <Text className="text-slate-700 text-xs font-semibold mt-0.5" numberOfLines={1}>
-                {isAdmin ? 'Staff ID' : 'Student ID'}: {isAdmin ? (currentUser?.staffId || 'SEC-01') : (currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')).replace(/\D/g, '')}
+                {isStaff ? 'Staff ID' : 'Student ID'}: {isStaff ? (currentUser?.staffId || (currentUser?.email ? currentUser.email.split('@')[0] : 'STF-1024')) : (currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')).replace(/\D/g, '')}
               </Text>
             )}
           </View>

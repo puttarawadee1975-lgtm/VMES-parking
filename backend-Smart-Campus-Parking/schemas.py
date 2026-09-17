@@ -18,7 +18,7 @@ class Vehicle(BaseModel):
 # User Schemas
 class UserBase(BaseModel):
     email: EmailStr
-    role: Literal["student", "officer", "office"] = "student"
+    role: str = "student"
     name: str
     driving_score: int = Field(default=100, ge=0, le=100)
     vehicles: List[dict] = Field(default_factory=list)
@@ -121,6 +121,7 @@ class VehicleRegisterCreate(BaseModel):
     vehicle_photo: Optional[str] = None
     vehicle_front_photo: Optional[str] = None
     vehicle_side_photo: Optional[str] = None
+    student_id_photo: Optional[str] = None
     vehicle_photo_url: Optional[str] = None
     front_photo_url: Optional[str] = None
     side_photo_url: Optional[str] = None

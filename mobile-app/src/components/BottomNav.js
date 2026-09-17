@@ -26,7 +26,7 @@ export default function BottomNav({ insets, activeTab, setActiveTab, onOpenQR })
         >
           <Ionicons name="qr-code-outline" size={30} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.centerText}>Save Spot</Text>
+        <Text style={styles.centerText}>Find My Parking</Text>
       </View>
 
       {/* Right: Profile */}

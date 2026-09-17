@@ -80,9 +80,9 @@ export default function StudentHomeScreen({
       <View className="mb-4">
         <View className="mb-3 flex-row justify-between items-center">
           <View className="flex-1 mr-2">
-            <Text className="text-xl font-bold text-slate-900">Live Parking Status</Text>
+            <Text className="text-xl font-bold text-slate-900">Parking Availability</Text>
             <Text className="text-slate-500 text-xs mt-0.5">
-              Real-time space availability across all zones
+              Real-time space availability
             </Text>
           </View>
         </View>
@@ -95,11 +95,12 @@ export default function StudentHomeScreen({
           </View>
         ) : (
           (() => {
-            const totalAvailable = parkingZones.reduce((sum, zone) => sum + (zone.available_slots || 0), 0);
-            const totalSlots = parkingZones.reduce((sum, zone) => sum + (zone.total_slots || 0), 0);
+            const carZones = parkingZones.filter(zone => zone.tag === 'Cars Only' || (zone.zone && (zone.zone.includes('Zone A') || zone.zone.includes('Zone C'))));
+            const totalAvailable = carZones.reduce((sum, zone) => sum + (zone.available_slots || 0), 0);
+            const totalSlots = carZones.reduce((sum, zone) => sum + (zone.total_slots || 0), 0);
 
             return (
-              <View className="bg-white border border-slate-200 py-8 px-4 rounded-3xl relative shadow-sm items-center justify-center">
+              <View style={{ minHeight: 196 }} className="bg-white border border-slate-200 py-6 px-4 rounded-3xl relative shadow-sm items-center justify-center">
                 {/* Refresh Icon (Top Right of Card) */}
                 <TouchableOpacity
                   onPress={fetchParkingData}
@@ -114,18 +115,19 @@ export default function StudentHomeScreen({
                   VMES Building
                 </Text>
 
-                {/* Huge Centered Number */}
+                {/* Huge Centered Number / Status */}
                 <Text
                   style={{ fontSize: 72, lineHeight: 76 }}
                   className={`font-black tracking-tighter ${totalAvailable > 0 ? 'text-emerald-500' : 'text-red-500'}`}
                 >
-                  {totalAvailable}
+                  {totalAvailable > 0 ? totalAvailable : 'FULL'}
                 </Text>
 
                 {/* Subtext */}
-                <Text className={`text-sm font-bold uppercase tracking-widest mt-2 ${totalAvailable > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {totalAvailable > 0 ? 'Total Spots Available' : 'Parking Full'}
+                <Text className={`text-xs font-bold uppercase tracking-widest mt-2 ${totalAvailable > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {totalAvailable > 0 ? 'Available Spots' : 'No Spots Available'}
                 </Text>
+
                 {totalSlots > 0 && (
                   <Text className="text-xs text-slate-400 font-medium mt-1">
                     Out of {totalSlots} total capacity
@@ -137,7 +139,7 @@ export default function StudentHomeScreen({
         )}
       </View>
 
-      {/* 3. Where did you park? (Parking Location QR Card) */}
+      {/* 3. Find My Parking (Parking Location QR Card) */}
       <View className="mt-2">
         <ParkingLocationCard
           parkedSpot={parkedSpot}

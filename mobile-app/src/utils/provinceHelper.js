@@ -247,6 +247,9 @@ export function formatDisplayPlate(plateStr) {
   if (!plateStr || typeof plateStr !== 'string') return '';
   let str = plateStr.trim();
 
+  // If format contains "(English)" after Thai e.g. "กรุงเทพมหานคร (Bangkok)", strip English in parens
+  str = str.replace(/\s*\([a-zA-Z\s,.-]+\)/g, '');
+
   // If format contains parentheses like "Bangkok (กรุงเทพมหานคร)", extract Thai inside parentheses
   if (str.includes('(') && str.includes(')')) {
     const thaiMatch = str.match(/\(([\u0E00-\u0E7F\s]+)\)/);

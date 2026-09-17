@@ -7,47 +7,99 @@ from auth import require_roles
 
 router = APIRouter(prefix="/parking", tags=["Parking Status"])
 
-# Mock default data if collection is empty (Total 21 slots across 4 zones for VMES Building)
+# Mock default data if collection is empty (Total 18 Car slots across VMES Building + Unlimited Motorcycles)
 DEFAULT_ZONES = [
-    {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 10, "occupied_slots": 2},
-    {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 2, "occupied_slots": 1},
-    {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 8, "occupied_slots": 1},
-    {"zone": "Zone D • Floor G (VMES Building)", "total_slots": 1, "occupied_slots": 1},
+    {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 10, "occupied_slots": 1, "tag": "Cars Only", "is_unlimited": False},
+    {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 0, "occupied_slots": 0, "tag": "Motorcycles", "is_unlimited": True},
+    {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 8, "occupied_slots": 0, "tag": "Cars Only", "is_unlimited": False},
+    {"zone": "Zone D • Floor G (VMES Building)", "total_slots": 0, "occupied_slots": 0, "tag": "Motorcycles", "is_unlimited": True},
 ]
 
 @router.get("/status", response_model=List[ParkingStatusResponse])
 async def get_parking_status():
     """
     Public endpoint: Get real-time available parking slots per zone.
+    Fully synchronized with building_zones capacity and active saved_spots in MongoDB Atlas.
     """
+    now = datetime.now(timezone.utc)
+
+    # 1. Fetch building zones capacity map from MongoDB Atlas if available
+    zone_capacities = {}
+    if building_zones_collection is not None:
+        bz_list = list(building_zones_collection.find({}, {"_id": 0}))
+        for bz in bz_list:
+            bz_id = bz.get("id") or bz.get("name")
+            if bz_id and "numericCapacity" in bz:
+                zone_capacities[bz_id] = bz["numericCapacity"]
+
+    # 2. Count active saved spots per zone from MongoDB Atlas
+    active_saved_counts = {}
+    if saved_spots_collection is not None:
+        active_spots = list(saved_spots_collection.find({"status": "Active Parked"}, {"_id": 0, "zone": 1}))
+        for sp in active_spots:
+            z_val = (sp.get("zone") or "").strip()
+            z_key = z_val.split(" • ")[0]
+            if z_key:
+                active_saved_counts[z_key] = active_saved_counts.get(z_key, 0) + 1
+
     if parking_status_collection is None:
         # Fallback response
-        now = datetime.now(timezone.utc)
-        return [
-            ParkingStatusResponse(
-                zone=item["zone"],
-                total_slots=item["total_slots"],
-                occupied_slots=item["occupied_slots"],
-                available_slots=max(0, item["total_slots"] - item["occupied_slots"]),
-                last_updated=now
+        res = []
+        for item in DEFAULT_ZONES:
+            z_key = item["zone"].split(" • ")[0]
+            t_slots = zone_capacities.get(z_key, item["total_slots"])
+            occ_slots = active_saved_counts.get(z_key, item["occupied_slots"])
+            avail_slots = max(0, t_slots - occ_slots)
+            res.append(
+                ParkingStatusResponse(
+                    zone=item["zone"],
+                    total_slots=t_slots,
+                    occupied_slots=occ_slots,
+                    available_slots=avail_slots,
+                    last_updated=now
+                )
             )
-            for item in DEFAULT_ZONES
-        ]
+        return res
 
     docs = list(parking_status_collection.find({}, {"_id": 0}))
     if not docs:
         # Seed initial zones
-        now = datetime.now(timezone.utc)
         for item in DEFAULT_ZONES:
+            z_key = item["zone"].split(" • ")[0]
+            t_slots = zone_capacities.get(z_key, item["total_slots"])
+            occ_slots = active_saved_counts.get(z_key, 0)
+            avail_slots = max(0, t_slots - occ_slots)
             doc = {
                 "zone": item["zone"],
-                "total_slots": item["total_slots"],
-                "occupied_slots": item["occupied_slots"],
-                "available_slots": max(0, item["total_slots"] - item["occupied_slots"]),
+                "total_slots": t_slots,
+                "occupied_slots": occ_slots,
+                "available_slots": avail_slots,
                 "last_updated": now
             }
             parking_status_collection.insert_one(doc)
         docs = list(parking_status_collection.find({}, {"_id": 0}))
+    else:
+        # Dynamically sync total_slots and occupied_slots from MongoDB Atlas
+        for doc in docs:
+            z_key = doc["zone"].split(" • ")[0]
+            new_total = zone_capacities.get(z_key, doc.get("total_slots", 10))
+            new_occupied = active_saved_counts.get(z_key, 0)
+            new_available = max(0, new_total - new_occupied)
+
+            doc["total_slots"] = new_total
+            doc["occupied_slots"] = new_occupied
+            doc["available_slots"] = new_available
+            doc["last_updated"] = now
+
+            parking_status_collection.update_one(
+                {"zone": doc["zone"]},
+                {"$set": {
+                    "total_slots": new_total,
+                    "occupied_slots": new_occupied,
+                    "available_slots": new_available,
+                    "last_updated": now
+                }}
+            )
 
     return docs
 
@@ -155,11 +207,15 @@ async def get_user_parking_spot(user_email: str = "demo@student.ac.th"):
 @router.delete("/clear-spot")
 async def clear_user_parking_spot(user_email: str = "demo@student.ac.th"):
     """
-    Clear/Remove saved parking spot location from MongoDB when exiting building.
+    Mark saved parking spot status as Exited in MongoDB (Permanent Data Retention Policy).
     """
     if saved_spots_collection is not None:
-        saved_spots_collection.delete_one({"user_email": user_email})
-    return {"message": "Parking spot cleared successfully"}
+        saved_spots_collection.update_many(
+            {"user_email": user_email, "status": "Active Parked"},
+            {"$set": {"status": "Exited", "exit_timestamp": datetime.now(timezone.utc)}}
+        )
+    return {"message": "Parking spot status updated to Exited (Retained in MongoDB)"}
+
 
 @router.post("/reserve-spot")
 async def reserve_parking_spot(data: SpotReservationCreate):
@@ -358,34 +414,37 @@ async def register_vehicle_in_mongodb(data: VehicleRegisterCreate):
                 return f"/vehicle_photos/{filename}"
             except Exception as err:
                 print(f"[VEHICLE PHOTO ERROR] {err}")
-                return None
+                return raw_photo  # Preserve raw base64 URI if disk write fails
         elif raw_photo.startswith("http") or raw_photo.startswith("/"):
             return raw_photo
-        return None
+        return raw_photo
 
-    front_url = data.front_photo_url or save_base64_photo(data.vehicle_front_photo, "front")
+    front_url = data.front_photo_url or save_base64_photo(data.vehicle_front_photo or data.vehicle_photo, "front")
     side_url = data.side_photo_url or save_base64_photo(data.vehicle_side_photo, "side")
+    student_id_url = save_base64_photo(data.student_id_photo, "student_id")
     if not front_url and data.vehicle_photo:
         front_url = save_base64_photo(data.vehicle_photo, "vehicle")
 
-    # Enforce front photo requirement for car registrations
-    is_car = "🚗" in (data.model or "") or "car" in (data.model or "").lower()
-    if is_car and not front_url:
-        raise HTTPException(
-            status_code=400,
-            detail="Car registration requires a clear front photo displaying the vehicle front license plate."
-        )
+    # Fallback to raw base64 data if URL is missing
+    front_photo_data = front_url or data.vehicle_front_photo or data.vehicle_photo
+    side_photo_data = side_url or data.vehicle_side_photo
+    student_id_photo_data = student_id_url or data.student_id_photo
 
-    main_photo_url = front_url or side_url or data.vehicle_photo_url
+    main_photo_url = front_photo_data or side_photo_data or data.vehicle_photo_url or data.vehicle_photo
 
     doc = {
-        "user_email": data.user_email,
+        "user_email": data.user_email.strip().lower(),
         "role": data.role or "student",
         "plate": data.plate,
         "model": data.model,
+        "vehicle_photo": main_photo_url,
+        "vehicle_front_photo": front_photo_data,
+        "vehicle_side_photo": side_photo_data,
+        "student_id_photo": student_id_photo_data,
         "vehicle_photo_url": main_photo_url,
-        "front_photo_url": front_url,
-        "side_photo_url": side_url,
+        "front_photo_url": front_photo_data,
+        "side_photo_url": side_photo_data,
+        "student_id_photo_url": student_id_photo_data,
         "registered_at": now
     }
 
@@ -405,25 +464,45 @@ async def register_vehicle_in_mongodb(data: VehicleRegisterCreate):
             for v in user_vehicles:
                 if v.get("plate") == data.plate:
                     v["model"] = data.model
+                    v["vehicle_photo"] = main_photo_url
+                    v["vehicle_front_photo"] = front_photo_data
+                    v["vehicle_side_photo"] = side_photo_data
+                    v["student_id_photo"] = student_id_photo_data
                     v["vehicle_photo_url"] = main_photo_url
-                    v["front_photo_url"] = front_url
-                    v["side_photo_url"] = side_url
+                    v["front_photo_url"] = front_photo_data
+                    v["side_photo_url"] = side_photo_data
+                    v["student_id_photo_url"] = student_id_photo_data
                     found = True
                 updated_vehicles.append(v)
             if not found:
                 updated_vehicles.append({
                     "plate": data.plate,
                     "model": data.model,
+                    "vehicle_photo": main_photo_url,
+                    "vehicle_front_photo": front_photo_data,
+                    "vehicle_side_photo": side_photo_data,
+                    "student_id_photo": student_id_photo_data,
                     "vehicle_photo_url": main_photo_url,
-                    "front_photo_url": front_url,
-                    "side_photo_url": side_url
+                    "front_photo_url": front_photo_data,
+                    "side_photo_url": side_photo_data,
+                    "student_id_photo_url": student_id_photo_data
                 })
+
+            user_set_fields = {
+                "vehicles": updated_vehicles,
+                "license_plate": data.plate
+            }
+            if student_id_photo_data:
+                user_set_fields["student_id_photo"] = student_id_photo_data
+                user_set_fields["id_card_photo"] = student_id_photo_data
+                user_set_fields["student_id_photo_url"] = student_id_photo_data
+
             users_collection.update_one(
                 {"email": data.user_email.strip().lower()},
-                {"$set": {"vehicles": updated_vehicles, "license_plate": data.plate}}
+                {"$set": user_set_fields}
             )
 
-    return {"status": "success", "message": "Vehicle registered in MongoDB with 2 vehicle photos", "vehicle": doc}
+    return {"status": "success", "message": "Vehicle registered in MongoDB with vehicle & ID photos", "vehicle": doc}
 
 
 
@@ -471,4 +550,3 @@ async def save_building_zones_to_mongodb(zones: list):
             building_zones_collection.insert_many(zones)
         return {"status": "success", "message": "Building zones updated in MongoDB Atlas"}
     return {"status": "error", "message": "Failed to update building zones in MongoDB Atlas"}
-

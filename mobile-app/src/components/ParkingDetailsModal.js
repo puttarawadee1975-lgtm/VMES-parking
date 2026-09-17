@@ -71,7 +71,7 @@ export default function ParkingDetailsModal({
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
         {/* Header Bar */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
-          <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>My Parking Location</Text>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>Find My Parking</Text>
           <TouchableOpacity onPress={onClose} style={{ padding: 8, backgroundColor: '#f1f5f9', borderRadius: 20 }}>
             <Ionicons name="close" size={20} color="#475569" />
           </TouchableOpacity>

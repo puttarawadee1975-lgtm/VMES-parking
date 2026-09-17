@@ -22,7 +22,7 @@ export default function ParkingLocationCard({
           </View>
           <View className="flex-1">
             <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">
-              My Parking Location ({zoneStr})
+              Find My Parking ({zoneStr})
             </Text>
             <Text className="text-slate-900 font-extrabold text-base" numberOfLines={1}>
               {(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VMES Building' : parkedSpot.building}
@@ -50,7 +50,7 @@ export default function ParkingLocationCard({
             <Ionicons name="qr-code-outline" size={20} color="#64748b" />
           </View>
           <View className="flex-1">
-            <Text className="text-slate-900 font-bold text-sm">Where did you park?</Text>
+            <Text className="text-slate-900 font-bold text-sm">Find My Parking</Text>
             <Text className="text-slate-500 text-[11px] mt-0.5">Scan pillar QR code to save your spot</Text>
           </View>
         </View>

@@ -13,7 +13,7 @@ import {
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import { useAuthRequest, makeRedirectUri, ResponseType, exchangeCodeAsync } from 'expo-auth-session';
+import { useAuthRequest, makeRedirectUri, ResponseType, exchangeCodeAsync, Prompt } from 'expo-auth-session';
 import { loginWithMicrosoft, saveSpotToMongoDB, clearSpotInMongoDB, registerVehicleToMongoDB, deleteVehicleFromMongoDB, getUserVehiclesFromMongoDB, getUserNotifications } from './src/services/api';
 import { registerForPushNotificationsAsync, sendLocalPhonePushNotification } from './src/services/notificationService';
 
@@ -60,6 +60,10 @@ function MainApp() {
     clientId: '779a1a49-5a7f-4142-acd3-b8f72152fc5e',
     responseType: ResponseType.Code,
     scopes: ['openid', 'profile', 'email', 'offline_access'],
+    prompt: Prompt.Login,
+    extraParams: {
+      prompt: 'login'
+    },
     redirectUri: makeRedirectUri({
       scheme: 'myapp'
     }),
@@ -95,7 +99,7 @@ function MainApp() {
                 ...data.user,
                 studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : '65070042'),
                 vehicles: data.user.vehicles || [],
-		safetyScore: data.user.driving_score ?? 100
+                safetyScore: data.user.driving_score ?? 100
               };
               fetchUserVehiclesAndLogin(formattedUser);
             } else {
@@ -247,21 +251,7 @@ function MainApp() {
   }, [currentUser?.email]);
 
 
-  useEffect(() => {
-    let interval;
-    if (currentUser?.role === 'admin') {
-      interval = setInterval(() => {
-        setSimStep((prev) => (prev + 1) % 100);
-      }, 100);
-    }
-    return () => clearInterval(interval);
-  }, [currentUser?.role]);
-
-  useEffect(() => {
-    if (simStep === 0 && currentUser?.role === 'admin') {
-      triggerScan();
-    }
-  }, [simStep, currentUser?.role]);
+  // Admin scan simulation interval removed - mobile app roles restricted to guest, student, staff
 
   const triggerScan = () => {
     const nextIdx = (currentVehIndex + 1) % SIMULATED_VEHICLES.length;
@@ -367,7 +357,11 @@ function MainApp() {
     };
 
     try {
-      const res = await promptAsync();
+      const res = await promptAsync({
+        preferEphemeralSession: true,
+        prompt: Prompt.SelectAccount,
+        extraParams: { prompt: 'select_account' }
+      });
       if (!res || res.type !== 'success') {
         await fetchUserVehiclesAndLogin(student);
       }
@@ -391,14 +385,22 @@ function MainApp() {
   };
 
   const handleSelectAccount = async (accountEmail) => {
-    const preset = DEMO_ACCOUNTS[accountEmail] || {
-      role: 'student',
-      name: accountEmail.split('@')[0],
-      studentId: accountEmail.replace(/\D/g, '') || '65070042',
-      email: accountEmail,
-      vehicles: [],
-      safetyScore: 100
-    };
+    const cleanEmail = (accountEmail || '').trim().toLowerCase();
+    let preset = DEMO_ACCOUNTS[cleanEmail];
+
+    if (!preset) {
+      const isStudentPattern = /^u\d{7}$/.test(cleanEmail.split('@')[0]);
+      const role = isStudentPattern ? 'student' : 'staff';
+      preset = {
+        role: role,
+        name: isStudentPattern ? `Student ${cleanEmail.split('@')[0]}` : `Staff (${cleanEmail.split('@')[0]})`,
+        studentId: isStudentPattern ? cleanEmail.split('@')[0].replace(/\D/g, '') : null,
+        staffId: isStudentPattern ? null : 'STF-1024',
+        email: cleanEmail,
+        vehicles: [],
+        safetyScore: 100
+      };
+    }
     await fetchUserVehiclesAndLogin(preset);
   };
 
@@ -437,7 +439,8 @@ function MainApp() {
           model: newFullModel,
           vehicle_front_photo: photos?.vehicle_front_photo,
           vehicle_side_photo: photos?.vehicle_side_photo,
-          vehicle_photo: photos?.vehicle_photo
+          vehicle_photo: photos?.vehicle_photo,
+          student_id_photo: photos?.student_id_photo
         }).catch(err => console.warn('Failed to sync edited vehicle to MongoDB:', err));
       }
       return { ...prev, vehicles: updatedVehicles };
@@ -473,9 +476,18 @@ function MainApp() {
       return false;
     }
 
-    // Call MongoDB API to persist vehicle registration with mandatory vehicle photo for Admin verification
+    const photosObj = typeof vehiclePhoto === 'object' && vehiclePhoto !== null ? vehiclePhoto : { vehicle_photo: vehiclePhoto };
+
+    // Call Backend API / MongoDB to persist vehicle registration with mandatory vehicle photos & ID card photo for Admin verification
     registerVehicleToMongoDB(
-      { plate: fullPlate, model: fullModel, vehicle_photo: vehiclePhoto },
+      {
+        plate: fullPlate,
+        model: fullModel,
+        vehicle_photo: photosObj.vehicle_photo || photosObj.vehicle_front_photo || null,
+        vehicle_front_photo: photosObj.vehicle_front_photo || null,
+        vehicle_side_photo: photosObj.vehicle_side_photo || null,
+        student_id_photo: photosObj.student_id_photo || null
+      },
       currentUser.email,
       currentUser?.role || 'student'
     );
@@ -560,7 +572,6 @@ function MainApp() {
     showToast('🔌 WebSocket Connected (Test Mode)');
   };
 
-  const isAdmin = currentUser?.role === 'admin';
   const bottomNavHeight = insets.bottom > 0 ? insets.bottom + 54 : 64;
 
   return (
@@ -571,6 +582,7 @@ function MainApp() {
       {!currentUser ? (
         <AuthScreen
           onOpenMicrosoftModal={handleMicrosoftLogin}
+          onSelectAccount={handleSelectAccount}
           onGuestLogin={handleGuestLogin}
           insets={insets}
           screenWidth={screenWidth}
@@ -606,41 +618,24 @@ function MainApp() {
             }}
             showsVerticalScrollIndicator={false}
           >
-            {/* Tab 1: Home (Student vs Admin/Staff view) */}
+            {/* Tab 1: Home */}
             {activeTab === 'monitor' && (
-              isAdmin ? (
-                <AdminHomeScreen
-                  currentUser={currentUser}
-                  kpiScans={kpiScans}
-                  kpiViolations={kpiViolations}
-                  simStep={simStep}
-                  activeSimVeh={activeSimVeh}
-                  triggerScan={triggerScan}
-                  detectionLogs={detectionLogs}
-                  setDetectionLogs={setDetectionLogs}
-                  screenWidth={screenWidth}
-                />
-              ) : (
-                <StudentHomeScreen
-                  currentUser={currentUser}
-                  kpiAvailable={kpiAvailable}
-                  kpiOccupied={kpiOccupied}
-                  parkedSpot={parkedSpot}
-                  onOpenQRScanner={() => setShowQRModal(true)}
-                  onExitBuilding={handleExitBuilding}
-                  onOpenNotifications={() => setShowNotificationsModal(true)}
-                />
-              )
+              <StudentHomeScreen
+                currentUser={currentUser}
+                kpiAvailable={kpiAvailable}
+                kpiOccupied={kpiOccupied}
+                parkedSpot={parkedSpot}
+                onOpenQRScanner={() => setShowQRModal(true)}
+                onExitBuilding={handleExitBuilding}
+                onOpenNotifications={() => setShowNotificationsModal(true)}
+              />
             )}
-
-            {/* Tab 2: Analytics (Admin only) */}
-            {activeTab === 'analytics' && isAdmin && <AnalyticsScreen />}
 
             {/* Tab 3: My Vehicle / Pass (Handles Student, Admin Staff ID, and Guest) */}
             {activeTab === 'my-vehicle' && (
               <MyVehicleScreen
                 currentUser={currentUser}
-                onOpenMicrosoftModal={() => promptAsync()}
+                onOpenMicrosoftModal={handleMicrosoftLogin}
                 onOpenAddVehicleModal={() => setShowAddVehicleModal(true)}
                 onAddVehicle={handleAddVehicle}
                 onEditVehicle={handleEditVehicle}

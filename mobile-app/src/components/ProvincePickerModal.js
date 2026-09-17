@@ -75,8 +75,10 @@ export default function ProvincePickerModal({ visible, onClose, onSelect, select
             renderItem={({ item }) => {
               const isSelected =
                 selectedProvince === item.label ||
+                selectedProvince === item.th ||
                 selectedProvince === item.en ||
-                selectedProvince?.toLowerCase() === item.en.toLowerCase();
+                selectedProvince?.toLowerCase() === item.en.toLowerCase() ||
+                selectedProvince?.toLowerCase() === item.th.toLowerCase();
 
               return (
                 <TouchableOpacity
@@ -86,7 +88,7 @@ export default function ProvincePickerModal({ visible, onClose, onSelect, select
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.itemLabel, isSelected && styles.itemLabelSelected]}>
-                      {item.label}
+                      {item.th} <Text style={{ color: isSelected ? '#2563eb' : '#64748b', fontWeight: '500', fontSize: 13 }}>({item.en})</Text>
                     </Text>
                   </View>
                   {isSelected && <Ionicons name="checkmark-circle" size={20} color="#2563eb" />}

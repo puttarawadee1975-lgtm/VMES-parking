@@ -165,7 +165,10 @@ export const registerVehicleToMongoDB = async (vehicleData, userEmail, role = 's
         model: vehicleData.model,
         user_email: userEmail,
         role: role,
-        vehicle_photo: vehicleData.vehicle_photo || null
+        vehicle_photo: vehicleData.vehicle_photo || null,
+        vehicle_front_photo: vehicleData.vehicle_front_photo || null,
+        vehicle_side_photo: vehicleData.vehicle_side_photo || null,
+        student_id_photo: vehicleData.student_id_photo || null
       }),
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -275,6 +278,25 @@ export const getUserNotifications = async (userEmail) => {
     console.warn('[API] Failed to fetch user notifications from MongoDB:', err);
   }
   return [];
+};
+
+// 16. AI License Plate OCR Camera Scan API
+export const scanPlateImageAPI = async (base64Image, vehicleType = 'car') => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/detections/ocr-scan`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        image_base64: base64Image,
+        vehicle_type: vehicleType
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] OCR scan request failed:', err);
+    return null;
+  }
 };
 
 
