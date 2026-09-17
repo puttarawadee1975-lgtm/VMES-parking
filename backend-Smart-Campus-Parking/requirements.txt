@@ -8,3 +8,4 @@ PyJWT
 requests
 
 email-validator
+python-multipart
