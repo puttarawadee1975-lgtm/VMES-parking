@@ -268,10 +268,15 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
     Public / Admin endpoint: Get parked vehicle spots dynamically from MongoDB Atlas.
     - If user saved their parking spot (saved_spots_collection), show their specific saved floor & pillar.
     - If car entered via CCTV gate (detection_logs_collection) but did NOT save spot, display location as '-'.
+    - Fully resolves User ID, Name & Role from MongoDB Atlas (Registered User vs Guest).
     """
     results = []
     seen_plates = set()
     seen_emails = set()
+
+    # Helper function to normalize plate string for matching
+    def norm_p(p: str) -> str:
+        return (p or "").replace("-", "").replace(" ", "").upper()
 
     # 1. Fetch saved spots from MongoDB saved_spots_collection (Users who scanned & saved spot)
     if saved_spots_collection is not None:
@@ -289,6 +294,34 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                 if email_str:
                     seen_emails.add(email_str)
 
+                # Look up registered user in users_collection for authoritative Name, Role & Student ID
+                user_doc = None
+                if email_str and users_collection is not None:
+                    user_doc = users_collection.find_one({"email": email_str.strip().lower()})
+                if not user_doc and plate_str != "-" and users_collection is not None:
+                    clean_p = norm_p(plate_str)
+                    for cand in users_collection.find({}):
+                        leg = norm_p(cand.get("license_plate", ""))
+                        if leg and leg == clean_p:
+                            user_doc = cand
+                            break
+                        for veh in cand.get("vehicles", []):
+                            vp = norm_p(veh.get("plate", ""))
+                            if vp and vp == clean_p:
+                                user_doc = cand
+                                break
+                        if user_doc:
+                            break
+
+                if user_doc:
+                    owner_name = user_doc.get("name") or item.get("owner") or "Registered Driver"
+                    student_id = user_doc.get("student_id") or user_doc.get("studentId") or item.get("studentId") or (email_str.split("@")[0].upper() if "@" in email_str else "STUDENT")
+                    role_str = (user_doc.get("role") or item.get("role") or "Student").capitalize()
+                else:
+                    owner_name = item.get("owner") or item.get("name") or "Guest Driver"
+                    student_id = item.get("studentId") or (email_str.split("@")[0].upper() if "@" in email_str else "GUEST")
+                    role_str = (item.get("role") or "Guest").capitalize()
+
                 saved_d = item.get("savedDate")
                 if not saved_d and item.get("timestamp"):
                     ts_val = item.get("timestamp")
@@ -299,10 +332,10 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
 
                 results.append({
                     "id": spot_id,
-                    "owner": item.get("owner") or item.get("name") or "Registered Driver",
-                    "studentId": item.get("studentId") or (email_str.split("@")[0].upper() if "@" in email_str else "STUDENT"),
-                    "ownerEmail": email_str or "user@student.ac.th",
-                    "role": item.get("role", "Student"),
+                    "owner": owner_name,
+                    "studentId": student_id,
+                    "ownerEmail": email_str or "guest@visitor.ac.th",
+                    "role": role_str,
                     "plate": plate_str,
                     "province": item.get("province", "กรุงเทพมหานคร"),
                     "vehicleType": item.get("vehicleType", item.get("vehicle_type", "car")),
@@ -349,6 +382,53 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                 if l_plate != "-":
                     seen_plates.add(l_plate)
 
+                # Look up registered user in users_collection / registered_vehicles_collection
+                user_doc = None
+                reg_v = None
+                if l_email and users_collection is not None:
+                    user_doc = users_collection.find_one({"email": l_email.strip().lower()})
+                if not user_doc and l_plate != "-" and users_collection is not None:
+                    clean_lp = norm_p(l_plate)
+                    for cand in users_collection.find({}):
+                        leg = norm_p(cand.get("license_plate", ""))
+                        if leg and leg == clean_lp:
+                            user_doc = cand
+                            break
+                        for veh in cand.get("vehicles", []):
+                            vp = norm_p(veh.get("plate", ""))
+                            if vp and vp == clean_lp:
+                                user_doc = cand
+                                break
+                        if user_doc:
+                            break
+                if not user_doc and l_plate != "-" and registered_vehicles_collection is not None:
+                    clean_lp = norm_p(l_plate)
+                    for rv in registered_vehicles_collection.find({}):
+                        vp = norm_p(rv.get("plate", ""))
+                        if vp and vp == clean_lp:
+                            reg_v = rv
+                            if rv.get("user_email") and users_collection is not None:
+                                user_doc = users_collection.find_one({"email": rv.get("user_email")})
+                            break
+
+                if user_doc:
+                    owner_name = user_doc.get("name") or (user_doc.get("email", "").split("@")[0].capitalize())
+                    student_id = user_doc.get("student_id") or user_doc.get("studentId") or (user_doc.get("email", "").split("@")[0].upper() if "@" in user_doc.get("email", "") else "STUDENT")
+                    role_str = (user_doc.get("role") or "Student").capitalize()
+                    owner_email = user_doc.get("email", "")
+                elif reg_v:
+                    owner_name = reg_v.get("owner") or reg_v.get("user_email", "").split("@")[0].capitalize()
+                    student_id = reg_v.get("student_id") or (reg_v.get("user_email", "").split("@")[0].upper() if "@" in reg_v.get("user_email", "") else "GUEST")
+                    role_str = (reg_v.get("role") or "Student").capitalize()
+                    owner_email = reg_v.get("user_email", "")
+                else:
+                    # Unregistered Guest Vehicle
+                    raw_user = l.get("matched_user")
+                    owner_name = raw_user if (raw_user and "Guest" not in raw_user and "Unregistered" not in raw_user) else "Guest Driver"
+                    student_id = "GUEST"
+                    role_str = "Guest"
+                    owner_email = "guest@visitor.ac.th"
+
                 ts = l.get("timestamp")
                 entry_time_str = "Active Parked"
                 log_d = None
@@ -365,10 +445,10 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                 spot_id = l.get("id") or f"LOG-{l_plate}"
                 results.append({
                     "id": spot_id,
-                    "owner": l.get("matched_user") or l.get("owner") or "Gate Entry Driver",
-                    "studentId": (l_email.split("@")[0].upper() if "@" in l_email else "STUDENT"),
-                    "ownerEmail": l_email or "driver@student.ac.th",
-                    "role": l.get("role", "Student"),
+                    "owner": owner_name,
+                    "studentId": student_id,
+                    "ownerEmail": owner_email,
+                    "role": role_str,
                     "plate": l_plate,
                     "province": l.get("province", "กรุงเทพมหานคร"),
                     "vehicleType": l.get("vehicle_type") or l.get("vehicleType", "car"),

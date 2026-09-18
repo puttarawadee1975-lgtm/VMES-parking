@@ -104,10 +104,14 @@ async def ingest_detection_event(payload: DetectionLogCreate):
                 break
 
     penalty_applied = False
+    role_str = "Guest"
+    student_id_str = "GUEST"
 
     if user_doc:
         matched_user = user_doc
         matched_user_name = f"{user_doc.get('name')} ({user_doc.get('email')})"
+        role_str = (user_doc.get("role") or "Student").capitalize()
+        student_id_str = user_doc.get("student_id") or user_doc.get("studentId") or (user_doc.get("email", "").split("@")[0].upper() if "@" in user_doc.get("email", "") else "STUDENT")
 
         # Check if Master Enforcement system is ACTIVE
         from database import system_settings_collection
@@ -147,6 +151,13 @@ async def ingest_detection_event(payload: DetectionLogCreate):
 
     elif registered_vehicle:
         matched_user_name = registered_vehicle.get("user_email") or "Registered Vehicle"
+        role_str = (registered_vehicle.get("role") or "Student").capitalize()
+        student_id_str = registered_vehicle.get("student_id") or (registered_vehicle.get("user_email", "").split("@")[0].upper() if "@" in registered_vehicle.get("user_email", "") else "STUDENT")
+    else:
+        matched_user_name = "Guest Driver"
+        role_str = "Guest"
+        student_id_str = "GUEST"
+
     # Insert into detection_logs collection
     log_doc = {
         "license_plate": payload.license_plate,
@@ -160,6 +171,9 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         "zone": payload.zone or "-",
         "timestamp": now,
         "matched_email": matched_user.get("email") if matched_user else None,
+        "matched_user": matched_user_name,
+        "role": role_str,
+        "studentId": student_id_str,
         # Optional event snapshot captured by ai_pipeline.py (local exhibition only)
         "image_url": payload.image_url or None,
     }
