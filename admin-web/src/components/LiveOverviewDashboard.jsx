@@ -223,7 +223,7 @@ export default function LiveOverviewDashboard({
             const item = currentTermData.hourlyOccupancy[idx];
             return [
               `Occupancy Rate: ${context.parsed.y}%`,
-              `Avg Occupied Slots: ${item?.avgSlots || 0} / 500 slots`
+              `Avg Occupied Slots: ${item?.avgSlots || 0} / ${item?.capacity || 19} slots`
             ];
           }
         }

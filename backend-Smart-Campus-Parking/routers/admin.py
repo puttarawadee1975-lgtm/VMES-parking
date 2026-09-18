@@ -821,13 +821,21 @@ async def get_term_summary(term: str = "2026-1"):
     # 3. Calculate real hourly occupancy rate from MongoDB Atlas detection logs
     import zoneinfo
     from datetime import datetime
+    from database import parking_status_collection
     
+    capacity = 19
+    if parking_status_collection is not None:
+        pz_docs = list(parking_status_collection.find({}, {"total_slots": 1}))
+        if pz_docs:
+            tot = sum(z.get("total_slots", 0) for z in pz_docs)
+            if tot > 0:
+                capacity = tot
+
     tz_bkk = zoneinfo.ZoneInfo("Asia/Bangkok")
     target_times = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '16:30']
-    capacity = 500
 
     hour_to_slot = {
-        3: '09:00', 4: '09:00', 5: '09:00', 6: '09:00', 7: '09:00', 8: '09:00', 9: '09:00',
+        0: '09:00', 1: '09:00', 2: '09:00', 3: '09:00', 4: '09:00', 5: '09:00', 6: '09:00', 7: '09:00', 8: '09:00', 9: '09:00',
         10: '10:00', 11: '11:00', 12: '12:00', 13: '13:00', 14: '14:00', 15: '15:00', 16: '16:00'
     }
     
@@ -856,7 +864,6 @@ async def get_term_summary(term: str = "2026-1"):
             except Exception:
                 pass
 
-    max_occ = max(slot_running_map.values()) if slot_running_map else 1
     hourly_occupancy_list = []
     last_slots = 0
 
@@ -868,14 +875,14 @@ async def get_term_summary(term: str = "2026-1"):
         elif raw_val > 0:
             last_slots = raw_val
             
-        relative_density = raw_val / max_occ if max_occ > 0 else 0
-        avg_slots = round(relative_density * 460) if total_scans > 0 else round(raw_val)
+        avg_slots = min(capacity, raw_val)
         rate_pct = round((avg_slots / capacity) * 100, 1)
         
         hourly_occupancy_list.append({
             "time": t,
             "avgSlots": avg_slots,
-            "ratePct": rate_pct
+            "ratePct": rate_pct,
+            "capacity": capacity
         })
 
     display_scans = total_scans
