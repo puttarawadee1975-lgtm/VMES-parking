@@ -122,9 +122,8 @@ export default function StudentHomeScreen({
           </View>
         ) : (
           (() => {
-            const carZones = parkingZones.filter(zone => zone.tag === 'Cars Only' || (zone.zone && (zone.zone.includes('Zone A') || zone.zone.includes('Zone C'))));
-            const totalAvailable = carZones.reduce((sum, zone) => sum + (zone.available_slots || 0), 0);
-            const totalSlots = carZones.reduce((sum, zone) => sum + (zone.total_slots || 0), 0);
+            const totalAvailable = parkingZones.reduce((sum, zone) => sum + (zone.available_slots || 0), 0);
+            const totalSlots = parkingZones.reduce((sum, zone) => sum + (zone.total_slots || 0), 0);
 
             return (
               <View style={{ minHeight: 196 }} className="bg-white border border-slate-200 py-6 px-4 rounded-3xl relative shadow-sm items-center justify-center">

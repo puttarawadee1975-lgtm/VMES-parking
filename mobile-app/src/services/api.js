@@ -20,10 +20,26 @@ const getHeaders = () => {
   return headers;
 };
 
+// Helper function to fetch with local backend fallback (matches admin-web behavior)
+const fetchAPI = async (endpoint, options = {}) => {
+  const localHosts = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://10.0.2.2:8000',
+  ];
+  for (const host of localHosts) {
+    try {
+      const res = await fetch(`${host}${endpoint}`, options);
+      if (res.ok) return res;
+    } catch (e) {}
+  }
+  return fetch(`${API_BASE_URL}${endpoint}`, options);
+};
+
 // 1. Parking Status (Public)
 export const getParkingStatus = async () => {
   try {
-    const res = await fetch(`${API_BASE_URL}/parking/status`, {
+    const res = await fetchAPI('/parking/status', {
       method: 'GET',
       headers: getHeaders(),
     });
@@ -38,7 +54,7 @@ export const getParkingStatus = async () => {
 // 1.5 Announcements API (Public)
 export const getAnnouncements = async () => {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/announcements`, {
+    const res = await fetchAPI('/admin/announcements', {
       method: 'GET',
       headers: getHeaders(),
     });
