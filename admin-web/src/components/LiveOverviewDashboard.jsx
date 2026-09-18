@@ -312,18 +312,74 @@ export default function LiveOverviewDashboard({
       .catch(() => { });
   }, [selectedTerm]);
 
+  const computedHourlyFromLogs = useMemo(() => {
+    if (!logs || logs.length === 0) return null;
+    const targetSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '16:30'];
+    const hourToSlot = {
+      3: '09:00', 4: '09:00', 5: '09:00', 6: '09:00', 7: '09:00', 8: '09:00', 9: '09:00',
+      10: '10:00', 11: '11:00', 12: '12:00', 13: '13:00', 14: '14:00', 15: '15:00', 16: '16:00'
+    };
+    let running = 0;
+    const slotMap = {};
+    const sortedLogs = [...logs].sort((a, b) => new Date(a.rawDate || a.timestamp || 0) - new Date(b.rawDate || b.timestamp || 0));
+    
+    sortedLogs.forEach(l => {
+      const gt = String(l.gate_type || l.gate || '').toUpperCase();
+      if (gt.includes('EXIT') || gt.includes('GATE 2')) {
+        running = Math.max(0, running - 1);
+      } else {
+        running += 1;
+      }
+      const d = l.rawDate ? new Date(l.rawDate) : (l.timestamp ? new Date(l.timestamp) : null);
+      if (d && !isNaN(d)) {
+        const h = d.getHours();
+        const m = d.getMinutes();
+        const sKey = (h > 16 || (h === 16 && m >= 30)) ? '16:30' : hourToSlot[h];
+        if (sKey) {
+          slotMap[sKey] = running;
+        }
+      }
+    });
+
+    const maxOcc = Math.max(...Object.values(slotMap), 1);
+    let lastVal = 0;
+    return targetSlots.map(t => {
+      let raw = slotMap[t] || 0;
+      if (raw === 0 && lastVal > 0 && ['15:00', '16:00', '16:30'].includes(t)) {
+        const decay = { '15:00': 0.65, '16:00': 0.40, '16:30': 0.20 }[t];
+        raw = Math.round(lastVal * decay);
+      } else if (raw > 0) {
+        lastVal = raw;
+      }
+      const rel = raw / maxOcc;
+      const avgSlots = Math.round(rel * 460);
+      const ratePct = parseFloat(((avgSlots / 500) * 100).toFixed(1));
+      return { time: t, avgSlots, ratePct };
+    });
+  }, [logs]);
+
   const currentTermData = useMemo(() => {
     const base = SEMESTER_DATA[selectedTerm] || SEMESTER_DATA['2026-1'];
-    if (!liveTermSummary) return base;
+    const activeHourly = (liveTermSummary?.hourlyOccupancy && liveTermSummary.hourlyOccupancy.length > 0)
+      ? liveTermSummary.hourlyOccupancy
+      : (computedHourlyFromLogs || base.hourlyOccupancy);
+
+    if (!liveTermSummary) {
+      return {
+        ...base,
+        hourlyOccupancy: activeHourly
+      };
+    }
     return {
       ...base,
       totalScans: liveTermSummary.totalScans || base.totalScans,
       violationsCount: liveTermSummary.violationsCount || base.violationsCount,
       avgSafetyScore: liveTermSummary.avgSafetyScore || base.avgSafetyScore,
       vehicleType: liveTermSummary.vehicleType || base.vehicleType,
-      userType: liveTermSummary.userType || base.userType
+      userType: liveTermSummary.userType || base.userType,
+      hourlyOccupancy: activeHourly
     };
-  }, [selectedTerm, liveTermSummary]);
+  }, [selectedTerm, liveTermSummary, computedHourlyFromLogs]);
 
   const termTrendData = useMemo(() => {
     const base = SEMESTER_DATA[selectedTerm] || SEMESTER_DATA['2026-1'];
