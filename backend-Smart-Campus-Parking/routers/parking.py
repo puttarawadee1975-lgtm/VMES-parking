@@ -289,6 +289,14 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                 if email_str:
                     seen_emails.add(email_str)
 
+                saved_d = item.get("savedDate")
+                if not saved_d and item.get("timestamp"):
+                    ts_val = item.get("timestamp")
+                    if isinstance(ts_val, datetime):
+                        saved_d = ts_val.strftime("%Y-%m-%d")
+                    else:
+                        saved_d = str(ts_val)[:10]
+
                 results.append({
                     "id": spot_id,
                     "owner": item.get("owner") or item.get("name") or "Registered Driver",
@@ -306,6 +314,9 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                     "entryTime": item.get("savedTime") or "Active Parked",
                     "exitTime": "Active (In Building)",
                     "scannedTime": item.get("savedTime", "Now"),
+                    "rawDate": saved_d,
+                    "savedDate": saved_d,
+                    "timestamp": str(item.get("timestamp")) if item.get("timestamp") else None,
                     "entryGate": "Gate 1 Entry",
                     "safetyScore": item.get("safetyScore", 100),
                     "status": item.get("status", "Active Parked"),
@@ -340,11 +351,14 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
 
                 ts = l.get("timestamp")
                 entry_time_str = "Active Parked"
+                log_d = None
                 if ts:
                     if isinstance(ts, datetime):
                         entry_time_str = ts.strftime("%I:%M %p")
+                        log_d = ts.strftime("%Y-%m-%d")
                     else:
                         entry_time_str = str(ts)
+                        log_d = str(ts)[:10]
                 elif l.get("time"):
                     entry_time_str = str(l.get("time"))
 
@@ -366,6 +380,9 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                     "entryTime": entry_time_str,
                     "exitTime": "Active (In Building)",
                     "scannedTime": entry_time_str,
+                    "rawDate": log_d,
+                    "savedDate": log_d,
+                    "timestamp": str(ts) if ts else None,
                     "entryGate": "Gate 1 Entry",
                     "safetyScore": 100,
                     "status": "Active Parked",

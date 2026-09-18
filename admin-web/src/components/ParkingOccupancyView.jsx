@@ -596,7 +596,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                         ? String(spot.exitTime).replace(/^Today\s*•?\s*/i, '')
                         : 'Active (In Building)';
 
-                      const recordDate = spot.rawDate || new Date().toISOString().split('T')[0];
+                      const recordDate = spot.rawDate || spot.savedDate || (spot.timestamp ? String(spot.timestamp).slice(0, 10) : new Date().toISOString().split('T')[0]);
 
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}>
