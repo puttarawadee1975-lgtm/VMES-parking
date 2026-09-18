@@ -141,9 +141,14 @@ export default function App() {
       if (resPark.ok) {
         const zones = await resPark.json();
         if (Array.isArray(zones) && zones.length > 0) {
+          // Filter ONLY Car Zones (Zone A & Zone C) for Car Available Spot KPI
+          const carZones = zones.filter(z => {
+            const zName = (z.zone || z.name || '').toUpperCase();
+            return zName.includes('ZONE A') || zName.includes('ZONE C');
+          });
           let total = 0;
           let occupied = 0;
-          zones.forEach(z => {
+          carZones.forEach(z => {
             total += z.total_slots || 0;
             occupied += z.occupied_slots || 0;
           });

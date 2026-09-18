@@ -284,16 +284,19 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
 
   const totalCarCapacity = useMemo(() => {
     if (!Array.isArray(zones) || zones.length === 0) return 19;
-    const carZones = zones.filter(z => z.tag && !z.tag.toLowerCase().includes('motorcycle'));
+    const carZones = zones.filter(z => {
+      const zName = (z.zone || z.name || z.id || '').toUpperCase();
+      return zName.includes('ZONE A') || zName.includes('ZONE C');
+    });
     const sum = carZones.reduce((acc, z) => {
-      const cap = (z.numericCapacity !== undefined && z.numericCapacity !== null) ? z.numericCapacity : (parseInt(z.capacity) || 0);
+      const cap = (z.numericCapacity !== undefined && z.numericCapacity !== null) ? z.numericCapacity : (z.total_slots || parseInt(z.capacity) || 0);
       return acc + cap;
     }, 0);
     return sum > 0 ? sum : 19;
   }, [zones]);
-  const occupiedCarsCount = parkedSpots.filter(s => s.status === 'Active Parked' && s.vehicleType !== 'motorcycle' && !s.zone?.includes('Zone B') && !s.zone?.includes('Zone D')).length;
+  const occupiedCarsCount = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType === 'car' || s.zone?.includes('Zone A') || s.zone?.includes('Zone C')) && s.vehicleType !== 'motorcycle' && !s.zone?.includes('Zone B')).length;
   const availableCarSpots = Math.max(0, totalCarCapacity - occupiedCarsCount);
-  const estMotos = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType === 'motorcycle' || s.zone?.includes('Zone B') || s.zone?.includes('Zone D'))).length;
+  const estMotos = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType?.toLowerCase() === 'motorcycle' || (s.vehicleName && s.vehicleName.toLowerCase().includes('motorcycle')))).length;
 
   const todayStr = new Date().toISOString().split('T')[0];
   const exitedTodayCount = (logs || []).filter(h => h.status === 'Completed' || (h.rawDate && h.rawDate.startsWith(todayStr))).length;
