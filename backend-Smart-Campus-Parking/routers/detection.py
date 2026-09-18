@@ -213,7 +213,6 @@ async def ingest_detection_event(payload: DetectionLogCreate):
             elif resolved_gate_type == "EXIT":
                 occupied = max(0, occupied - 1)
 
-
             parking_status_collection.update_one(
                 {"zone": zone_name},
                 {
@@ -224,6 +223,24 @@ async def ingest_detection_event(payload: DetectionLogCreate):
                     }
                 }
             )
+
+    # Automatically mark active saved spot as Exited on CCTV EXIT gate scan
+    from database import saved_spots_collection
+    if resolved_gate_type == "EXIT" and saved_spots_collection is not None:
+        clean_lp = (payload.license_plate or "").replace("-", "").replace(" ", "").upper()
+        if matched_user and matched_user.get("email"):
+            saved_spots_collection.update_many(
+                {"user_email": matched_user["email"], "status": "Active Parked"},
+                {"$set": {"status": "Exited", "exit_timestamp": now, "exitTime": now.strftime("%I:%M %p")}}
+            )
+        elif clean_lp:
+            for sp in saved_spots_collection.find({"status": "Active Parked"}):
+                sp_p = (sp.get("plate") or "").replace("-", "").replace(" ", "").upper()
+                if sp_p and sp_p == clean_lp:
+                    saved_spots_collection.update_one(
+                        {"_id": sp["_id"]},
+                        {"$set": {"status": "Exited", "exit_timestamp": now, "exitTime": now.strftime("%I:%M %p")}}
+                    )
 
     # Trigger automatic notification creation on Vehicle ENTRY (Student Cars ONLY for VMES Parking Limit)
     if payload.gate_type == "ENTRY" and matched_user and matched_user.get("email"):
