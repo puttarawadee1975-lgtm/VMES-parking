@@ -381,9 +381,9 @@ export default function LiveOverviewDashboard({
                 outline: 'none'
               }}
             >
-              {Object.keys(SEMESTER_DATA).map(key => (
+              {Object.keys(ACADEMIC_TERMS).map(key => (
                 <option key={key} value={key}>
-                  {SEMESTER_DATA[key].label}
+                  {ACADEMIC_TERMS[key].label}
                 </option>
               ))}
             </select>
