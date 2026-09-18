@@ -909,6 +909,18 @@ async def get_term_summary(term: str = "2026-1"):
         "source": "MongoDB Atlas Live Database"
     }
 
+@router.delete("/clear-detections")
+async def clear_all_detection_logs():
+    """
+    Admin endpoint: Clear all CCTV detection logs from MongoDB Atlas.
+    """
+    from database import detection_logs_collection
+    if detection_logs_collection is None:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    result = detection_logs_collection.delete_many({})
+    return {"status": "success", "deleted_count": result.deleted_count}
+
 
 
 
