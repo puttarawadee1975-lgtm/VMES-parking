@@ -294,8 +294,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     }, 0);
     return sum > 0 ? sum : 19;
   }, [zones]);
-  const occupiedCarsCount = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType === 'car' || s.zone?.includes('Zone A') || s.zone?.includes('Zone C')) && s.vehicleType !== 'motorcycle' && !s.zone?.includes('Zone B')).length;
-  const availableCarSpots = Math.max(0, totalCarCapacity - occupiedCarsCount);
+  const calcOccupiedCarsCount = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType === 'car' || s.zone?.includes('Zone A') || s.zone?.includes('Zone C')) && s.vehicleType !== 'motorcycle' && !s.zone?.includes('Zone B')).length;
+  const occupiedCarsCount = (parkingOccupancy && parkingOccupancy.occupied !== undefined) ? parkingOccupancy.occupied : calcOccupiedCarsCount;
+  const availableCarSpots = (parkingOccupancy && parkingOccupancy.available !== undefined) ? parkingOccupancy.available : Math.max(0, totalCarCapacity - occupiedCarsCount);
   const estMotos = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType?.toLowerCase() === 'motorcycle' || (s.vehicleName && s.vehicleName.toLowerCase().includes('motorcycle')))).length;
 
   const todayStr = new Date().toISOString().split('T')[0];

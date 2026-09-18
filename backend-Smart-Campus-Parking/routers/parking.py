@@ -24,45 +24,67 @@ async def get_parking_status():
             if bz_id and "numericCapacity" in bz:
                 zone_capacities[bz_id] = bz["numericCapacity"]
 
-    # 2. Count active saved spots per zone from MongoDB Atlas
+    # 2. Count active saved spots per zone from MongoDB Atlas (QR scans + CCTV Gate entries)
     active_saved_counts = {}
+    seen_plates = set()
+
+    def normalize_zone_key(z_str: str) -> str:
+        if not z_str:
+            return "Zone A"
+        z_u = z_str.upper()
+        if "ZONE A" in z_u:
+            return "Zone A"
+        if "ZONE B" in z_u:
+            return "Zone B"
+        if "ZONE C" in z_u:
+            return "Zone C"
+        if "ZONE D" in z_u:
+            return "Zone D"
+        return z_str.split(" • ")[0].split(" (")[0].strip()
+
     if saved_spots_collection is not None:
-        active_spots = list(saved_spots_collection.find({"status": "Active Parked"}, {"_id": 0, "zone": 1}))
+        active_spots = list(saved_spots_collection.find({"status": "Active Parked"}, {"_id": 0, "zone": 1, "plate": 1}))
         for sp in active_spots:
             z_val = (sp.get("zone") or "").strip()
-            z_key = z_val.split(" • ")[0]
+            z_key = normalize_zone_key(z_val)
             if z_key:
                 active_saved_counts[z_key] = active_saved_counts.get(z_key, 0) + 1
+            if sp.get("plate") and sp.get("plate") != "-":
+                seen_plates.add(sp.get("plate"))
 
-    if parking_status_collection is None:
-        return []
+    if detection_logs_collection is not None:
+        logs = list(detection_logs_collection.find({}, {"_id": 0}).sort("timestamp", -1).limit(200))
+        for l in logs:
+            plate = l.get("plate") or l.get("license_plate") or "-"
+            gate = str(l.get("gate_type") or l.get("gate") or "").lower()
+            vtype = str(l.get("vehicle_type") or l.get("vehicleType") or "").lower()
+            if "exit" in gate:
+                continue
+            if vtype == "car" or "car" in vtype:
+                if plate != "-" and plate in seen_plates:
+                    continue
+                if plate != "-":
+                    seen_plates.add(plate)
+                z_assigned = l.get("zone") or ""
+                z_key = normalize_zone_key(z_assigned)
+                active_saved_counts[z_key] = active_saved_counts.get(z_key, 0) + 1
+
+    DEFAULT_BUILDING_ZONES = [
+        {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 10},
+        {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 0},
+        {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 9},
+        {"zone": "Zone D • Floor G (VMES Building)", "total_slots": 0},
+    ]
 
     docs = list(parking_status_collection.find({}, {"_id": 0}))
-    if not docs and building_zones_collection is not None:
-        bz_docs = list(building_zones_collection.find({}, {"_id": 0}))
-        res = []
-        for bz in bz_docs:
-            z_name = bz.get("zone") or bz.get("name") or "Zone"
-            z_key = z_name.split(" • ")[0]
-            t_slots = bz.get("numericCapacity", bz.get("total_slots", 0))
-            occ_slots = active_saved_counts.get(z_key, 0)
-            avail_slots = max(0, t_slots - occ_slots)
-            res.append(
-                ParkingStatusResponse(
-                    zone=z_name,
-                    total_slots=t_slots,
-                    occupied_slots=occ_slots,
-                    available_slots=avail_slots,
-                    last_updated=now
-                )
-            )
-        return res
+    if not docs:
+        docs = DEFAULT_BUILDING_ZONES
 
     res = []
     for doc in docs:
-        z_key = doc.get("zone", "").split(" • ")[0]
+        z_key = normalize_zone_key(doc.get("zone", ""))
         new_total = zone_capacities.get(z_key, doc.get("total_slots", 0))
-        new_occupied = active_saved_counts.get(z_key, doc.get("occupied_slots", 0))
+        new_occupied = active_saved_counts.get(z_key, 0)
         new_available = max(0, new_total - new_occupied)
 
         res.append(
