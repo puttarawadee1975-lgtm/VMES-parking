@@ -128,15 +128,20 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       );
 
       // 2. Zone Filter
-      const matchZone = selectedZoneId === 'ALL' || spot.zone.toUpperCase().includes(selectedZoneId.toUpperCase());
+      const matchZone = selectedZoneId === 'ALL' ||
+        spot.zone?.toUpperCase().includes(selectedZoneId.toUpperCase()) ||
+        selectedZoneId.toUpperCase().includes(spot.zone?.toUpperCase() || '');
 
       // 3. Date Filter
       let matchDate = true;
+      const isActiveNow = spot.status === 'Active Parked' || (spot.exitTime && spot.exitTime.toLowerCase().includes('active'));
+
       if (dateFilter !== 'all') {
         const itemDate = spot.rawDate ? new Date(spot.rawDate) : (spot.timestamp ? new Date(spot.timestamp) : new Date());
         const today = new Date();
         if (dateFilter === 'today') {
-          matchDate = itemDate.toDateString() === today.toDateString();
+          // A vehicle currently parked inside the building is active TODAY regardless of entry date
+          matchDate = itemDate.toDateString() === today.toDateString() || isActiveNow;
         } else if (dateFilter === 'yesterday') {
           const yest = new Date(today);
           yest.setDate(yest.getDate() - 1);
@@ -150,7 +155,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       // 4. Status Filter
       let matchStatus = true;
       if (reservationFilter === 'ACTIVE') {
-        matchStatus = spot.status === 'Active Parked' || (spot.exitTime && spot.exitTime.includes('Active'));
+        matchStatus = isActiveNow;
       } else if (reservationFilter === 'EXITED') {
         matchStatus = spot.status === 'Exited' || spot.status === 'Completed' || (spot.exitTime && !spot.exitTime.toLowerCase().includes('active'));
       }
