@@ -27,268 +27,12 @@ ChartJS.register(
   Filler
 );
 
-const SAMPLE_ANNOUNCEMENTS = [
-  {
-    id: 'ANC-01',
-    title: 'Zone B Parking Maintenance Notice',
-    content: 'Zone B motorcycle parking area floor repainting scheduled for Sept 18.',
-    priority: 'high',
-    date: '14/09/2026',
-    target_audience: 'all'
-  },
-  {
-    id: 'ANC-02',
-    title: 'Mandatory Helmet Safety Enforcement',
-    content: 'Security officers will penalize non-helmet riders entering Gate 1.',
-    priority: 'normal',
-    date: '12/09/2026',
-    target_audience: 'all_students'
-  }
-];
-
-const SEMESTER_DATA = {
-  '2026-1': {
-    label: 'Semester 1 / 2026 (Current Term)',
-    period: '01 Jun 2026 – 31 Oct 2026',
-    totalScans: 14820,
-    violationsCount: 146,
-    avgSafetyScore: 94,
-    avgOccupancyRate: '76.4%',
-    occupancyPct: 76.4,
-    operatingHoursText: 'จันทร์ – ศุกร์ (09:00 – 16:30 น.)',
-    hourlyOccupancy: [
-      { time: '09:00', avgSlots: 245, ratePct: 49.0 },
-      { time: '10:00', avgSlots: 380, ratePct: 76.0 },
-      { time: '11:00', avgSlots: 462, ratePct: 92.4 },
-      { time: '12:00', avgSlots: 445, ratePct: 89.0 },
-      { time: '13:00', avgSlots: 450, ratePct: 90.0 },
-      { time: '14:00', avgSlots: 410, ratePct: 82.0 },
-      { time: '15:00', avgSlots: 325, ratePct: 65.0 },
-      { time: '16:00', avgSlots: 210, ratePct: 42.0 },
-      { time: '16:30', avgSlots: 110, ratePct: 22.0 }
-    ],
-    vehicleType: {
-      motorcycles: { trips: 10107, pct: 68.2 },
-      cars: { trips: 4713, pct: 31.8 }
-    },
-    userType: {
-      registered: { trips: 11633, pct: 78.5 },
-      unregistered: { trips: 3187, pct: 21.5 }
-    },
-    violationBreakdown: [
-      { title: 'No Helmet (ไม่สวมหมวกนิรภัย)', count: 99, pct: 67.8, color: '#dc2626' },
-      { title: 'VMES Overtime >30 Mins (จอดเกินเวลา)', count: 32, pct: 21.9, color: '#2563eb' },
-      { title: 'Speeding in Campus (ขับรถเร็วเกินกำหนด)', count: 10, pct: 6.8, color: '#d97706' },
-      { title: 'Unauthorized Zone (จอดนอกพื้นที่)', count: 5, pct: 3.4, color: '#7c3aed' }
-    ],
-    occupancyDetails: {
-      totalOccupiedHours: 252120,
-      capacity: 500,
-      termWeekdays: 88,
-      dailyHours: 7.5,
-      totalOperatingHours: 660
-    },
-    monthlyTrend: [
-      { month: 'Jun', traffic: 2840, violations: 32 },
-      { month: 'Jul', traffic: 3450, violations: 41 },
-      { month: 'Aug', traffic: 3100, violations: 28 },
-      { month: 'Sep', traffic: 3220, violations: 25 },
-      { month: 'Oct', traffic: 2210, violations: 20 },
-    ]
-  },
-  '2025-2': {
-    label: 'Semester 2 / 2025',
-    period: '01 Nov 2025 – 31 Mar 2026',
-    totalScans: 16450,
-    violationsCount: 182,
-    avgSafetyScore: 92,
-    avgOccupancyRate: '81.2%',
-    occupancyPct: 81.2,
-    operatingHoursText: 'จันทร์ – ศุกร์ (09:00 – 16:30 น.)',
-    hourlyOccupancy: [
-      { time: '09:00', avgSlots: 270, ratePct: 54.0 },
-      { time: '10:00', avgSlots: 410, ratePct: 82.0 },
-      { time: '11:00', avgSlots: 480, ratePct: 96.0 },
-      { time: '12:00', avgSlots: 468, ratePct: 93.6 },
-      { time: '13:00', avgSlots: 472, ratePct: 94.4 },
-      { time: '14:00', avgSlots: 435, ratePct: 87.0 },
-      { time: '15:00', avgSlots: 350, ratePct: 70.0 },
-      { time: '16:00', avgSlots: 230, ratePct: 46.0 },
-      { time: '16:30', avgSlots: 120, ratePct: 24.0 }
-    ],
-    vehicleType: {
-      motorcycles: { trips: 11186, pct: 68.0 },
-      cars: { trips: 5264, pct: 32.0 }
-    },
-    userType: {
-      registered: { trips: 12535, pct: 76.2 },
-      unregistered: { trips: 3915, pct: 23.8 }
-    },
-    violationBreakdown: [
-      { title: 'No Helmet (ไม่สวมหมวกนิรภัย)', count: 124, pct: 68.1, color: '#dc2626' },
-      { title: 'VMES Overtime >30 Mins (จอดเกินเวลา)', count: 42, pct: 23.1, color: '#2563eb' },
-      { title: 'Speeding in Campus (ขับรถเร็วเกินกำหนด)', count: 11, pct: 6.0, color: '#d97706' },
-      { title: 'Unauthorized Zone (จอดนอกพื้นที่)', count: 5, pct: 2.8, color: '#7c3aed' }
-    ],
-    occupancyDetails: {
-      totalOccupiedHours: 267960,
-      capacity: 500,
-      termWeekdays: 88,
-      dailyHours: 7.5,
-      totalOperatingHours: 660
-    },
-    monthlyTrend: [
-      { month: 'Nov', traffic: 3120, violations: 42 },
-      { month: 'Dec', traffic: 3540, violations: 38 },
-      { month: 'Jan', traffic: 3680, violations: 45 },
-      { month: 'Feb', traffic: 2980, violations: 29 },
-      { month: 'Mar', traffic: 3130, violations: 28 },
-    ]
-  },
-  '2025-3': {
-    label: 'Semester 3 / 2025 (Summer)',
-    period: '01 Apr 2026 – 31 May 2026',
-    totalScans: 6200,
-    violationsCount: 45,
-    avgSafetyScore: 96,
-    avgOccupancyRate: '58.4%',
-    occupancyPct: 58.4,
-    operatingHoursText: 'จันทร์ – ศุกร์ (09:00 – 16:30 น.)',
-    hourlyOccupancy: [
-      { time: '09:00', avgSlots: 180, ratePct: 36.0 },
-      { time: '10:00', avgSlots: 290, ratePct: 58.0 },
-      { time: '11:00', avgSlots: 360, ratePct: 72.0 },
-      { time: '12:00', avgSlots: 340, ratePct: 68.0 },
-      { time: '13:00', avgSlots: 350, ratePct: 70.0 },
-      { time: '14:00', avgSlots: 310, ratePct: 62.0 },
-      { time: '15:00', avgSlots: 220, ratePct: 44.0 },
-      { time: '16:00', avgSlots: 140, ratePct: 28.0 },
-      { time: '16:30', avgSlots: 70, ratePct: 14.0 }
-    ],
-    vehicleType: {
-      motorcycles: { trips: 4216, pct: 68.0 },
-      cars: { trips: 1984, pct: 32.0 }
-    },
-    userType: {
-      registered: { trips: 5084, pct: 82.0 },
-      unregistered: { trips: 1116, pct: 18.0 }
-    },
-    violationBreakdown: [
-      { title: 'No Helmet (ไม่สวมหมวกนิรภัย)', count: 31, pct: 68.9, color: '#dc2626' },
-      { title: 'VMES Overtime >30 Mins (จอดเกินเวลา)', count: 10, pct: 22.2, color: '#2563eb' },
-      { title: 'Speeding in Campus (ขับรถเร็วเกินกำหนด)', count: 3, pct: 6.7, color: '#d97706' },
-      { title: 'Unauthorized Zone (จอดนอกพื้นที่)', count: 1, pct: 2.2, color: '#7c3aed' }
-    ],
-    occupancyDetails: {
-      totalOccupiedHours: 105120,
-      capacity: 500,
-      termWeekdays: 42,
-      dailyHours: 7.5,
-      totalOperatingHours: 315
-    },
-    monthlyTrend: [
-      { month: 'Apr', traffic: 3050, violations: 22 },
-      { month: 'May', traffic: 3150, violations: 23 },
-    ]
-  },
-  '2025-1': {
-    label: 'Semester 1 / 2025',
-    period: '01 Jun 2025 – 31 Oct 2025',
-    totalScans: 15200,
-    violationsCount: 204,
-    avgSafetyScore: 90,
-    avgOccupancyRate: '74.8%',
-    occupancyPct: 74.8,
-    operatingHoursText: 'จันทร์ – ศุกร์ (09:00 – 16:30 น.)',
-    hourlyOccupancy: [
-      { time: '09:00', avgSlots: 230, ratePct: 46.0 },
-      { time: '10:00', avgSlots: 365, ratePct: 73.0 },
-      { time: '11:00', avgSlots: 446, ratePct: 89.2 },
-      { time: '12:00', avgSlots: 430, ratePct: 86.0 },
-      { time: '13:00', avgSlots: 438, ratePct: 87.6 },
-      { time: '14:00', avgSlots: 395, ratePct: 79.0 },
-      { time: '15:00', avgSlots: 310, ratePct: 62.0 },
-      { time: '16:00', avgSlots: 200, ratePct: 40.0 },
-      { time: '16:30', avgSlots: 105, ratePct: 21.0 }
-    ],
-    vehicleType: {
-      motorcycles: { trips: 10184, pct: 67.0 },
-      cars: { trips: 5016, pct: 33.0 }
-    },
-    userType: {
-      registered: { trips: 11248, pct: 74.0 },
-      unregistered: { trips: 3952, pct: 26.0 }
-    },
-    violationBreakdown: [
-      { title: 'No Helmet (ไม่สวมหมวกนิรภัย)', count: 142, pct: 69.6, color: '#dc2626' },
-      { title: 'VMES Overtime >30 Mins (จอดเกินเวลา)', count: 46, pct: 22.5, color: '#2563eb' },
-      { title: 'Speeding in Campus (ขับรถเร็วเกินกำหนด)', count: 10, pct: 4.9, color: '#d97706' },
-      { title: 'Unauthorized Zone (จอดนอกพื้นที่)', count: 6, pct: 2.9, color: '#7c3aed' }
-    ],
-    occupancyDetails: {
-      totalOccupiedHours: 246840,
-      capacity: 500,
-      termWeekdays: 88,
-      dailyHours: 7.5,
-      totalOperatingHours: 660
-    },
-    monthlyTrend: [
-      { month: 'Jun', traffic: 2950, violations: 48 },
-      { month: 'Jul', traffic: 3610, violations: 52 },
-      { month: 'Aug', traffic: 3280, violations: 41 },
-      { month: 'Sep', traffic: 3160, violations: 36 },
-      { month: 'Oct', traffic: 2200, violations: 27 },
-    ]
-  },
-  '2024-2': {
-    label: 'Semester 2 / 2024',
-    period: '01 Nov 2024 – 31 Mar 2025',
-    totalScans: 14100,
-    violationsCount: 220,
-    avgSafetyScore: 89,
-    avgOccupancyRate: '71.5%',
-    occupancyPct: 71.5,
-    operatingHoursText: 'จันทร์ – ศุกร์ (09:00 – 16:30 น.)',
-    hourlyOccupancy: [
-      { time: '09:00', avgSlots: 220, ratePct: 44.0 },
-      { time: '10:00', avgSlots: 350, ratePct: 70.0 },
-      { time: '11:00', avgSlots: 430, ratePct: 86.0 },
-      { time: '12:00', avgSlots: 415, ratePct: 83.0 },
-      { time: '13:00', avgSlots: 420, ratePct: 84.0 },
-      { time: '14:00', avgSlots: 380, ratePct: 76.0 },
-      { time: '15:00', avgSlots: 295, ratePct: 59.0 },
-      { time: '16:00', avgSlots: 185, ratePct: 37.0 },
-      { time: '16:30', avgSlots: 95, ratePct: 19.0 }
-    ],
-    vehicleType: {
-      motorcycles: { trips: 9306, pct: 66.0 },
-      cars: { trips: 4794, pct: 34.0 }
-    },
-    userType: {
-      registered: { trips: 10124, pct: 71.8 },
-      unregistered: { trips: 3976, pct: 28.2 }
-    },
-    violationBreakdown: [
-      { title: 'No Helmet (ไม่สวมหมวกนิรภัย)', count: 155, pct: 70.5, color: '#dc2626' },
-      { title: 'VMES Overtime >30 Mins (จอดเกินเวลา)', count: 48, pct: 21.8, color: '#2563eb' },
-      { title: 'Speeding in Campus (ขับรถเร็วเกินกำหนด)', count: 11, pct: 5.0, color: '#d97706' },
-      { title: 'Unauthorized Zone (จอดนอกพื้นที่)', count: 6, pct: 2.7, color: '#7c3aed' }
-    ],
-    occupancyDetails: {
-      totalOccupiedHours: 235950,
-      capacity: 500,
-      termWeekdays: 88,
-      dailyHours: 7.5,
-      totalOperatingHours: 660
-    },
-    monthlyTrend: [
-      { month: 'Nov', traffic: 2800, violations: 50 },
-      { month: 'Dec', traffic: 3200, violations: 48 },
-      { month: 'Jan', traffic: 3400, violations: 54 },
-      { month: 'Feb', traffic: 2600, violations: 38 },
-      { month: 'Mar', traffic: 2100, violations: 30 },
-    ]
-  }
+const ACADEMIC_TERMS = {
+  '2026-1': { label: 'Semester 1 / 2026 (Current Term)', period: '01 Jun 2026 – 31 Oct 2026' },
+  '2025-2': { label: 'Semester 2 / 2025', period: '01 Nov 2025 – 31 Mar 2026' },
+  '2025-3': { label: 'Semester 3 / 2025 (Summer)', period: '01 Apr 2026 – 31 May 2026' },
+  '2025-1': { label: 'Semester 1 / 2025', period: '01 Jun 2025 – 31 Oct 2025' },
+  '2024-2': { label: 'Semester 2 / 2024', period: '01 Nov 2024 – 31 Mar 2025' }
 };
 
 export default function LiveOverviewDashboard({
@@ -359,38 +103,56 @@ export default function LiveOverviewDashboard({
   }, [logs]);
 
   const currentTermData = useMemo(() => {
-    const base = SEMESTER_DATA[selectedTerm] || SEMESTER_DATA['2026-1'];
     const activeHourly = (liveTermSummary?.hourlyOccupancy && liveTermSummary.hourlyOccupancy.length > 0)
       ? liveTermSummary.hourlyOccupancy
-      : (computedHourlyFromLogs || base.hourlyOccupancy);
+      : (computedHourlyFromLogs || []);
 
-    if (!liveTermSummary) {
-      return {
-        ...base,
-        hourlyOccupancy: activeHourly
-      };
-    }
     return {
-      ...base,
-      totalScans: liveTermSummary.totalScans || base.totalScans,
-      violationsCount: liveTermSummary.violationsCount || base.violationsCount,
-      avgSafetyScore: liveTermSummary.avgSafetyScore || base.avgSafetyScore,
-      vehicleType: liveTermSummary.vehicleType || base.vehicleType,
-      userType: liveTermSummary.userType || base.userType,
+      label: ACADEMIC_TERMS[selectedTerm]?.label || 'Current Academic Term',
+      period: ACADEMIC_TERMS[selectedTerm]?.period || '',
+      totalScans: liveTermSummary?.totalScans ?? (logs ? logs.length : 0),
+      violationsCount: liveTermSummary?.violationsCount ?? (logs ? logs.filter(l => l.violation).length : 0),
+      avgSafetyScore: liveTermSummary?.avgSafetyScore ?? 100,
+      vehicleType: liveTermSummary?.vehicleType ?? {
+        motorcycles: { trips: Math.round((logs?.length || 0) * 0.68), pct: 68.0 },
+        cars: { trips: Math.round((logs?.length || 0) * 0.32), pct: 32.0 }
+      },
+      userType: liveTermSummary?.userType ?? {
+        registered: { trips: Math.round((logs?.length || 0) * 0.78), pct: 78.0 },
+        unregistered: { trips: Math.round((logs?.length || 0) * 0.22), pct: 22.0 }
+      },
       hourlyOccupancy: activeHourly
     };
-  }, [selectedTerm, liveTermSummary, computedHourlyFromLogs]);
+  }, [selectedTerm, liveTermSummary, computedHourlyFromLogs, logs]);
 
   const termTrendData = useMemo(() => {
-    const base = SEMESTER_DATA[selectedTerm] || SEMESTER_DATA['2026-1'];
-    const trend = base.monthlyTrend || [];
-    const totalScans = currentTermData.totalScans || trend.reduce((s, m) => s + m.traffic, 0) || 1;
-    const totalViolations = currentTermData.violationsCount || trend.reduce((s, m) => s + m.violations, 0) || 1;
+    if (!logs || logs.length === 0) return [];
+    
+    const monthsMap = {};
+    const monthOrder = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+    
+    logs.forEach(log => {
+      const dt = log.rawDate ? new Date(log.rawDate) : (log.timestamp ? new Date(log.timestamp) : null);
+      if (dt && !isNaN(dt)) {
+        const mKey = dt.toLocaleString('en-US', { month: 'short' });
+        if (!monthsMap[mKey]) {
+          monthsMap[mKey] = { month: mKey, traffic: 0, violations: 0 };
+        }
+        monthsMap[mKey].traffic += 1;
+        if (log.violation) {
+          monthsMap[mKey].violations += 1;
+        }
+      }
+    });
 
-    const maxTraffic = Math.max(...trend.map(m => m.traffic), 1);
-    const maxViolations = Math.max(...trend.map(m => m.violations), 1);
+    const trendList = Object.values(monthsMap).sort((a, b) => monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month));
+    const totalScans = currentTermData.totalScans || trendList.reduce((s, m) => s + m.traffic, 0) || 1;
+    const totalViolations = currentTermData.violationsCount || trendList.reduce((s, m) => s + m.violations, 0) || 1;
 
-    return trend.map((m) => {
+    const maxTraffic = Math.max(...trendList.map(m => m.traffic), 1);
+    const maxViolations = Math.max(...trendList.map(m => m.violations), 1);
+
+    return trendList.map((m) => {
       const trafficPct = parseFloat(((m.traffic / totalScans) * 100).toFixed(1));
       const violationPct = parseFloat(((m.violations / totalViolations) * 100).toFixed(1));
       const trafficHeightPct = Math.max(16, Math.round((m.traffic / maxTraffic) * 100));
@@ -406,7 +168,7 @@ export default function LiveOverviewDashboard({
         violationHeightPct
       };
     });
-  }, [selectedTerm, currentTermData]);
+  }, [logs, currentTermData]);
 
   const avgSafetyScore = useMemo(() => {
     if (liveTermSummary?.avgSafetyScore) return liveTermSummary.avgSafetyScore;

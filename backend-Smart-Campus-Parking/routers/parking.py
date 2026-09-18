@@ -7,14 +7,6 @@ from auth import require_roles
 
 router = APIRouter(prefix="/parking", tags=["Parking Status"])
 
-# Mock default data if collection is empty (Total 18 Car slots across VMES Building + Unlimited Motorcycles)
-DEFAULT_ZONES = [
-    {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 10, "occupied_slots": 1, "tag": "Cars Only", "is_unlimited": False},
-    {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 0, "occupied_slots": 0, "tag": "Motorcycles", "is_unlimited": True},
-    {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 9, "occupied_slots": 0, "tag": "Cars Only", "is_unlimited": False},
-    {"zone": "Zone D • Floor G (VMES Building)", "total_slots": 0, "occupied_slots": 0, "tag": "Motorcycles", "is_unlimited": True},
-]
-
 @router.get("/status", response_model=List[ParkingStatusResponse])
 async def get_parking_status():
     """
@@ -43,16 +35,21 @@ async def get_parking_status():
                 active_saved_counts[z_key] = active_saved_counts.get(z_key, 0) + 1
 
     if parking_status_collection is None:
-        # Fallback response
+        return []
+
+    docs = list(parking_status_collection.find({}, {"_id": 0}))
+    if not docs and building_zones_collection is not None:
+        bz_docs = list(building_zones_collection.find({}, {"_id": 0}))
         res = []
-        for item in DEFAULT_ZONES:
-            z_key = item["zone"].split(" • ")[0]
-            t_slots = zone_capacities.get(z_key, item["total_slots"])
-            occ_slots = active_saved_counts.get(z_key, item["occupied_slots"])
+        for bz in bz_docs:
+            z_name = bz.get("zone") or bz.get("name") or "Zone"
+            z_key = z_name.split(" • ")[0]
+            t_slots = bz.get("numericCapacity", bz.get("total_slots", 0))
+            occ_slots = active_saved_counts.get(z_key, 0)
             avail_slots = max(0, t_slots - occ_slots)
             res.append(
                 ParkingStatusResponse(
-                    zone=item["zone"],
+                    zone=z_name,
                     total_slots=t_slots,
                     occupied_slots=occ_slots,
                     available_slots=avail_slots,
@@ -61,36 +58,24 @@ async def get_parking_status():
             )
         return res
 
-    docs = list(parking_status_collection.find({}, {"_id": 0}))
-    if not docs:
-        # Seed initial zones
-        for item in DEFAULT_ZONES:
-            z_key = item["zone"].split(" • ")[0]
-            t_slots = zone_capacities.get(z_key, item["total_slots"])
-            occ_slots = active_saved_counts.get(z_key, 0)
-            avail_slots = max(0, t_slots - occ_slots)
-            doc = {
-                "zone": item["zone"],
-                "total_slots": t_slots,
-                "occupied_slots": occ_slots,
-                "available_slots": avail_slots,
-                "last_updated": now
-            }
-            parking_status_collection.insert_one(doc)
-        docs = list(parking_status_collection.find({}, {"_id": 0}))
-    else:
-        # Dynamically sync total_slots and occupied_slots from MongoDB Atlas
-        for doc in docs:
-            z_key = doc["zone"].split(" • ")[0]
-            new_total = zone_capacities.get(z_key, doc.get("total_slots", 10))
-            new_occupied = active_saved_counts.get(z_key, 0)
-            new_available = max(0, new_total - new_occupied)
+    res = []
+    for doc in docs:
+        z_key = doc.get("zone", "").split(" • ")[0]
+        new_total = zone_capacities.get(z_key, doc.get("total_slots", 0))
+        new_occupied = active_saved_counts.get(z_key, doc.get("occupied_slots", 0))
+        new_available = max(0, new_total - new_occupied)
 
-            doc["total_slots"] = new_total
-            doc["occupied_slots"] = new_occupied
-            doc["available_slots"] = new_available
-            doc["last_updated"] = now
+        res.append(
+            ParkingStatusResponse(
+                zone=doc.get("zone", "Zone"),
+                total_slots=new_total,
+                occupied_slots=new_occupied,
+                available_slots=new_available,
+                last_updated=now
+            )
+        )
 
+        if parking_status_collection is not None and "zone" in doc:
             parking_status_collection.update_one(
                 {"zone": doc["zone"]},
                 {"$set": {
@@ -100,8 +85,7 @@ async def get_parking_status():
                     "last_updated": now
                 }}
             )
-
-    return docs
+    return res
 
 @router.post("/update", response_model=ParkingStatusResponse)
 async def update_parking_zone(

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Depends, status
-from database import users_collection, announcements_collection, semester_resets_collection, academic_terms_collection
+from database import users_collection, announcements_collection, semester_resets_collection, academic_terms_collection, score_logs_collection
 
 from schemas import UserResponse, UserCreate
 from auth import require_roles
@@ -98,27 +98,7 @@ def announcement_sort_key(ann: dict):
     dt = parse_announcement_date(ann)
     return (prio_order, -dt.timestamp())
 
-# --- Announcements Endpoints (Public GET / Admin POST / Admin DELETE) ---
-MOCK_ANNOUNCEMENTS = [
-    {
-        "id": "ANN-01",
-        "title": "Zone B Maintenance Notice",
-        "content": "Zone B Floor 2 will be temporarily closed for sensor maintenance tomorrow from 09:00 AM to 02:00 PM. Please park at Zone A or Zone C.",
-        "date": "2026-09-17 09:00",
-        "created_at": "2026-09-17T09:00:00+07:00",
-        "priority": "high",
-        "expire_date": "2026-12-31"
-    },
-    {
-        "id": "ANN-02",
-        "title": "Helmet Safety Policy Reminder",
-        "content": "All motorcycle drivers must wear a safety helmet when entering university gates. AI CCTV cameras will deduct 10 safety points for non-compliance.",
-        "date": "2026-09-16 14:00",
-        "created_at": "2026-09-16T14:00:00+07:00",
-        "priority": "normal",
-        "expire_date": "2026-12-31"
-    }
-]
+# --- Announcements Endpoints (Public GET / Admin POST / Admin DELETE / Admin PUT) ---
 
 @router.get("/announcements")
 async def get_announcements():
@@ -136,15 +116,12 @@ async def get_announcements():
         docs = list(announcements_collection.find({}, {"_id": 0}))
         docs.sort(key=announcement_sort_key)
         return docs
-
-    active = [a for a in MOCK_ANNOUNCEMENTS if not a.get("expire_date") or a.get("expire_date") >= today_str]
-    active.sort(key=announcement_sort_key)
-    return active
+    return []
 
 @router.post("/announcements")
 async def create_announcement(announcement: dict):
     """
-    Admin website endpoint: Post new campus announcement.
+    Admin website endpoint: Post new campus announcement to MongoDB Atlas.
     """
     now = datetime.now()
     now_str = now.strftime("%Y-%m-%d %H:%M")
@@ -153,8 +130,6 @@ async def create_announcement(announcement: dict):
     ann_count = 1
     if announcements_collection is not None:
         ann_count = announcements_collection.count_documents({}) + 1
-    else:
-        ann_count = len(MOCK_ANNOUNCEMENTS) + 1
 
     new_ann = {
         "id": f"ANN-{ann_count:02d}",
@@ -170,24 +145,21 @@ async def create_announcement(announcement: dict):
 
     if announcements_collection is not None:
         announcements_collection.insert_one(dict(new_ann))
-    MOCK_ANNOUNCEMENTS.insert(0, new_ann)
     return {"status": "success", "announcement": new_ann}
 
 @router.delete("/announcements/{ann_id}")
 async def delete_announcement(ann_id: str):
     """
-    Admin website endpoint: Delete a campus announcement by ID.
+    Admin website endpoint: Delete a campus announcement by ID from MongoDB Atlas.
     """
-    global MOCK_ANNOUNCEMENTS
     if announcements_collection is not None:
         announcements_collection.delete_one({"id": ann_id})
-    MOCK_ANNOUNCEMENTS = [a for a in MOCK_ANNOUNCEMENTS if a.get("id") != ann_id]
     return {"status": "success", "message": f"Announcement {ann_id} deleted"}
 
 @router.put("/announcements/{ann_id}")
 async def update_announcement(ann_id: str, payload: dict):
     """
-    Admin website endpoint: Edit an existing campus announcement by ID.
+    Admin website endpoint: Edit an existing campus announcement by ID in MongoDB Atlas.
     """
     update_data = {}
     for key in ["title", "content", "priority", "target_audience", "target_user", "expire_date"]:
@@ -199,21 +171,15 @@ async def update_announcement(ann_id: str, payload: dict):
         updated_doc = announcements_collection.find_one({"id": ann_id}, {"_id": 0})
         if updated_doc:
             return {"status": "success", "announcement": updated_doc}
-
-    for a in MOCK_ANNOUNCEMENTS:
-        if a.get("id") == ann_id:
-            a.update(update_data)
-            return {"status": "success", "announcement": a}
     raise HTTPException(status_code=404, detail="Announcement not found")
 
-# --- Driving Score Audit Log Endpoints ---
-SCORE_LOGS = []
+# --- Driving Score Audit Log Endpoints (MongoDB Atlas) ---
 
 @router.post("/adjust-score")
 async def adjust_user_score(payload: dict):
     """
     Admin website endpoint: Deduct or restore driving safety score for a student/user,
-    and log the audit entry in memory and MongoDB.
+    and log the audit entry directly in MongoDB Atlas.
     """
     email = payload.get("user_email", "").strip().lower()
     points = payload.get("points_changed", 0)
@@ -234,11 +200,13 @@ async def adjust_user_score(payload: dict):
             current_score = new_score
         else:
             current_score = max(0, min(100, 100 + points))
-    else:
-        current_score = max(0, min(100, 100 + points))
+
+    log_count = 1
+    if score_logs_collection is not None:
+        log_count = score_logs_collection.count_documents({}) + 1
 
     log_entry = {
-        "id": f"SCORE-LOG-{len(SCORE_LOGS) + 1:04d}",
+        "id": f"SCORE-LOG-{log_count:04d}",
         "user_email": email,
         "action": "RESTORE" if points > 0 else "DEDUCT",
         "points_changed": points,
@@ -246,18 +214,22 @@ async def adjust_user_score(payload: dict):
         "reason": reason,
         "gate_name": gate,
         "image_url": image_url,
-        "timestamp": "Just now"
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-    SCORE_LOGS.insert(0, log_entry)
+    if score_logs_collection is not None:
+        score_logs_collection.insert_one(dict(log_entry))
+
     return {"status": "success", "log": log_entry, "new_score": current_score}
 
 @router.get("/score-logs")
 async def get_all_score_logs():
     """
-    Get all score adjustment audit logs.
+    Get all score adjustment audit logs from MongoDB Atlas.
     """
-    return SCORE_LOGS
+    if score_logs_collection is not None:
+        return list(score_logs_collection.find({}, {"_id": 0}).sort("timestamp", -1))
+    return []
 
 LAST_AUTO_RESET_TERM = None
 

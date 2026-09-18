@@ -1,11 +1,5 @@
 import React, { useState, useMemo } from 'react';
 
-const SAMPLE_ZONE_IMAGES = [
-  { name: 'Ground Floor Car Deck', url: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80' },
-  { name: 'Motorcycle Two-Wheeler Deck', url: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80' },
-  { name: 'Faculty & Staff Car Deck', url: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80' }
-];
-
 // Zone layout structure for visual parking slot grid
 
 // Definition of zone layout spots for visual slot grid
@@ -209,7 +203,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     setFormLocation('Ground Floor');
     setFormPillars('Pillars G10 - G15');
     setFormCapacity('6 Car Spots');
-    setFormImageUrl(SAMPLE_ZONE_IMAGES[0].url);
+    setFormImageUrl('');
     setFormDescription('New Building Zone Specification.');
     setShowZoneModal(true);
   };
@@ -259,7 +253,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
         location: formLocation.trim(),
         pillars: formPillars.trim(),
         capacity: formCapacity.trim(),
-        imageUrl: formImageUrl.trim() || SAMPLE_ZONE_IMAGES[0].url,
+        imageUrl: formImageUrl.trim(),
         description: formDescription.trim(),
         color: '#2563eb',
         bgLight: '#eff6ff'
