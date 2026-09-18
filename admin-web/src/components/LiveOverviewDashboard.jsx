@@ -107,12 +107,16 @@ export default function LiveOverviewDashboard({
       ? liveTermSummary.hourlyOccupancy
       : (computedHourlyFromLogs || []);
 
+    const rates = activeHourly.map(h => h.ratePct || 0);
+    const avgOccRate = rates.length > 0 ? (rates.reduce((a, b) => a + b, 0) / rates.length).toFixed(1) : '0.0';
+
     return {
       label: ACADEMIC_TERMS[selectedTerm]?.label || 'Current Academic Term',
       period: ACADEMIC_TERMS[selectedTerm]?.period || '',
       totalScans: liveTermSummary?.totalScans ?? (logs ? logs.length : 0),
       violationsCount: liveTermSummary?.violationsCount ?? (logs ? logs.filter(l => l.violation).length : 0),
       avgSafetyScore: liveTermSummary?.avgSafetyScore ?? 100,
+      avgOccupancyRate: `${avgOccRate}%`,
       vehicleType: liveTermSummary?.vehicleType ?? {
         motorcycles: { trips: Math.round((logs?.length || 0) * 0.68), pct: 68.0 },
         cars: { trips: Math.round((logs?.length || 0) * 0.32), pct: 32.0 }
@@ -121,7 +125,8 @@ export default function LiveOverviewDashboard({
         registered: { trips: Math.round((logs?.length || 0) * 0.78), pct: 78.0 },
         unregistered: { trips: Math.round((logs?.length || 0) * 0.22), pct: 22.0 }
       },
-      hourlyOccupancy: activeHourly
+      hourlyOccupancy: activeHourly,
+      monthlyTrend: []
     };
   }, [selectedTerm, liveTermSummary, computedHourlyFromLogs, logs]);
 
@@ -326,7 +331,9 @@ export default function LiveOverviewDashboard({
   };
 
   const maxTrafficInTrend = useMemo(() => {
-    return Math.max(...currentTermData.monthlyTrend.map(m => m.traffic), 4000);
+    const trend = currentTermData.monthlyTrend || [];
+    if (trend.length === 0) return 4000;
+    return Math.max(...trend.map(m => m.traffic || 0), 4000);
   }, [currentTermData]);
 
   return (
