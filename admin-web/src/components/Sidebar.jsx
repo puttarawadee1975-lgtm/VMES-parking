@@ -10,9 +10,9 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
           className="brand-logo"
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? "Click to Expand Sidebar" : "VMES Parking"}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
         >
-          <i className="ri-shield-keyhole-fill"></i>
+          <img src="/logo.png" alt="VMES Logo" style={{ width: 44, height: 44, objectFit: 'contain', display: 'block' }} />
         </div>
         {!isCollapsed && (
           <div className="brand-text">
