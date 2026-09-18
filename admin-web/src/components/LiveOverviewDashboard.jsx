@@ -535,7 +535,7 @@ export default function LiveOverviewDashboard({
             color: '#2563eb',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             fontSize: 22
           }}>
             <i className="ri-calendar-event-line"></i>
@@ -588,7 +588,7 @@ export default function LiveOverviewDashboard({
             background: '#eff6ff',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             flexShrink: 0
           }}>
             <i className="ri-scan-2-line" style={{ color: '#2563eb', fontSize: 24 }}></i>
@@ -622,7 +622,7 @@ export default function LiveOverviewDashboard({
             background: '#fef2f2',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             flexShrink: 0
           }}>
             <i className="ri-error-warning-line" style={{ color: '#dc2626', fontSize: 24 }}></i>
@@ -656,7 +656,7 @@ export default function LiveOverviewDashboard({
             background: '#e0f2fe',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             flexShrink: 0
           }}>
             <i className="ri-parking-box-line" style={{ color: '#0284c7', fontSize: 24 }}></i>
@@ -690,7 +690,7 @@ export default function LiveOverviewDashboard({
             background: '#f3e8ff',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             flexShrink: 0
           }}>
             <i className="ri-shield-line" style={{ color: '#7c3aed', fontSize: 24 }}></i>

@@ -4,7 +4,7 @@ export default function Header({ pageTitle, pageSubtitle, enforcementActive = tr
   return (
     <header className="top-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <img src="/logo.png" alt="VMES Logo" style={{ width: 44, height: 48, objectFit: 'contain' }} />
+        <img src="/logo.png" alt="VMES Logo" style={{ width: 44, height: 44, objectFit: 'contain', display: 'block' }} />
         <div>
           <h1 className="page-title" style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px', lineHeight: 1.1, margin: 0 }}>{pageTitle}</h1>
           <p className="page-subtitle" style={{ fontSize: 14, color: '#64748b', marginTop: 4, fontWeight: 500, margin: 0 }}>{pageSubtitle}</p>

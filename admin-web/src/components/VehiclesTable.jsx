@@ -133,7 +133,7 @@ function SearchableColorSelect({ value, onChange, vehicleType = 'motorcycle' }) 
                     fontWeight: isSelected ? 700 : 500,
                     background: isSelected ? '#eff6ff' : 'transparent',
                     display: 'flex',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     alignItems: 'center'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
