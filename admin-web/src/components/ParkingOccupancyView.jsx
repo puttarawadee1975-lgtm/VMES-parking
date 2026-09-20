@@ -1,42 +1,43 @@
 import React, { useState, useMemo } from 'react';
+import { fetchAPI } from '../api';
 
 // Zone layout structure for visual parking slot grid
 
 // Definition of zone layout spots for visual slot grid
 const ZONE_PILLAR_LAYOUTS = {
   'Zone A': [
-    { pillar: 'Spot A-01', spotId: 'SPOT-65070399', label: 'Spot A-01' },
-    { pillar: 'Spot A-02', spotId: 'SPOT-65070088', label: 'Spot A-02' },
-    { pillar: 'Spot A-03', spotId: 'SPOT-66070112', label: 'Spot A-03' },
-    { pillar: 'Spot A-04', spotId: null, label: 'Spot A-04' },
-    { pillar: 'Spot A-05', spotId: null, label: 'Spot A-05' },
-    { pillar: 'Spot A-06', spotId: null, label: 'Spot A-06' },
-    { pillar: 'Spot A-07', spotId: null, label: 'Spot A-07' },
-    { pillar: 'Spot A-08', spotId: null, label: 'Spot A-08' },
-    { pillar: 'Spot A-09', spotId: null, label: 'Spot A-09' },
-    { pillar: 'Spot A-10', spotId: null, label: 'Spot A-10' }
+    { pillar: 'Spot A-01', spotId: 'SPOT-65070399', label: 'A-01' },
+    { pillar: 'Spot A-02', spotId: 'SPOT-65070088', label: 'A-02' },
+    { pillar: 'Spot A-03', spotId: 'SPOT-66070112', label: 'A-03' },
+    { pillar: 'Spot A-04', spotId: null, label: 'A-04' },
+    { pillar: 'Spot A-05', spotId: null, label: 'A-05' },
+    { pillar: 'Spot A-06', spotId: null, label: 'A-06' },
+    { pillar: 'Spot A-07', spotId: null, label: 'A-07' },
+    { pillar: 'Spot A-08', spotId: null, label: 'A-08' },
+    { pillar: 'Spot A-09', spotId: null, label: 'A-09' },
+    { pillar: 'Spot A-10', spotId: null, label: 'A-10' }
   ],
   'Zone B': [
-    { pillar: 'Spot B-01', spotId: 'SPOT-65070042', label: 'Side B-01' },
-    { pillar: 'Spot B-02', spotId: 'SPOT-65070118', label: 'Side B-02' }
+    { pillar: 'Spot B-01', spotId: 'SPOT-65070042', label: 'B-01' },
+    { pillar: 'Spot B-02', spotId: 'SPOT-65070118', label: 'B-02' }
   ],
   'Zone C': [
-    { pillar: 'Spot C-01', spotId: 'SPOT-SOMCHAI-P', label: 'Spot C-01' },
-    { pillar: 'Spot C-02', spotId: null, label: 'Spot C-02' },
-    { pillar: 'Spot C-03', spotId: null, label: 'Spot C-03' },
-    { pillar: 'Spot C-04', spotId: null, label: 'Spot C-04' },
-    { pillar: 'Spot C-05', spotId: null, label: 'Spot C-05' },
-    { pillar: 'Spot C-06', spotId: null, label: 'Spot C-06' },
-    { pillar: 'Spot C-07', spotId: null, label: 'Spot C-07' },
-    { pillar: 'Spot C-08', spotId: null, label: 'Spot C-08' },
-    { pillar: 'Spot C-09', spotId: null, label: 'Spot C-09' }
+    { pillar: 'Spot C-01', spotId: 'SPOT-SOMCHAI-P', label: 'C-01' },
+    { pillar: 'Spot C-02', spotId: null, label: 'C-02' },
+    { pillar: 'Spot C-03', spotId: null, label: 'C-03' },
+    { pillar: 'Spot C-04', spotId: null, label: 'C-04' },
+    { pillar: 'Spot C-05', spotId: null, label: 'C-05' },
+    { pillar: 'Spot C-06', spotId: null, label: 'C-06' },
+    { pillar: 'Spot C-07', spotId: null, label: 'C-07' },
+    { pillar: 'Spot C-08', spotId: null, label: 'C-08' },
+    { pillar: 'Spot C-09', spotId: null, label: 'C-09' }
   ],
   'Zone D': [
-    { pillar: 'Spot D-01', spotId: 'SPOT-65070244', label: 'Spot D-01' }
+    { pillar: 'Spot D-01', spotId: 'SPOT-65070244', label: 'D-01' }
   ]
 };
 
-export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehicles = [] }) {
+export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehicles = [], selectedTerm: propSelectedTerm, setSelectedTerm: propSetSelectedTerm }) {
   const {
     total = 21,
     occupied = 0,
@@ -44,9 +45,11 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     rate = 0
   } = parkingOccupancy || {};
 
+  const [localTerm, setLocalTerm] = useState('2026-1');
+  const selectedTerm = propSelectedTerm || localTerm;
+  const setSelectedTerm = propSetSelectedTerm || setLocalTerm;
 
   // Search & Date Filter Controls
-  const [selectedTerm, setSelectedTerm] = useState('2026-1');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedZoneId, setSelectedZoneId] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('today');
@@ -56,16 +59,22 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   // State for Registered Account Scanned & Admin Locked Parking Spots from MongoDB Atlas
   const [parkedSpots, setParkedSpots] = useState([]);
 
-  // Fetch real term-by-term parked vehicle spots from Backend MongoDB Atlas
+  // Fetch real term-by-term parked vehicle spots from Backend MongoDB Atlas with auto-refresh
   React.useEffect(() => {
-    fetch(`http://localhost:8000/parking/occupied-spots?term=${selectedTerm}`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        setParkedSpots(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        setParkedSpots([]);
-      });
+    const fetchSpots = () => {
+      fetchAPI(`/parking/occupied-spots?term=${selectedTerm}`)
+        .then(res => res && res.ok ? res.json() : [])
+        .then(data => {
+          setParkedSpots(Array.isArray(data) ? data : []);
+        })
+        .catch(() => {
+          setParkedSpots([]);
+        });
+    };
+
+    fetchSpots();
+    const interval = setInterval(fetchSpots, 3000);
+    return () => clearInterval(interval);
   }, [selectedTerm]);
 
   // Dynamic Building Zones State (Loaded from MongoDB Atlas)
@@ -73,8 +82,8 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
 
   // Fetch building zones from MongoDB Atlas on mount
   React.useEffect(() => {
-    fetch('http://localhost:8000/parking/building-zones')
-      .then(res => res.ok ? res.json() : [])
+    fetchAPI('/parking/building-zones')
+      .then(res => res && res.ok ? res.json() : [])
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setZones(data);
@@ -84,7 +93,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   }, []);
 
   const syncZonesToMongoDB = (newZones) => {
-    fetch('http://localhost:8000/parking/building-zones', {
+    fetchAPI('/parking/building-zones', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newZones)
@@ -112,9 +121,51 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   };
 
 
+  // Combine active parked spots with historical detection logs and date records
+  const allCombinedSpots = useMemo(() => {
+    const list = [...parkedSpots];
+    const seenPlatesAndDates = new Set(list.map(s => `${s.plate}-${s.rawDate || s.savedDate || 'today'}`));
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yestObj = new Date();
+    yestObj.setDate(yestObj.getDate() - 1);
+    const yestStr = yestObj.toISOString().split('T')[0];
+
+    // Add historical detection logs if available
+    (logs || []).forEach((l, index) => {
+      const logDate = l.rawDate ? String(l.rawDate).slice(0, 10) : (l.timestamp ? String(l.timestamp).slice(0, 10) : todayStr);
+      const plate = l.plate || l.license_plate || '-';
+      const key = `${plate}-${logDate}`;
+
+      if (!seenPlatesAndDates.has(key)) {
+        seenPlatesAndDates.add(key);
+        const isExit = (l.gate || '').toUpperCase().includes('EXIT') || (l.gate_type || '').toUpperCase().includes('EXIT') || l.status === 'Completed';
+        list.push({
+          id: l.id || `LOG-${index + 100}`,
+          owner: l.owner || 'Registered Driver',
+          studentId: l.studentId || l.ownerEmail?.split('@')[0] || (l.owner ? l.owner.split(' ')[0].toUpperCase() : 'STUDENT'),
+          role: l.role || 'Student',
+          plate: plate,
+          province: l.province || 'กรุงเทพมหานคร',
+          zone: l.zone || 'Zone A',
+          floor: l.floor || 'Floor G',
+          pillar: l.pillar || l.spot || 'A-01',
+          entryTime: l.time ? `${l.time} (${l.gate || 'Gate 1 Entry'})` : '08:24 AM (Gate 1 Entry)',
+          exitTime: isExit ? '05:30 PM (Gate 2 Exit)' : 'Active (In Building)',
+          rawDate: logDate,
+          savedDate: logDate,
+          status: isExit ? 'Exited' : 'Active Parked',
+          isSpotSaved: true
+        });
+      }
+    });
+
+    return list;
+  }, [parkedSpots, logs]);
+
   // Filtered Scanned Parking Spots
   const filteredSpots = useMemo(() => {
-    return parkedSpots.filter(spot => {
+    return allCombinedSpots.filter(spot => {
       // 1. Search Query Filter
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q || (
@@ -135,34 +186,38 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       // 3. Date Filter
       let matchDate = true;
       const isActiveNow = spot.status === 'Active Parked' || (spot.exitTime && spot.exitTime.toLowerCase().includes('active'));
+      const rawD = spot.rawDate || spot.savedDate || (spot.timestamp ? String(spot.timestamp).slice(0, 10) : null);
+      const itemDateStr = rawD ? String(rawD).slice(0, 10) : new Date().toISOString().split('T')[0];
 
-      if (dateFilter !== 'all') {
-        const itemDate = spot.rawDate ? new Date(spot.rawDate) : (spot.timestamp ? new Date(spot.timestamp) : new Date());
-        const today = new Date();
-        if (dateFilter === 'today') {
-          // A vehicle currently parked inside the building is active TODAY regardless of entry date
-          matchDate = itemDate.toDateString() === today.toDateString() || isActiveNow;
-        } else if (dateFilter === 'yesterday') {
-          const yest = new Date(today);
-          yest.setDate(yest.getDate() - 1);
-          matchDate = itemDate.toDateString() === yest.toDateString();
-        } else if (dateFilter === 'custom' && selectedDate) {
-          const [year, month, day] = selectedDate.split('-').map(Number);
-          matchDate = itemDate.getFullYear() === year && (itemDate.getMonth() + 1) === month && itemDate.getDate() === day;
-        }
+      const todayObj = new Date();
+      const todayStr = todayObj.toISOString().split('T')[0];
+
+      if (dateFilter === 'today') {
+        matchDate = itemDateStr === todayStr || isActiveNow;
+      } else if (dateFilter === 'yesterday') {
+        const yestObj = new Date(todayObj);
+        yestObj.setDate(yestObj.getDate() - 1);
+        const yestStr = yestObj.toISOString().split('T')[0];
+        matchDate = itemDateStr === yestStr;
+      } else if (dateFilter === 'custom' && selectedDate) {
+        matchDate = itemDateStr === selectedDate;
+      } else if (dateFilter === 'all') {
+        matchDate = true;
       }
 
       // 4. Status Filter
       let matchStatus = true;
       if (reservationFilter === 'ACTIVE') {
-        matchStatus = isActiveNow;
+        matchStatus = dateFilter === 'all' || dateFilter === 'yesterday' || dateFilter === 'custom' ? true : isActiveNow;
       } else if (reservationFilter === 'EXITED') {
-        matchStatus = spot.status === 'Exited' || spot.status === 'Completed' || (spot.exitTime && !spot.exitTime.toLowerCase().includes('active'));
+        matchStatus = !isActiveNow || spot.status === 'Exited' || spot.status === 'Completed';
+      } else if (reservationFilter === 'ALL') {
+        matchStatus = true;
       }
 
       return matchSearch && matchZone && matchDate && matchStatus;
     });
-  }, [parkedSpots, searchQuery, selectedZoneId, dateFilter, selectedDate, reservationFilter]);
+  }, [allCombinedSpots, searchQuery, selectedZoneId, dateFilter, selectedDate, reservationFilter]);
 
   // Filtered Historical Parking Records from MongoDB Atlas Detection Logs
   const filteredHistory = useMemo(() => {
@@ -462,29 +517,6 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                 />
               </div>
 
-              {/* Academic Term Select Dropdown */}
-              <select
-                value={selectedTerm}
-                onChange={(e) => setSelectedTerm(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: '#2563eb',
-                  background: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  borderRadius: 10,
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="2026-1">Semester 1 / 2026 (Current)</option>
-                <option value="2025-2">Semester 2 / 2025</option>
-                <option value="2025-1">Semester 1 / 2025</option>
-                <option value="2024-2">Semester 2 / 2024</option>
-                <option value="ALL">All Semester Terms</option>
-              </select>
-
               {/* Reservation Status Dropdown */}
               <select
                 value={reservationFilter}
@@ -533,7 +565,13 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
               {/* Date Filter Dropdown */}
               <select
                 value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDateFilter(val);
+                  if (val === 'all') {
+                    setReservationFilter('ALL');
+                  }
+                }}
                 style={{
                   padding: '8px 12px',
                   fontSize: 12,
@@ -558,14 +596,15 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   style={{
-                    padding: '7px 10px',
+                    padding: '7px 12px',
                     fontSize: 12,
                     fontWeight: 600,
                     color: '#0f172a',
-                    background: '#ffffff',
-                    border: '1px solid #2563eb',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: 10,
-                    outline: 'none'
+                    outline: 'none',
+                    cursor: 'pointer'
                   }}
                 />
               )}
@@ -627,7 +666,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                             {spot.zone}
                           </td>
                           <td style={{ padding: '14px 16px', fontSize: 12, color: '#0f172a', fontWeight: 600 }}>
-                            {spot.floor === '-' || spot.pillar === '-' || spot.isSpotSaved === false ? '-' : `${spot.floor}${spot.pillar ? `, ${String(spot.pillar).replace(/\s*\([^)]*\)/gi, '').trim()}` : ''}`}
+                            {spot.floor === '-' || spot.pillar === '-' || spot.isSpotSaved === false ? '-' : `${spot.floor}${spot.pillar ? `, ${String(spot.pillar).replace(/\s*\([^)]*\)/gi, '').replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim()}` : ''}`}
                           </td>
                           <td style={{ padding: '14px 16px', fontSize: 12, color: '#0f172a', fontWeight: 500 }}>
                             <div>
@@ -806,6 +845,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
           </div>
         </div>
       )}
+
     </div>
   );
 }

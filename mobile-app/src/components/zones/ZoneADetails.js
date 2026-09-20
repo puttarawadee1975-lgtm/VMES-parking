@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ZoneADetails({ parkedSpot }) {
-  const zoneSlots = ['G01', 'G02', 'G03', 'G04', 'G05', 'G05-G09', 'A-01', 'A-02'];
+  const zoneSlots = ['A-01', 'A-02', 'A-03', 'A-04', 'A-05', 'A-06', 'A-07', 'A-08', 'A-09', 'A-10'];
   
   return (
     <View className="bg-slate-900 rounded-2xl p-4 overflow-hidden border border-slate-800 mb-6">
@@ -20,7 +20,7 @@ export default function ZoneADetails({ parkedSpot }) {
           {zoneSlots.map((slot, i) => (
             <View
               key={i}
-              className={`w-[22%] h-8 rounded m-1 items-center justify-center border ${
+              className={`w-[18%] h-8 rounded m-1 items-center justify-center border ${
                 parkedSpot.pillar === slot || (parkedSpot.pillar && slot.includes(parkedSpot.pillar.split('-')[0]))
                   ? 'bg-blue-600/40 border-blue-400'
                   : 'border-slate-500'
@@ -40,7 +40,9 @@ export default function ZoneADetails({ parkedSpot }) {
             <Text className="text-2xl">🛵</Text>
           </View>
           <View className="bg-blue-600 px-3 py-1 rounded-full mt-2 shadow-sm">
-            <Text className="text-white text-[10px] font-bold">Parked at Pillar {parkedSpot.pillar || 'G05-G09'}</Text>
+            <Text className="text-white text-[10px] font-bold">
+              Parked at {(parkedSpot.pillar || 'A-01').replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim()}
+            </Text>
           </View>
         </View>
       </View>

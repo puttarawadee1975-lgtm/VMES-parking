@@ -230,12 +230,28 @@ const ENGLISH_TO_THAI_MAP = {
  * Normalizes and converts an English or alternative province name to clean Title Case.
  */
 export function toThaiProvince(input) {
-  if (!input || typeof input !== 'string') return 'Bangkok';
-  const trimmed = input.trim().toLowerCase();
-  if (PROVINCE_MAP[trimmed]) {
-    return PROVINCE_MAP[trimmed];
+  if (!input || typeof input !== 'string') return 'กรุงเทพมหานคร';
+  let str = input.trim();
+
+  // Strip trailing english parens if any e.g. "กรุงเทพมหานคร (Bangkok)" -> "กรุงเทพมหานคร"
+  str = str.replace(/\s*\([a-zA-Z\s,.-]+\)/g, '').trim();
+
+  const lower = str.toLowerCase();
+
+  // Direct English -> Thai lookup
+  if (ENGLISH_TO_THAI_MAP[lower]) {
+    return ENGLISH_TO_THAI_MAP[lower];
   }
-  return input.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+
+  // Indirect PROVINCE_MAP lookup -> English -> Thai
+  if (PROVINCE_MAP[lower]) {
+    const enKey = PROVINCE_MAP[lower].toLowerCase();
+    if (ENGLISH_TO_THAI_MAP[enKey]) {
+      return ENGLISH_TO_THAI_MAP[enKey];
+    }
+  }
+
+  return str;
 }
 
 /**

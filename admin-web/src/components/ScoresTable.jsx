@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { fetchAPI } from '../api';
 
 export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onViewViolations }) {
   // Score adjustment modal states
@@ -17,19 +18,12 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
     setResettingSemester(true);
     setResetSuccessMessage('');
     try {
-      let res = await fetch('http://localhost:8000/admin/reset-semester-scores', {
+      let res = await fetchAPI('/admin/reset-semester-scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semester_name: selectedTermName || 'New Academic Semester' })
       });
-      if (!res.ok) {
-        res = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/reset-semester-scores', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ semester_name: selectedTermName || 'New Academic Semester' })
-        });
-      }
-      if (res.ok) {
+      if (res && res.ok) {
         const data = await res.json();
         setResetSuccessMessage(data.message || 'All driver safety scores reset to 100 successfully!');
         if (onAdjustScore) onAdjustScore();

@@ -23,21 +23,18 @@ export default function ParkingDetailsModal({
     }
     if (typeof parkedSpot.imageUrl === 'string' && parkedSpot.imageUrl.trim()) {
       const splitUrls = parkedSpot.imageUrl.split(',').map(url => url.trim()).filter(Boolean);
-      if (splitUrls.length > 1) return splitUrls;
-      if (splitUrls.length === 1) {
-        return [
-          splitUrls[0],
-          'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
-        ];
-      }
+      if (splitUrls.length > 0) return splitUrls;
     }
-    // Default multi-angle photos for saved spot
-    return [
-      'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
-    ];
+    const p = parkedSpot.pillar || '';
+    const z = parkedSpot.zone || '';
+    if (z === 'Zone D' || p.includes('D-01')) {
+      return [
+        require('../../assets/zone_d_building.jpg'),
+        require('../../assets/zone_d_spot.jpg')
+      ];
+      return [];
+    }
+    return [];
   }, [parkedSpot]);
 
   React.useEffect(() => {
@@ -53,7 +50,8 @@ export default function ParkingDetailsModal({
   };
 
   // Safe property fallbacks
-  const pillar = hasSpot ? (parkedSpot.pillar || 'G05-G09') : '-';
+  const rawPillar = hasSpot ? (parkedSpot.pillar || 'A-01') : '-';
+  const cleanSpot = rawPillar.replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim();
   const floorRaw = hasSpot ? (parkedSpot.floor || 'Floor G') : '-';
   const displayFloor = hasSpot ? (floorRaw.replace(/Floor/gi, '').trim() || 'G') : '-';
   const building = hasSpot ? ((!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VMES Building' : parkedSpot.building) : '-';
@@ -89,13 +87,13 @@ export default function ParkingDetailsModal({
             </View>
           )}
 
-          {/* Top Cards: Pillar & Floor */}
+          {/* Top Cards: Spot & Floor */}
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-            {/* Left Card: Pillar */}
+            {/* Left Card: Spot */}
             <View style={{ flex: 1, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 20, padding: 18, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
-              <Text style={{ color: '#64748b', fontWeight: '600', fontSize: 13, marginBottom: 4 }}>Pillar</Text>
+              <Text style={{ color: '#64748b', fontWeight: '600', fontSize: 13, marginBottom: 4 }}>Spot</Text>
               <Text style={{ color: hasSpot ? '#1e3a8a' : '#94a3b8', fontWeight: '900', fontSize: 24, letterSpacing: -0.5 }}>
-                {pillar}
+                {cleanSpot}
               </Text>
             </View>
 
@@ -133,7 +131,7 @@ export default function ParkingDetailsModal({
             {imageList.length > 0 ? (
               <View style={{ height: 210, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#cbd5e1', position: 'relative' }}>
                 <Image
-                  source={{ uri: imageList[activeImageIndex] }}
+                  source={typeof imageList[activeImageIndex] === 'number' ? imageList[activeImageIndex] : { uri: imageList[activeImageIndex] }}
                   style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
                 />
 

@@ -169,19 +169,23 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         "camera_id": camera_id,
         "gate_name": gate_name,
         "zone": payload.zone or "-",
+        "term": "2026-1",
         "timestamp": now,
         "matched_email": matched_user.get("email") if matched_user else None,
         "matched_user": matched_user_name,
         "role": role_str,
         "studentId": student_id_str,
-        # Optional event snapshot captured by ai_pipeline.py (local exhibition only)
-        "image_url": payload.image_url or None,
+        # Event snapshot captured by ai_pipeline.py or web camera
+        "image_url": payload.image_url or payload.snapshot_base64 or None,
+        "snapshot_base64": payload.snapshot_base64 or (payload.image_url if payload.image_url and payload.image_url.startswith("data:") else None),
     }
 
     inserted_id = "mock_id"
     if detection_logs_collection is not None:
         res = detection_logs_collection.insert_one(log_doc)
         inserted_id = str(res.inserted_id)
+
+    resolved_img_url = payload.snapshot_base64 or payload.image_url or None
 
     log_response = DetectionLogResponse(
         id=inserted_id,
@@ -194,7 +198,8 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         zone=payload.zone or "-",
         timestamp=now,
         matched_user=matched_user_name,
-        image_url=payload.image_url or None,
+        image_url=resolved_img_url,
+        snapshot_base64=payload.snapshot_base64 or None,
     )
 
     IN_MEMORY_DETECTIONS.insert(0, log_response.model_dump())
@@ -287,8 +292,8 @@ async def get_all_detections(days: int = 30):
                     zone=doc.get("zone", "-"),
                     timestamp=ensure_utc(doc.get("timestamp", datetime.now(timezone.utc))),
                     matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered",
-                    # Older records without image_url safely default to None
-                    image_url=doc.get("image_url") or doc.get("snapshot_url") or None,
+                    image_url=doc.get("snapshot_base64") or doc.get("image_url") or doc.get("snapshot_url") or doc.get("photo") or None,
+                    snapshot_base64=doc.get("snapshot_base64") or None,
                 ))
             return result
     return IN_MEMORY_DETECTIONS
@@ -301,45 +306,43 @@ def clean_text(text: str) -> str:
     return text
 
 def extract_plate(texts: list) -> str:
-    # 1. Motorcycle split lines: e.g. 1กก + 2048 -> 1กก 2048
-    for i in range(len(texts)):
-        if re.fullmatch(r"[0-9]{1,2}[ก-ฮ]{1,3}", texts[i]):
-            for j in range(i + 1, len(texts)):
-                if re.fullmatch(r"[0-9]{3,4}", texts[j]):
-                    return f"{texts[i]} {texts[j]}"
+    clean_texts = [text.replace(" ", "").replace("-", "").strip() for text in texts if text]
 
-    # 2. International / standard alphanumeric: 1B9 + 61
-    for i in range(len(texts) - 1):
-        candidate = texts[i] + texts[i + 1]
-        if re.fullmatch(r"[0-9]{1,2}[A-Z]{1,3}[0-9]{2,4}", candidate):
-            return candidate
-
-    # 3. Thai car plates: e.g. 1กข5678, 1กข 5678, 1กข-5678, กข5678
-    for text in texts:
-        m = re.fullmatch(r"([0-9]{1,2}[ก-ฮ]{1,3})-?([0-9]{3,4})", text)
+    # 1. Single token full match e.g. "3กฮ5678", "1กข1234", "กข5678"
+    for text in clean_texts:
+        m = re.fullmatch(r"([0-9]{1,2}[ก-ฮ]{1,3})([0-9]{1,4})", text)
         if m:
             return f"{m.group(1)} {m.group(2)}"
 
-        m2 = re.fullmatch(r"([ก-ฮ]{1,3})([0-9]{3,4})", text)
+        m2 = re.fullmatch(r"([ก-ฮ]{1,3})([0-9]{1,4})", text)
         if m2:
             return f"{m2.group(1)} {m2.group(2)}"
+
+    # 2. Split line tokens e.g. ['3กฮ', '5678'] or ['1กข', '1234'] or ['กข', '5678']
+    for i in range(len(clean_texts)):
+        m_head = re.fullmatch(r"([0-9]{1,2}[ก-ฮ]{1,3}|[ก-ฮ]{1,3})", clean_texts[i])
+        if m_head:
+            for j in range(i + 1, len(clean_texts)):
+                m_num = re.fullmatch(r"[0-9]{1,4}", clean_texts[j])
+                if m_num:
+                    return f"{clean_texts[i]} {clean_texts[j]}"
+
+    # 3. Alphanumeric / International e.g. "1B961" or ["1B9", "61"]
+    for text in clean_texts:
+        m = re.fullmatch(r"([0-9]{1,2}[A-Z]{1,3})([0-9]{1,4})", text)
+        if m:
+            return f"{m.group(1)} {m.group(2)}"
+
+    for i in range(len(clean_texts) - 1):
+        cand = clean_texts[i] + clean_texts[i + 1]
+        m = re.fullmatch(r"([0-9]{1,2}[A-Z]{1,3})([0-9]{1,4})", cand)
+        if m:
+            return f"{clean_texts[i]} {clean_texts[i+1]}"
 
     # 4. Private truck format: 82-4728
-    for text in texts:
-        if re.fullmatch(r"[0-9]{2}-?[0-9]{4}", text):
-            if "-" in text:
-                return text
-            return text[:2] + "-" + text[2:]
-
-    # 5. Split Thai car plate: e.g. ภบ + 9503
-    for i in range(len(texts) - 1):
-        candidate = texts[i] + texts[i + 1]
-        m = re.fullmatch(r"([0-9]{1,2}[ก-ฮ]{1,3})-?([0-9]{3,4})", candidate)
-        if m:
-            return f"{m.group(1)} {m.group(2)}"
-        m2 = re.fullmatch(r"([ก-ฮ]{1,3})([0-9]{3,4})", candidate)
-        if m2:
-            return f"{m2.group(1)} {m2.group(2)}"
+    for text in clean_texts:
+        if re.fullmatch(r"[0-9]{6}", text):
+            return f"{text[:2]}-{text[2:]}"
 
     return ""
 
@@ -356,21 +359,68 @@ THAI_PROVINCES = [
     "หนองคาย", "หนองบัวลำภู", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์", "อุทัยธานี", "อุบลราชธานี"
 ]
 
+PROVINCE_SYNONYMS = {
+    "กทม": "กรุงเทพมหานคร",
+    "กรุงเทพ": "กรุงเทพมหานคร",
+    "กรุงเทพมหานคร": "กรุงเทพมหานคร",
+    "อยุธยา": "พระนครศรีอยุธยา",
+    "โคราช": "นครราชสีมา",
+    "แปดริ้ว": "ฉะเชิงเทรา",
+    "เมืองชล": "ชลบุรี",
+    "ปากน้ำ": "สมุทรปราการ",
+    "มหาชัย": "สมุทรสาคร",
+}
+
 def extract_province(texts: list) -> str:
-    """Extract province from OCR text lines by searching against 77 Thai provinces."""
+    """
+    Extract province from OCR text lines using strict Thai province matching.
+    Avoid matching 1-2 character plate series tokens (e.g. 'ก', 'ข') as substring of provinces!
+    """
+    if not texts:
+        return "กรุงเทพมหานคร"
+
+    # Pass 1: Exact synonym or exact province match in raw text tokens
     for text in texts:
-        clean = text.replace(" ", "").replace("-", "")
+        clean = text.replace(" ", "").replace("-", "").strip()
+        if not clean:
+            continue
+
+        # Check against known synonyms/abbreviations
+        for syn, official_prov in PROVINCE_SYNONYMS.items():
+            if syn in clean:
+                return official_prov
+
+        # Check if an official province name is explicitly contained inside the OCR text
         for prov in THAI_PROVINCES:
-            # Check exact or partial match e.g. "อยุธยา" -> "พระนครศรีอยุธยา", "กทม" / "กรุงเทพ" -> "กรุงเทพมหานคร"
-            if prov in clean or clean in prov:
+            if prov in clean:
                 return prov
-            if "กรุงเทพ" in clean or "กทม" in clean:
-                return "กรุงเทพมหานคร"
-            if "อยุธยา" in clean:
-                return "พระนครศรีอยุธยา"
-            if "โคราช" in clean:
-                return "นครราชสีมา"
+
+    # Pass 2: Fuzzy matching or substring matching ONLY for tokens with length >= 3
+    import difflib
+    for text in texts:
+        clean = text.replace(" ", "").replace("-", "").strip()
+        if len(clean) >= 3:
+            for prov in THAI_PROVINCES:
+                if clean in prov:
+                    return prov
+
+            matches = difflib.get_close_matches(clean, THAI_PROVINCES, n=1, cutoff=0.7)
+            if matches:
+                return matches[0]
+
     return "กรุงเทพมหานคร"
+
+_CACHED_EASYOCR_READER = None
+
+def get_ocr_reader():
+    global _CACHED_EASYOCR_READER
+    if _CACHED_EASYOCR_READER is None:
+        import easyocr
+        import os
+        use_gpu = os.uname().sysname == "Darwin" and os.uname().machine == "arm64"
+        print("[API OCR] Initializing global warm EasyOCR model (One-time load for fast mobile scans)...")
+        _CACHED_EASYOCR_READER = easyocr.Reader(['th', 'en'], gpu=use_gpu)
+    return _CACHED_EASYOCR_READER
 
 class OCRScanRequest(BaseModel):
     image_base64: str
@@ -380,11 +430,9 @@ class OCRScanRequest(BaseModel):
 async def scan_plate_from_image(payload: OCRScanRequest):
     """
     Real-time AI OCR endpoint for Mobile Camera Scanner:
-    Uses the exact detection rules and algorithms from smart_parking_v1.py!
-    1. Crops image strictly to central ROI frame box.
-    2. Preprocesses image (resize + grayscale + bilateral filter).
-    3. Runs EasyOCR or OCR Space Cloud API.
-    4. Cleans text with clean_text() and parses with extract_plate() from smart_parking_v1.py.
+    1. Resizes high-res camera photos to optimal width (1200px) for CRAFT detector.
+    2. Multi-pass OCR (Direct BGR + Bilateral Filter + CLAHE Contrast).
+    3. Cleans text with clean_text() and parses plate pattern with extract_plate().
     """
     import base64
     import urllib.request
@@ -410,58 +458,60 @@ async def scan_plate_from_image(payload: OCRScanRequest):
         if img is not None:
             h, w = img.shape[:2]
 
-            # Strategy 1: Crop ROI (Generous bounds to prevent cutting off plates due to camera aspect ratio differences)
-            v_type = (payload.vehicle_type or "car").lower()
-            if v_type == "motorcycle":
-                crop_w = int(w * 0.85)
-                crop_h = int(h * 0.70)
-            else:
-                crop_w = int(w * 0.90)
-                crop_h = int(h * 0.60)
+            # Scale high-res camera photos down to optimal CRAFT detector width (1200px)
+            target_w = 1200
+            if w > target_w:
+                scale = target_w / float(w)
+                target_h = int(h * scale)
+                img = cv2.resize(img, (target_w, target_h), interpolation=cv2.INTER_AREA)
+                h, w = img.shape[:2]
 
+            # Crop ROI frame box generously (center 90% width, 70% height)
+            crop_w = int(w * 0.90)
+            crop_h = int(h * 0.70)
             start_x = max(0, (w - crop_w) // 2)
             start_y = max(0, (h - crop_h) // 2)
             roi_img = img[start_y:start_y + crop_h, start_x:start_x + crop_w]
 
-            # Multi-pass preprocessing (CLAHE + Bilateral Filter)
-            big = cv2.resize(roi_img, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
-            gray = cv2.cvtColor(big, cv2.COLOR_BGR2GRAY)
-
-            # Pass 1: Standard Bilateral Filter
+            gray = cv2.cvtColor(roi_img, cv2.COLOR_BGR2GRAY)
             pass1_img = cv2.bilateralFilter(gray, 9, 75, 75)
-
-            # Pass 2: CLAHE (Contrast Limited Adaptive Histogram Equalization)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
             pass2_img = clahe.apply(gray)
 
-            # Try local EasyOCR on preprocessed images
             try:
-                import easyocr
-                reader = easyocr.Reader(['th', 'en'], gpu=False)
+                reader = get_ocr_reader()
 
-                # Scan Pass 1
-                res1 = reader.readtext(pass1_img, detail=1)
-                for bbox, text, confidence in res1:
-                    if confidence > 0.25:
+                # Pass 1: Direct BGR ROI Image Scan
+                res0 = reader.readtext(roi_img, detail=1)
+                for bbox, text, confidence in res0:
+                    if confidence > 0.20:
                         cleaned = clean_text(text)
                         if cleaned:
                             raw_ocr_tokens.append(cleaned)
 
-                # Scan Pass 2 (CLAHE Enhanced) if Pass 1 yielded few tokens
-                if len(raw_ocr_tokens) < 2:
-                    res2 = reader.readtext(pass2_img, detail=1)
-                    for bbox, text, confidence in res2:
-                        if confidence > 0.25:
+                # Pass 2: Grayscale Bilateral Filter
+                if not raw_ocr_tokens or not extract_plate(raw_ocr_tokens):
+                    res1 = reader.readtext(pass1_img, detail=1)
+                    for bbox, text, confidence in res1:
+                        if confidence > 0.20:
                             cleaned = clean_text(text)
                             if cleaned:
                                 raw_ocr_tokens.append(cleaned)
 
-                # Strategy 2: If ROI crop gave no tokens, scan FULL image directly!
-                if not raw_ocr_tokens:
-                    full_gray = cv2.cvtColor(cv2.resize(img, None, fx=1.5, fy=1.5), cv2.COLOR_BGR2GRAY)
-                    full_res = reader.readtext(full_gray, detail=1)
+                # Pass 3: CLAHE Contrast Enhanced
+                if not raw_ocr_tokens or not extract_plate(raw_ocr_tokens):
+                    res2 = reader.readtext(pass2_img, detail=1)
+                    for bbox, text, confidence in res2:
+                        if confidence > 0.20:
+                            cleaned = clean_text(text)
+                            if cleaned:
+                                raw_ocr_tokens.append(cleaned)
+
+                # Strategy 2: Full Image Direct Scan if ROI crop yielded no plate pattern
+                if not raw_ocr_tokens or not extract_plate(raw_ocr_tokens):
+                    full_res = reader.readtext(img, detail=1)
                     for bbox, text, confidence in full_res:
-                        if confidence > 0.25:
+                        if confidence > 0.20:
                             cleaned = clean_text(text)
                             if cleaned:
                                 raw_ocr_tokens.append(cleaned)
@@ -472,7 +522,7 @@ async def scan_plate_from_image(payload: OCRScanRequest):
     except Exception as e:
         print(f"[OCR CV2 ERROR] {e}")
 
-    # Strategy 3: Fallback to OCR Space Cloud API using FULL image if local EasyOCR returned no tokens
+    # Fallback Strategy 3: Cloud OCR Space API if local EasyOCR found no tokens
     if not raw_ocr_tokens and img_data:
         try:
             url = "https://api.ocr.space/parse/image"
@@ -498,14 +548,35 @@ async def scan_plate_from_image(payload: OCRScanRequest):
         except Exception as cloud_err:
             print(f"[OCR CLOUD ERROR] {cloud_err}")
 
-    # Extract license plate & province using the exact logic from smart_parking_v1.py and Thai province matching
+    # Extract license plate & province using multi-pass rules
     if raw_ocr_tokens:
         detected_plate = extract_plate(raw_ocr_tokens)
         detected_province = extract_province(raw_ocr_tokens)
 
-    # Fallback default plate if OCR could not extract a valid plate pattern
-    if not detected_plate:
-        detected_plate = "3กฮ 5678"
+    # Registered Vehicle Lookup: If detected_plate is in DB, prioritize stored registered province
+    if detected_plate:
+        norm_p = detected_plate.replace("-", "").replace(" ", "").upper()
+        reg_prov = None
+
+        if registered_vehicles_collection is not None:
+            for veh in registered_vehicles_collection.find({}):
+                sp = (veh.get("plate") or "").replace("-", "").replace(" ", "").upper()
+                if sp and sp == norm_p and veh.get("province"):
+                    reg_prov = veh.get("province")
+                    break
+
+        if not reg_prov and users_collection is not None:
+            for usr in users_collection.find({}):
+                for veh in usr.get("vehicles", []):
+                    sp = (veh.get("plate") or "").replace("-", "").replace(" ", "").upper()
+                    if sp and sp == norm_p and veh.get("province"):
+                        reg_prov = veh.get("province")
+                        break
+                if reg_prov:
+                    break
+
+        if reg_prov:
+            detected_province = reg_prov
 
     return {
         "plate": detected_plate,

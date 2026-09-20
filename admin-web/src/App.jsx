@@ -10,6 +10,7 @@ import AnnouncementsTable from './components/AnnouncementsTable';
 import ParkingOccupancyView from './components/ParkingOccupancyView';
 import ViolationsTable from './components/ViolationsTable';
 import LiveOverviewDashboard from './components/LiveOverviewDashboard';
+import { fetchAPI, getImageUrl, getApiHost } from './api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -21,19 +22,11 @@ export default function App() {
   const [parkingOccupancy, setParkingOccupancy] = useState({ available: 0, occupied: 0, total: 0, rate: 0 });
 
   const [logs, setLogs] = useState([]);
-  const [enforcementActive, setEnforcementActive] = useState(true);
+  const [selectedTerm, setSelectedTerm] = useState('2026-1');
 
   const handleNavigateToViolations = (userName) => {
     setViolationUserFilter(userName || '');
     setActiveTab('access-history');
-  };
-
-  const fetchAPI = async (endpoint, options) => {
-    try {
-      const res = await fetch(`http://localhost:8000${endpoint}`, options);
-      if (res.ok) return res;
-    } catch (e) {}
-    return fetch(`https://smart-campus-parking-deploy.onrender.com${endpoint}`, options);
   };
 
   const handleToggleEnforcement = async () => {
@@ -110,11 +103,11 @@ export default function App() {
               // Admin Web browser can fetch them from the local FastAPI server.
               // Records without image_url remain null and InspectionTable falls
               // back to its existing Unsplash placeholder automatically.
-              imageUrl: item.image_url
-                ? (item.image_url.startsWith('http')
-                    ? item.image_url
-                    : `http://localhost:8000${item.image_url}`)
-                : null,
+              imageUrl: (() => {
+                const rawImg = item.snapshot_base64 || item.image_url;
+                if (!rawImg) return null;
+                return getImageUrl(rawImg);
+              })(),
             };
           });
           setLogs(transformedLogs);
@@ -265,12 +258,14 @@ export default function App() {
         <Header
           pageTitle={currentMeta.title}
           pageSubtitle={currentMeta.subtitle}
-          enforcementActive={enforcementActive}
-          onToggleEnforcement={handleToggleEnforcement}
+          selectedTerm={selectedTerm}
+          onSelectTerm={setSelectedTerm}
         />
 
         {activeTab === 'overview' && (
           <LiveOverviewDashboard
+            selectedTerm={selectedTerm}
+            setSelectedTerm={setSelectedTerm}
             totalScans={totalScans}
             violationsCount={violationsCount}
             parkingOccupancy={parkingOccupancy}
@@ -307,7 +302,7 @@ export default function App() {
                 gateType="ENTRY"
                 currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]}
                 onTriggerScan={() => handleTriggerScan('ENTRY')}
-                streamUrl="http://localhost:8000/cameras/stream/1"
+                streamUrl={`${getApiHost()}/cameras/stream/1`}
               />
               <CameraStream
                 gateName="Gate 2 (Exit Gate)"
@@ -334,7 +329,7 @@ export default function App() {
         )}
 
         {activeTab === 'parking-map' && (
-          <ParkingOccupancyView parkingOccupancy={parkingOccupancy} logs={logs} />
+          <ParkingOccupancyView parkingOccupancy={parkingOccupancy} logs={logs} selectedTerm={selectedTerm} setSelectedTerm={setSelectedTerm} />
         )}
 
         {activeTab === 'announcements' && (

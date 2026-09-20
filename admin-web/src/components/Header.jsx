@@ -1,6 +1,10 @@
 import React from 'react';
 
-export default function Header({ pageTitle, pageSubtitle, enforcementActive = true, onToggleEnforcement }) {
+export const ACADEMIC_TERMS = {
+  '2026-1': { label: 'Semester 1 / 2026', period: '01 Jun 2026 – 31 Oct 2026', hasData: true }
+};
+
+export default function Header({ pageTitle, pageSubtitle, selectedTerm = '2026-1', onSelectTerm }) {
   return (
     <header className="top-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -12,46 +16,53 @@ export default function Header({ pageTitle, pageSubtitle, enforcementActive = tr
       </div>
 
       <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Master Penalty Deduction System Toggle Switch */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, backgroundColor: enforcementActive ? '#f0fdf4' : '#fffbeb', border: `1px solid ${enforcementActive ? '#bbf7d0' : '#fef08a'}`, padding: '6px 14px', borderRadius: 20 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: 11, fontWeight: '800', color: enforcementActive ? '#15803d' : '#b45309', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Parking Access Mode
-            </span>
-            <span style={{ fontSize: 10, fontWeight: '800', color: enforcementActive ? '#16a34a' : '#d97706', letterSpacing: '0.5px' }}>
-              {enforcementActive ? 'ON' : 'PAUSED'}
-            </span>
+        {/* Academic Term Selector Dropdown (Replaces Parking Access Mode Toggle) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          padding: '6px 14px',
+          borderRadius: 20,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+        }}>
+          <div style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: '#eff6ff',
+            color: '#2563eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 18
+          }}>
+            <i className="ri-calendar-event-line"></i>
           </div>
 
-          <button
-            onClick={onToggleEnforcement}
+          <select
+            value={selectedTerm}
+            onChange={(e) => onSelectTerm && onSelectTerm(e.target.value)}
             style={{
-              width: 44,
-              height: 24,
-              borderRadius: 12,
-              backgroundColor: enforcementActive ? '#22c55e' : '#cbd5e1',
+              background: 'transparent',
               border: 'none',
+              fontSize: 14,
+              fontWeight: 800,
+              color: '#0f172a',
               cursor: 'pointer',
-              position: 'relative',
-              transition: 'background-color 0.2s ease',
-              padding: 2
+              outline: 'none',
+              paddingRight: 8
             }}
-            title={enforcementActive ? 'Click to toggle Free Parking Mode' : 'Click to enable Automatic Point Deductions'}
           >
-            <div
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: 10,
-                backgroundColor: '#ffffff',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                position: 'absolute',
-                top: 2,
-                left: enforcementActive ? 22 : 2,
-                transition: 'left 0.2s ease'
-              }}
-            />
-          </button>
+            {Object.keys(ACADEMIC_TERMS)
+              .filter(key => ACADEMIC_TERMS[key].hasData !== false)
+              .map(key => (
+                <option key={key} value={key}>
+                  {ACADEMIC_TERMS[key].label.replace(/\s*\(.*?\)/g, '')}
+                </option>
+              ))}
+          </select>
         </div>
       </div>
     </header>

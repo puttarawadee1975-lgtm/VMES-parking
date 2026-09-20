@@ -63,6 +63,9 @@ export default function GateHistoryModal({
           const isExit = item.camera_id === 2 || gateStr.includes('EXIT');
           const gateName = isExit ? 'Exit gate' : 'Entry gate';
 
+          const rawImg = item.image_url || item.imageUrl || item.snapshot_url;
+          const imgUrl = rawImg ? (rawImg.startsWith('http') ? rawImg : `http://localhost:8000${rawImg}`) : null;
+
           if (isV) {
             return {
               id: item.id,
@@ -73,7 +76,8 @@ export default function GateHistoryModal({
               plate: item.license_plate,
               gate: gateName,
               time: `${dateStr}, ${timeStr}`,
-              rawDate: dateObj
+              rawDate: dateObj,
+              imageUrl: imgUrl
             };
           } else {
             const isParked = !item.exit_time || item.exit_time === 'N/A' || item.status === 'parked';
@@ -89,7 +93,8 @@ export default function GateHistoryModal({
               exitGate: isParked ? 'Pending Exit' : 'Exit gate',
               status: isParked ? 'Parked' : 'Completed',
               helmet: item.vehicle_type === 'car' ? 'N/A' : (item.helmet_detected ? 'Pass (Worn)' : 'NO HELMET'),
-              rawDate: dateObj
+              rawDate: dateObj,
+              imageUrl: imgUrl
             };
           }
         });

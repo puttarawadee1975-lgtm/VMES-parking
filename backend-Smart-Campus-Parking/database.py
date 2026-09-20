@@ -72,6 +72,7 @@ notification_templates_collection = db["notification_templates"] if db is not No
 building_zones_collection = db["building_zones"] if db is not None else None
 registered_gates_collection = db["registered_gates"] if db is not None else None
 score_logs_collection = db["score_logs"] if db is not None else None
+parking_spots_collection = db["parking_spots"] if db is not None else None
 
 
 

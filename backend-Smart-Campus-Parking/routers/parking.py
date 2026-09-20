@@ -171,6 +171,26 @@ async def save_user_parking_spot(data: SavedSpotCreate, user_email: str = "demo@
             plate_num = rv_doc.get("plate", plate_num)
             role_str = rv_doc.get("role", role_str)
 
+    from database import parking_spots_collection
+    image_url_val = data.imageUrl
+    image_urls_val = data.imageUrls
+
+    if parking_spots_collection is not None:
+        spot_db = parking_spots_collection.find_one(
+            {"$or": [{"spot_id": data.pillar}, {"zone": data.zone, "pillar": data.pillar}]},
+            {"_id": 0}
+        )
+        if spot_db:
+            image_url_val = spot_db.get("imageUrl") or image_url_val
+            image_urls_val = spot_db.get("imageUrls") or image_urls_val
+
+    if not image_url_val and (data.zone == "Zone D" or "D-01" in (data.pillar or "")):
+        image_url_val = "/static/zone_d_building.jpg,/static/zone_d_spot.jpg"
+        image_urls_val = [
+            "/static/zone_d_building.jpg",
+            "/static/zone_d_spot.jpg"
+        ]
+
     doc = {
         "user_email": user_email,
         "owner": owner_name,
@@ -183,6 +203,8 @@ async def save_user_parking_spot(data: SavedSpotCreate, user_email: str = "demo@
         "building": data.building or "VMES Building",
         "floor": data.floor or "Floor G",
         "pillar": data.pillar,
+        "imageUrl": image_url_val,
+        "imageUrls": image_urls_val,
         "savedDate": data.savedDate or now.strftime("%Y-%m-%d"),
         "savedTime": data.savedTime or now.strftime("%I:%M %p"),
         "status": "Active Parked",
@@ -215,10 +237,16 @@ async def clear_user_parking_spot(user_email: str = "demo@student.ac.th"):
     """
     Mark saved parking spot status as Exited in MongoDB (Permanent Data Retention Policy).
     """
+    now = datetime.now(timezone.utc)
+    time_str = now.strftime("%I:%M %p")
     if saved_spots_collection is not None:
         saved_spots_collection.update_many(
-            {"user_email": user_email, "status": "Active Parked"},
-            {"$set": {"status": "Exited", "exit_timestamp": datetime.now(timezone.utc)}}
+            {"user_email": user_email},
+            {"$set": {
+                "status": "Exited",
+                "exitTime": f"{time_str} (Gate 2 Exit)",
+                "exit_timestamp": now
+            }}
         )
     return {"message": "Parking spot status updated to Exited (Retained in MongoDB)"}
 
@@ -330,6 +358,14 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                     else:
                         saved_d = str(ts_val)[:10]
 
+                status_val = item.get("status", "Active Parked")
+                if status_val == "Exited":
+                    resolved_exit = item.get("exitTime") or "05:30 PM (Gate 2 Exit)"
+                    if not resolved_exit.endswith(")"):
+                        resolved_exit = f"{resolved_exit} (Gate 2 Exit)"
+                else:
+                    resolved_exit = "Active (In Building)"
+
                 results.append({
                     "id": spot_id,
                     "owner": owner_name,
@@ -345,15 +381,15 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                     "floor": item.get("floor", "Floor G"),
                     "pillar": item.get("pillar", "Spot A-01"),
                     "entryTime": item.get("savedTime") or "Active Parked",
-                    "exitTime": "Active (In Building)",
+                    "exitTime": resolved_exit,
                     "scannedTime": item.get("savedTime", "Now"),
                     "rawDate": saved_d,
                     "savedDate": saved_d,
                     "timestamp": str(item.get("timestamp")) if item.get("timestamp") else None,
                     "entryGate": "Gate 1 Entry",
                     "safetyScore": item.get("safetyScore", 100),
-                    "status": item.get("status", "Active Parked"),
-                    "imageUrl": item.get("imageUrl") or "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80",
+                    "status": status_val,
+                    "imageUrl": item.get("imageUrl") or "",
                     "term": item_term,
                     "isSpotSaved": True
                 })
@@ -466,7 +502,7 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                     "entryGate": "Gate 1 Entry",
                     "safetyScore": 100,
                     "status": "Active Parked",
-                    "imageUrl": l.get("photo") or l.get("cctv_image_url") or "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop&q=80",
+                    "imageUrl": l.get("photo") or l.get("cctv_image_url") or l.get("image_url") or l.get("snapshot_url") or "",
                     "term": l_term,
                     "isSpotSaved": False
                 })
@@ -548,6 +584,9 @@ async def register_vehicle_in_mongodb(data: VehicleRegisterCreate):
         "front_photo_url": front_photo_data,
         "side_photo_url": side_photo_data,
         "student_id_photo_url": student_id_photo_data,
+        "vehicle_front_photo_base64": data.vehicle_front_photo if (data.vehicle_front_photo and data.vehicle_front_photo.startswith("data:")) else None,
+        "vehicle_side_photo_base64": data.vehicle_side_photo if (data.vehicle_side_photo and data.vehicle_side_photo.startswith("data:")) else None,
+        "student_id_photo_base64": data.student_id_photo if (data.student_id_photo and data.student_id_photo.startswith("data:")) else None,
         "registered_at": now
     }
 
@@ -631,6 +670,49 @@ async def delete_vehicle_from_mongodb(user_email: str = "", plate: str = ""):
         return {"status": "success", "message": f"Vehicle {plate} deleted from MongoDB"}
     return {"status": "error", "message": "Vehicle plate or user_email missing or DB unavailable"}
 
+DEFAULT_4ZONES = [
+    {
+        "id": "ZONE-A",
+        "name": "Zone A",
+        "tag": "VMES Building - Floor G",
+        "type": "Car Only",
+        "total": 10,
+        "location": "VMES Building Floor G (Spot A-01 to A-10)",
+        "rate": "100%",
+        "slots": [f"Spot A-{i:02d}" for i in range(1, 11)]
+    },
+    {
+        "id": "ZONE-B",
+        "name": "Zone B",
+        "tag": "VMES Building - Floor G",
+        "type": "Car Only",
+        "total": 2,
+        "location": "VMES Building Floor G (Spot B-01 to B-02)",
+        "rate": "100%",
+        "slots": [f"Spot B-{i:02d}" for i in range(1, 3)]
+    },
+    {
+        "id": "ZONE-C",
+        "name": "Zone C",
+        "tag": "VMES Building - Floor G",
+        "type": "Motorcycle Only",
+        "total": 9,
+        "location": "VMES Building Floor G (Spot C-01 to C-09)",
+        "rate": "100%",
+        "slots": [f"Spot C-{i:02d}" for i in range(1, 10)]
+    },
+    {
+        "id": "ZONE-D",
+        "name": "Zone D",
+        "tag": "VMES Building - Floor G",
+        "type": "Reserved / Special",
+        "total": 1,
+        "location": "VMES Building Floor G (Spot D-01)",
+        "rate": "100%",
+        "slots": ["Spot D-01"]
+    }
+]
+
 @router.get("/building-zones")
 async def get_building_zones_from_mongodb():
     """
@@ -638,10 +720,9 @@ async def get_building_zones_from_mongodb():
     """
     if building_zones_collection is not None:
         zones = list(building_zones_collection.find({}, {"_id": 0}))
-        if zones:
+        if zones and len(zones) >= 4:
             return zones
-    from seed_configs_to_mongodb import DEFAULT_ZONES as DB_DEFAULT_ZONES
-    return DB_DEFAULT_ZONES
+    return DEFAULT_4ZONES
 
 @router.post("/building-zones")
 async def save_building_zones_to_mongodb(zones: list):

@@ -163,7 +163,10 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
             </thead>
             <tbody>
               {filteredLogs.map((item, i) => {
-                const snapshotUrl = item.imageUrl || item.image || 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80';
+                const rawUrl = item.imageUrl || item.image_url || item.snapshot_base64 || item.snapshotUrl || item.image;
+                const snapshotUrl = rawUrl
+                  ? ((rawUrl.startsWith('http') || rawUrl.startsWith('data:')) ? rawUrl : `http://${window.location.hostname}:8000${rawUrl}`)
+                  : 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80';
                 return (
                   <tr key={i}>
                     <td style={{ fontWeight: 700, color: '#0f172a' }}>LOG-V{String(i + 1).padStart(3, '0')}</td>

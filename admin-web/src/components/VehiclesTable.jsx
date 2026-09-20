@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { THAI_PROVINCES } from '../data/provincesData';
+import { getImageUrl } from '../api';
 
 const CAR_COLORS = [
   { name: 'White', label: 'White', hex: '#ffffff' },
@@ -636,7 +637,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>1. Front Photo (Front & License Plate)</div>
                 <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
                   <img
-                    src={selectedPhotoVehicle.front_photo_url ? (selectedPhotoVehicle.front_photo_url.startsWith('/') ? `http://localhost:8000${selectedPhotoVehicle.front_photo_url}` : selectedPhotoVehicle.front_photo_url) : (selectedPhotoVehicle.vehicle_photo_url ? (selectedPhotoVehicle.vehicle_photo_url.startsWith('/') ? `http://localhost:8000${selectedPhotoVehicle.vehicle_photo_url}` : selectedPhotoVehicle.vehicle_photo_url) : '')}
+                    src={getImageUrl(selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url)}
                     alt="Front Photo"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=80'; }}
@@ -649,7 +650,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>2. Side Photo (Side View)</div>
                   <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
                     <img
-                      src={selectedPhotoVehicle.side_photo_url.startsWith('/') ? `http://localhost:8000${selectedPhotoVehicle.side_photo_url}` : selectedPhotoVehicle.side_photo_url}
+                      src={getImageUrl(selectedPhotoVehicle.side_photo_url)}
                       alt="Side Photo"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=80'; }}
@@ -665,7 +666,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                   </div>
                   <div style={{ width: '100%', height: 200, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: `1px solid ${selectedPhotoVehicle.owner_role === 'staff' ? '#e9d5ff' : '#bbf7d0'}` }}>
                     <img
-                      src={selectedPhotoVehicle.student_id_photo_url.startsWith('/') ? `http://localhost:8000${selectedPhotoVehicle.student_id_photo_url}` : selectedPhotoVehicle.student_id_photo_url}
+                      src={getImageUrl(selectedPhotoVehicle.student_id_photo_url)}
                       alt="ID Photo"
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />

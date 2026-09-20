@@ -193,7 +193,7 @@ export default function AccountScreen({
                 <Text className="text-slate-700 font-semibold text-sm">Find My Parking</Text>
                 {parkedSpot && (
                   <Text className="text-slate-400 text-xs mt-0.5" numberOfLines={1}>
-                    {`${(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VMES Building' : parkedSpot.building} (${parkedSpot.pillar})`}
+                    {`${(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VMES Building' : parkedSpot.building} (${(parkedSpot.pillar || '').replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim()})`}
                   </Text>
                 )}
               </View>

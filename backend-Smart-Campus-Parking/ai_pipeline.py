@@ -6,6 +6,7 @@ import threading
 import cv2
 import easyocr
 import requests
+import base64
 import numpy as np
 from collections import Counter
 from ultralytics import YOLO
@@ -166,16 +167,13 @@ def extract_thai_plate(texts: list) -> str:
 
     return ""
 
-def save_event_snapshot(frame, plate: str, gate_type: str, cam_id: str) -> str | None:
+def save_event_snapshot(frame, plate: str, gate_type: str, cam_id: str) -> tuple[str | None, str | None]:
     """
     Save exactly one JPEG snapshot of the current camera frame when an ENTRY or EXIT
     event is confirmed by the existing plate-stability mechanism.
 
-    Returns the relative URL string  "/snapshots/<filename>"  for inclusion in the
-    detection payload, or None if the write fails.
-
-    A failure here MUST NOT prevent the parking event from being submitted to the API —
-    callers must handle a None return value gracefully.
+    Returns (relative_url, base64_uri) e.g. ("/snapshots/<filename>", "data:image/jpeg;base64,...")
+    for inclusion in the detection payload and storage in MongoDB Atlas.
     """
     try:
         # Sanitize plate to safe ASCII/Thai filename characters
@@ -190,16 +188,20 @@ def save_event_snapshot(frame, plate: str, gate_type: str, cam_id: str) -> str |
         )
         if not encode_ok:
             print(f"[SNAPSHOT ERROR] JPEG encode failed for plate {plate}. Detection will continue without photo.")
-            return None
+            return None, None
 
+        img_bytes = buffer.tobytes()
         with open(filepath, "wb") as f:
-            f.write(buffer.tobytes())
+            f.write(img_bytes)
 
-        print(f"[SNAPSHOT] Saved {filename}")
-        return f"/snapshots/{filename}"
+        b64_encoded = base64.b64encode(img_bytes).decode('utf-8')
+        b64_uri = f"data:image/jpeg;base64,{b64_encoded}"
+
+        print(f"[SNAPSHOT] Saved {filename} and generated Base64 Data URI")
+        return f"/snapshots/{filename}", b64_uri
     except Exception as e:
         print(f"[SNAPSHOT ERROR] Could not save snapshot for plate {plate}: {e}. Detection will continue without photo.")
-        return None
+        return None, None
 
 
 def post_detection_to_backend(
@@ -208,6 +210,7 @@ def post_detection_to_backend(
     helmet_detected: bool,
     zone: str = DEFAULT_ZONE,
     image_url: str | None = None,
+    snapshot_base64: str | None = None,
 ):
     payload = {
         "license_plate": plate,
@@ -217,6 +220,7 @@ def post_detection_to_backend(
         "zone": zone,
         "camera_id": CAMERA_ID,
         "image_url": image_url,
+        "snapshot_base64": snapshot_base64,
     }
     try:
         res = requests.post(API_URL, json=payload, timeout=3.0)
@@ -406,7 +410,7 @@ while cap.isOpened():
                     # save_event_snapshot() is fully exception-safe:
                     # it always returns None on any error so the detection
                     # below is never skipped due to a photo failure.
-                    event_image_url = save_event_snapshot(
+                    event_image_url, event_b64 = save_event_snapshot(
                         frame=frame,
                         plate=stable_plate,
                         gate_type=GATE_TYPE,
@@ -419,6 +423,7 @@ while cap.isOpened():
                         helmet_detected=stable_helmet_state if is_motorcycle else None,
                         zone=zone_target,
                         image_url=event_image_url,
+                        snapshot_base64=event_b64,
                     )
 
                     last_submitted_plate = stable_plate

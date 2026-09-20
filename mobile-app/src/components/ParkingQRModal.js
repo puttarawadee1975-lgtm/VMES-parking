@@ -14,32 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getEnglishFormattedDate, getEnglishFormattedTime, PRESET_ZONES } from '../data/mockData';
 
 // Predefined Zone QR presets (VMES Building, Floor G)
-const PRESET_PILLARS = [
-  {
-    id: 'QR-VMES-GA',
-    building: 'VMES Building',
-    floor: 'Floor G',
-    pillar: 'G05-G09',
-    zone: 'Zone A',
-    nearestExit: 'Main Entrance Gate 1',
-  },
-  {
-    id: 'QR-VMES-GB',
-    building: 'VMES Building',
-    floor: 'Floor G',
-    pillar: 'G06-G10',
-    zone: 'Zone B',
-    nearestExit: 'East Exit Walkway',
-  },
-  {
-    id: 'QR-VMES-GC',
-    building: 'VMES Building',
-    floor: 'Floor G',
-    pillar: 'G11-G15',
-    zone: 'Zone C',
-    nearestExit: 'West Exit Ramp',
-  }
-];
+const PRESET_PILLARS = PRESET_ZONES;
 
 export default function ParkingQRModal({
   visible,
@@ -63,20 +38,16 @@ export default function ParkingQRModal({
       }
       if (typeof scannedSpot.imageUrl === 'string' && scannedSpot.imageUrl.trim()) {
         const splitUrls = scannedSpot.imageUrl.split(',').map(url => url.trim()).filter(Boolean);
-        if (splitUrls.length > 1) return splitUrls;
-        if (splitUrls.length === 1) {
-          return [
-            splitUrls[0],
-            'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
-          ];
-        }
+        if (splitUrls.length > 0) return splitUrls;
       }
-      return [
-        'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
-      ];
+      const p = scannedSpot.pillar || '';
+      const z = scannedSpot.zone || '';
+      if (z === 'Zone D' || p.includes('D-01')) {
+        return [
+          require('../../assets/zone_d_building.jpg'),
+          require('../../assets/zone_d_spot.jpg')
+        ];
+      return [];
     }
     return [];
   }, [scannedSpot]);
@@ -187,10 +158,10 @@ export default function ParkingQRModal({
 
           <View className="items-center">
             <Text className="text-white font-bold text-sm">
-              {scannedSpot ? 'Save Parking Location' : 'Scan Pillar QR Code'}
+              {scannedSpot ? 'Save Parking Location' : 'Scan Spot QR Code'}
             </Text>
             <Text className="text-slate-400 text-[10px]">
-              {scannedSpot ? 'Review and confirm spot' : 'Scan parking pillar QR code'}
+              {scannedSpot ? 'Review and confirm spot' : 'Scan parking spot QR code'}
             </Text>
           </View>
 
@@ -228,9 +199,9 @@ export default function ParkingQRModal({
                 <Ionicons name="checkmark" size={22} color="#ffffff" />
               </View>
               <View className="flex-1">
-                <Text className="text-emerald-400 font-bold text-sm">Pillar QR Code Scanned!</Text>
+                <Text className="text-emerald-400 font-bold text-sm">Spot QR Code Scanned!</Text>
                 <Text className="text-emerald-300/80 text-xs mt-0.5">
-                  Pillar detected successfully. Tap below to save your spot.
+                  Spot detected successfully. Tap below to save your spot.
                 </Text>
               </View>
             </View>
@@ -250,8 +221,8 @@ export default function ParkingQRModal({
               </View>
 
               <View className="flex-row justify-between items-center pb-2.5 border-b border-slate-800">
-                <Text className="text-slate-400 text-xs font-semibold">Pillar / Slot:</Text>
-                <Text className="text-emerald-400 font-black text-sm">{scannedSpot.pillar}</Text>
+                <Text className="text-slate-400 text-xs font-semibold">Spot:</Text>
+                <Text className="text-emerald-400 font-black text-sm">{(scannedSpot.pillar || '').replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim()}</Text>
               </View>
 
               <View className="flex-row justify-between items-center">
@@ -265,7 +236,7 @@ export default function ParkingQRModal({
               {qrImageList.length > 0 ? (
                 <View style={{ height: 180, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', position: 'relative' }}>
                   <Image
-                    source={{ uri: qrImageList[activeQRImageIndex] }}
+                    source={typeof qrImageList[activeQRImageIndex] === 'number' ? qrImageList[activeQRImageIndex] : { uri: qrImageList[activeQRImageIndex] }}
                     style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
                   />
 
@@ -406,13 +377,13 @@ export default function ParkingQRModal({
                     <Text className="text-2xl">🛵</Text>
                   </View>
                   <View className="bg-blue-600 px-2.5 py-0.5 rounded-full mt-1.5 shadow-md shadow-blue-500/40">
-                    <Text className="text-white text-[10px] font-bold">You are here: {scannedSpot.pillar}</Text>
+                    <Text className="text-white text-[10px] font-bold">You are here: {(scannedSpot.pillar || '').replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim()}</Text>
                   </View>
                 </View>
               </View>
 
               <Text className="text-slate-400 text-[10px] text-center mt-2.5">
-                Surrounding floor map around parking pillar
+                Surrounding floor map around parking spot
               </Text>
             </View>
 
@@ -442,10 +413,10 @@ export default function ParkingQRModal({
             {/* Top Instruction */}
             <View className="items-center mt-2">
               <Text className="text-slate-200 text-sm font-semibold text-center">
-                Point camera at the QR code on the parking pillar
+                Point camera at the QR code on the parking spot
               </Text>
               <Text className="text-slate-400 text-xs text-center mt-1">
-                Scan pillar sticker to record parking coordinates
+                Scan spot sticker to record parking coordinates
               </Text>
             </View>
 
@@ -499,7 +470,7 @@ export default function ParkingQRModal({
                   style={{ marginRight: 8 }}
                 />
                 <Text className="text-white font-bold text-sm">
-                  {isScanning ? 'Scanning QR Code...' : 'Tap to Scan Pillar QR'}
+                  {isScanning ? 'Scanning QR Code...' : 'Tap to Scan Spot QR'}
                 </Text>
               </TouchableOpacity>
 

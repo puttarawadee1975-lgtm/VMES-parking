@@ -10,6 +10,9 @@ export default function ParkingLocationCard({
   // If user currently has a parked spot saved (Compact View)
   if (parkedSpot) {
     const zoneStr = parkedSpot.zone ? `${parkedSpot.zone} • ${parkedSpot.floor || 'Floor G'}` : (parkedSpot.floor || 'Floor G');
+    const rawSpot = parkedSpot.pillar || 'A-01';
+    const cleanSpot = rawSpot.replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim();
+
     return (
       <TouchableOpacity 
         onPress={onOpenDetails}
@@ -28,7 +31,7 @@ export default function ParkingLocationCard({
               {(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VMES Building' : parkedSpot.building}
             </Text>
             <Text className="text-blue-600 font-bold text-xs mt-0.5">
-              Pillar {parkedSpot.pillar || 'G05-G09'} • {parkedSpot.savedDate || '28 June 2026'}
+              {cleanSpot} • {parkedSpot.savedDate || 'Today'}
             </Text>
           </View>
         </View>
@@ -51,7 +54,7 @@ export default function ParkingLocationCard({
           </View>
           <View className="flex-1">
             <Text className="text-slate-900 font-bold text-sm">Find My Parking</Text>
-            <Text className="text-slate-500 text-[11px] mt-0.5">Scan pillar QR code to save your spot</Text>
+            <Text className="text-slate-500 text-[11px] mt-0.5">Scan spot QR code to save your spot</Text>
           </View>
         </View>
 

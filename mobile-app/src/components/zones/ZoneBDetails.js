@@ -40,7 +40,7 @@ export default function ZoneBDetails({ parkedSpot }) {
             <Text className="text-2xl">🛵</Text>
           </View>
           <View className="bg-pink-600 px-3 py-1 rounded-full mt-2 shadow-sm">
-            <Text className="text-white text-[10px] font-bold">Parked at Pillar {parkedSpot.pillar || 'G06-G10'}</Text>
+            <Text className="text-white text-[10px] font-bold">Parked at {(parkedSpot.pillar || 'B-01').replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim()}</Text>
           </View>
         </View>
       </View>

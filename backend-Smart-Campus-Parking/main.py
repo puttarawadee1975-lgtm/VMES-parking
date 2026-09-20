@@ -30,7 +30,10 @@ app = FastAPI(
 )
 
 
-# Serve evidence snapshots & vehicle photos statically
+# Serve evidence snapshots, vehicle photos & static assets
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 app.mount("/snapshots", StaticFiles(directory=snapshots_dir), name="snapshots")
 app.mount("/vehicle_photos", StaticFiles(directory=vehicle_photos_dir), name="vehicle_photos")
 

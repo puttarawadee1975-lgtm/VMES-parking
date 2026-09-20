@@ -13,6 +13,8 @@ import {
   Filler
 } from 'chart.js';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
+import { ACADEMIC_TERMS } from './Header';
+import { fetchAPI } from '../api';
 
 ChartJS.register(
   CategoryScale,
@@ -27,29 +29,22 @@ ChartJS.register(
   Filler
 );
 
-const ACADEMIC_TERMS = {
-  '2026-1': { label: 'Semester 1 / 2026 (Current Term)', period: '01 Jun 2026 – 31 Oct 2026' },
-  '2025-2': { label: 'Semester 2 / 2025', period: '01 Nov 2025 – 31 Mar 2026' },
-  '2025-3': { label: 'Semester 3 / 2025 (Summer)', period: '01 Apr 2026 – 31 May 2026' },
-  '2025-1': { label: 'Semester 1 / 2025', period: '01 Jun 2025 – 31 Oct 2025' },
-  '2024-2': { label: 'Semester 2 / 2024', period: '01 Nov 2024 – 31 Mar 2025' }
-};
-
 export default function LiveOverviewDashboard({
-  logs,
-  vehicles,
-  onNavigate,
+  vehicles = [],
+  logs = [],
+  onNavigateToViolations,
+  selectedTerm = '2026-1',
+  setSelectedTerm
 }) {
-  const [selectedTerm, setSelectedTerm] = useState('2026-1');
   const [selectedSnapshot, setSelectedSnapshot] = useState(null);
   const [liveTermSummary, setLiveTermSummary] = useState(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/admin/term-summary?term=${selectedTerm}`)
-      .then(res => res.ok ? res.json() : null)
+    fetchAPI(`/admin/term-summary?term=${selectedTerm}`)
+      .then(res => res && res.ok ? res.json() : null)
       .then(data => {
-        if (data && data.totalScans) {
+        if (data) {
           setLiveTermSummary(data);
         }
       })
@@ -58,10 +53,10 @@ export default function LiveOverviewDashboard({
 
   const computedHourlyFromLogs = useMemo(() => {
     if (!logs || logs.length === 0) return null;
-    const targetSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '16:30'];
+    const targetSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
     const hourToSlot = {
       3: '09:00', 4: '09:00', 5: '09:00', 6: '09:00', 7: '09:00', 8: '09:00', 9: '09:00',
-      10: '10:00', 11: '11:00', 12: '12:00', 13: '13:00', 14: '14:00', 15: '15:00', 16: '16:00'
+      10: '10:00', 11: '11:00', 12: '12:00', 13: '13:00', 14: '14:00', 15: '15:00', 16: '16:00', 17: '17:00', 18: '18:00'
     };
     let running = 0;
     const slotMap = {};
@@ -77,8 +72,7 @@ export default function LiveOverviewDashboard({
       const d = l.rawDate ? new Date(l.rawDate) : (l.timestamp ? new Date(l.timestamp) : null);
       if (d && !isNaN(d)) {
         const h = d.getHours();
-        const m = d.getMinutes();
-        const sKey = (h > 16 || (h === 16 && m >= 30)) ? '16:30' : hourToSlot[h];
+        const sKey = h >= 18 ? '18:00' : hourToSlot[h];
         if (sKey) {
           slotMap[sKey] = running;
         }
@@ -89,8 +83,8 @@ export default function LiveOverviewDashboard({
     let lastVal = 0;
     return targetSlots.map(t => {
       let raw = slotMap[t] || 0;
-      if (raw === 0 && lastVal > 0 && ['15:00', '16:00', '16:30'].includes(t)) {
-        const decay = { '15:00': 0.65, '16:00': 0.40, '16:30': 0.20 }[t];
+      if (raw === 0 && lastVal > 0 && ['15:00', '16:00', '17:00', '18:00'].includes(t)) {
+        const decay = { '15:00': 0.70, '16:00': 0.50, '17:00': 0.30, '18:00': 0.15 }[t];
         raw = Math.round(lastVal * decay);
       } else if (raw > 0) {
         lastVal = raw;
@@ -111,7 +105,7 @@ export default function LiveOverviewDashboard({
     const avgOccRate = rates.length > 0 ? (rates.reduce((a, b) => a + b, 0) / rates.length).toFixed(1) : '0.0';
 
     return {
-      label: ACADEMIC_TERMS[selectedTerm]?.label || 'Current Academic Term',
+      label: (ACADEMIC_TERMS[selectedTerm]?.label || 'Semester 1 / 2026').replace(/\s*\(.*?\)/g, ''),
       period: ACADEMIC_TERMS[selectedTerm]?.period || '',
       totalScans: liveTermSummary?.totalScans ?? (logs ? logs.length : 0),
       violationsCount: liveTermSummary?.violationsCount ?? (logs ? logs.filter(l => l.violation).length : 0),
@@ -131,6 +125,10 @@ export default function LiveOverviewDashboard({
   }, [selectedTerm, liveTermSummary, computedHourlyFromLogs, logs]);
 
   const termTrendData = useMemo(() => {
+    if (liveTermSummary?.monthlyTrend && liveTermSummary.monthlyTrend.length > 0) {
+      return liveTermSummary.monthlyTrend;
+    }
+
     if (!logs || logs.length === 0) return [];
     
     const monthsMap = {};
@@ -173,7 +171,7 @@ export default function LiveOverviewDashboard({
         violationHeightPct
       };
     });
-  }, [logs, currentTermData]);
+  }, [logs, currentTermData, liveTermSummary]);
 
   const avgSafetyScore = useMemo(() => {
     if (liveTermSummary?.avgSafetyScore) return liveTermSummary.avgSafetyScore;
@@ -256,7 +254,7 @@ export default function LiveOverviewDashboard({
   const vehiclePieData = useMemo(() => {
     const vt = currentTermData.vehicleType;
     return {
-      labels: ['Motorcycles (รถจักรยานยนต์)', 'Cars (รถยนต์)'],
+      labels: ['Motorcycles', 'Cars'],
       datasets: [
         {
           data: [vt.motorcycles.trips, vt.cars.trips],
@@ -295,7 +293,7 @@ export default function LiveOverviewDashboard({
   const userPieData = useMemo(() => {
     const ut = currentTermData.userType;
     return {
-      labels: ['Registered Users (ผู้ลงทะเบียน)', 'Unregistered / Guests (ผู้ใช้ทั่วไป)'],
+      labels: ['Registered Users', 'Unregistered / Guests'],
       datasets: [
         {
           data: [ut.registered.trips, ut.unregistered.trips],
@@ -337,127 +335,73 @@ export default function LiveOverviewDashboard({
   }, [currentTermData]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Term Selector & Control Header Bar */}
-      <div style={{
-        background: '#ffffff',
-        borderRadius: 20,
-        border: '1px solid #e2e8f0',
-        padding: '16px 24px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 16,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: '#eff6ff',
-            color: '#2563eb',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 22
-          }}>
-            <i className="ri-calendar-event-line"></i>
-          </div>
-          <div>
-            <select
-              value={selectedTerm}
-              onChange={(e) => setSelectedTerm(e.target.value)}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: 10,
-                padding: '8px 14px',
-                fontSize: 14,
-                fontWeight: 800,
-                color: '#0f172a',
-                cursor: 'pointer',
-                outline: 'none'
-              }}
-            >
-              {Object.keys(ACADEMIC_TERMS).map(key => (
-                <option key={key} value={key}>
-                  {ACADEMIC_TERMS[key].label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22, paddingBottom: 24 }}>
 
       {/* Top 4 Term Summary KPI Cards */}
-      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
         {/* Requirement 1: Term Gate Traffic */}
         <div className="kpi-card" style={{
           background: '#ffffff',
-          padding: '20px 24px',
+          padding: '22px 24px',
           borderRadius: 20,
           border: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          boxShadow: '0 2px 6px rgba(15,23,42,0.03)',
           display: 'flex',
           alignItems: 'center',
           gap: 16
         }}>
           <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
+            width: 54,
+            height: 54,
+            borderRadius: 16,
             background: '#eff6ff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <i className="ri-scan-2-line" style={{ color: '#2563eb', fontSize: 24 }}></i>
+            <i className="ri-scan-2-line" style={{ color: '#2563eb', fontSize: 26 }}></i>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Gate Traffic (Trips)</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+            <div style={{ fontSize: 30, fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>
               {currentTermData.totalScans.toLocaleString()}
             </div>
-            <div style={{ fontSize: 11, color: '#2563eb', fontWeight: 700, lineHeight: 1.3 }}>
-              Total Vehicle Entry & Exit Traffic
+            <div style={{ fontSize: 12, color: '#2563eb', fontWeight: 700, lineHeight: 1.1 }}>
+              Total Entry & Exit Traffic
             </div>
           </div>
         </div>
 
-        {/* Requirement 2: Term Violations (ผู้ทำผิดรวมทุกกรณี) */}
+        {/* Requirement 2: Term Violations */}
         <div className="kpi-card" style={{
           background: '#ffffff',
-          padding: '20px 24px',
+          padding: '22px 24px',
           borderRadius: 20,
           border: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          boxShadow: '0 2px 6px rgba(15,23,42,0.03)',
           display: 'flex',
           alignItems: 'center',
           gap: 16
         }}>
           <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
+            width: 54,
+            height: 54,
+            borderRadius: 16,
             background: '#fef2f2',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <i className="ri-error-warning-line" style={{ color: '#dc2626', fontSize: 24 }}></i>
+            <i className="ri-error-warning-line" style={{ color: '#dc2626', fontSize: 26 }}></i>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Violations</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+            <div style={{ fontSize: 30, fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>
               {currentTermData.violationsCount.toLocaleString()}
             </div>
-            <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 700 }}>
+            <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>
               Total Violations Count
             </div>
           </div>
@@ -466,33 +410,33 @@ export default function LiveOverviewDashboard({
         {/* Requirement 3: Overall Term Occupancy Rate */}
         <div className="kpi-card" style={{
           background: '#ffffff',
-          padding: '20px 24px',
+          padding: '22px 24px',
           borderRadius: 20,
           border: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          boxShadow: '0 2px 6px rgba(15,23,42,0.03)',
           display: 'flex',
           alignItems: 'center',
           gap: 16
         }}>
           <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
+            width: 54,
+            height: 54,
+            borderRadius: 16,
             background: '#e0f2fe',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <i className="ri-parking-box-line" style={{ color: '#0284c7', fontSize: 24 }}></i>
+            <i className="ri-parking-box-line" style={{ color: '#0284c7', fontSize: 26 }}></i>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Overall Term Occupancy Rate</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Overall Occupancy Rate</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>
               {currentTermData.avgOccupancyRate}
             </div>
-            <div style={{ fontSize: 11, color: '#0284c7', fontWeight: 700 }}>
-              คำนวณตามสูตรเปิดบริการ 09:00 - 16:30 น.
+            <div style={{ fontSize: 12, color: '#0284c7', fontWeight: 700 }}>
+              Operating Hours: 09:00 - 18:00
             </div>
           </div>
         </div>
@@ -500,32 +444,32 @@ export default function LiveOverviewDashboard({
         {/* Card 4: Avg Driver Safety Score */}
         <div className="kpi-card" style={{
           background: '#ffffff',
-          padding: '20px 24px',
+          padding: '22px 24px',
           borderRadius: 20,
           border: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          boxShadow: '0 2px 6px rgba(15,23,42,0.03)',
           display: 'flex',
           alignItems: 'center',
           gap: 16
         }}>
           <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
+            width: 54,
+            height: 54,
+            borderRadius: 16,
             background: '#f3e8ff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <i className="ri-shield-line" style={{ color: '#7c3aed', fontSize: 24 }}></i>
+            <i className="ri-shield-line" style={{ color: '#7c3aed', fontSize: 26 }}></i>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Avg. Term Safety Score</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>Avg. Safety Score</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>
               {avgSafetyScore} <span style={{ fontSize: 14, color: '#64748b', fontWeight: 600 }}>/ 100</span>
             </div>
-            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
               {(vehicles || []).length > 0 ? (vehicles || []).length : 1} Registered Vehicles
             </div>
           </div>
@@ -533,33 +477,29 @@ export default function LiveOverviewDashboard({
       </div>
 
       {/* Main Content Layout: 2 Main Columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: '62% 36%', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.75fr 1fr', gap: 22 }}>
 
-        {/* Left Column (62%): Charts & Trends */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Left Column (Main Charts) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 
           {/* Requirement 4: Time-based Occupancy Rate (Hourly Trend Line) */}
           <div className="card" style={{
             background: '#ffffff',
             borderRadius: 20,
             border: '1px solid #e2e8f0',
-            padding: 24,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            padding: '24px 28px',
+            boxShadow: '0 2px 6px rgba(15,23,42,0.03)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <i className="ri-line-chart-line" style={{ color: '#0284c7' }}></i> Time-based Occupancy Rate (Hourly Trend Line)
+                  <i className="ri-line-chart-line" style={{ color: '#0284c7', fontSize: 20 }}></i> Time-based Occupancy Rate (Hourly Trend Line)
                 </h3>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                  อัตราความหนาแน่นของการเข้าจอดแยกตามรายชั่วโมง (เฉพาะเวลาเปิดบริการ 09:00 – 16:30 น.)
+                <div style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontWeight: 500 }}>
+                  Hourly parking occupancy density (Operating hours: 09:00 – 18:00)
                 </div>
               </div>
-
-
             </div>
-
-
 
             {/* Interactive Line Chart */}
             <div style={{ height: 260 }}>
@@ -567,41 +507,43 @@ export default function LiveOverviewDashboard({
             </div>
           </div>
 
-          {/* Gate Traffic & Violation Audit (Selected Year-Term) */}
+          {/* Gate Traffic & Violation Audit */}
           <div className="card" style={{
             background: '#ffffff',
             borderRadius: 20,
             border: '1px solid #e2e8f0',
-            padding: 24,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            padding: '24px 28px',
+            boxShadow: '0 2px 6px rgba(15,23,42,0.03)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
                   Gate Traffic & Violation ({selectedTerm})
                 </h3>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                  การเปรียบเทียบสถิติจราจรทางเข้า-ออก และการทำผิดกฎประจำปีการศึกษาและเทอม {selectedTerm} (เชื่อมต่อ MongoDB Atlas Database)
+                <div style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontWeight: 500 }}>
+                  Gate traffic & violation statistics for academic term {selectedTerm}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, fontWeight: 700 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 13, fontWeight: 700 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#2563eb' }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 3, background: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)' }}></span> Gate Scans (Trips)
+                  <span style={{ width: 12, height: 12, borderRadius: 3, background: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)' }}></span> Gate Scans
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#dc2626' }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 3, background: 'linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)' }}></span> Violations
+                  <span style={{ width: 12, height: 12, borderRadius: 3, background: 'linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)' }}></span> Violations
                 </span>
               </div>
             </div>
 
-            {/* Side-by-Side Double Bar Chart Visual with Clean Hover Tooltips */}
+            {/* Side-by-Side Double Bar Chart Visual */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${termTrendData.length}, 1fr)`,
               gap: 16,
-              height: 220,
+              height: 235,
               alignItems: 'flex-end',
-              paddingTop: 36
+              paddingTop: 14,
+              borderBottom: '1px solid #f1f5f9',
+              paddingBottom: 8
             }}>
               {termTrendData.map((m, idx) => {
                 const trafficKey = `traffic-${idx}`;
@@ -610,9 +552,9 @@ export default function LiveOverviewDashboard({
                 const isViolationHovered = hoveredBarIndex === violationKey;
 
                 return (
-                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end' }}>
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, height: '100%', justifyContent: 'flex-end' }}>
                     {/* Double Bar Cylinder Container */}
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: '78%', width: '100%', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: '84%', width: '100%', justifyContent: 'center' }}>
                       
                       {/* Bar 1: Gate Traffic (Blue) */}
                       <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
@@ -624,7 +566,7 @@ export default function LiveOverviewDashboard({
                             transform: 'translateX(-50%)',
                             background: '#0f172a',
                             color: '#ffffff',
-                            padding: '5px 10px',
+                            padding: '6px 12px',
                             borderRadius: 8,
                             boxShadow: '0 4px 14px rgba(15,23,42,0.25)',
                             fontSize: 12,
@@ -633,17 +575,17 @@ export default function LiveOverviewDashboard({
                             zIndex: 25,
                             pointerEvents: 'none'
                           }}>
-                            {m.traffic.toLocaleString()} ครั้ง ({m.trafficPct}%)
+                            {m.traffic.toLocaleString()} trips ({m.trafficPct}%)
                           </div>
                         )}
                         <div
                           onMouseEnter={() => setHoveredBarIndex(trafficKey)}
                           onMouseLeave={() => setHoveredBarIndex(null)}
                           style={{
-                            width: 24,
+                            width: 28,
                             height: `${m.trafficHeightPct}%`,
                             background: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)',
-                            borderRadius: '6px 6px 0 0',
+                            borderRadius: '8px 8px 0 0',
                             transition: 'all 0.2s ease',
                             cursor: 'pointer',
                             transform: isTrafficHovered ? 'scaleY(1.05)' : 'scaleY(1)',
@@ -663,7 +605,7 @@ export default function LiveOverviewDashboard({
                             transform: 'translateX(-50%)',
                             background: '#0f172a',
                             color: '#ffffff',
-                            padding: '5px 10px',
+                            padding: '6px 12px',
                             borderRadius: 8,
                             boxShadow: '0 4px 14px rgba(15,23,42,0.25)',
                             fontSize: 12,
@@ -672,17 +614,17 @@ export default function LiveOverviewDashboard({
                             zIndex: 25,
                             pointerEvents: 'none'
                           }}>
-                            {m.violations.toLocaleString()} รายการ ({m.violationPct}%)
+                            {m.violations.toLocaleString()} violations ({m.violationPct}%)
                           </div>
                         )}
                         <div
                           onMouseEnter={() => setHoveredBarIndex(violationKey)}
                           onMouseLeave={() => setHoveredBarIndex(null)}
                           style={{
-                            width: 24,
+                            width: 28,
                             height: `${m.violationHeightPct}%`,
                             background: 'linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)',
-                            borderRadius: '6px 6px 0 0',
+                            borderRadius: '8px 8px 0 0',
                             transition: 'all 0.2s ease',
                             cursor: 'pointer',
                             transform: isViolationHovered ? 'scaleY(1.05)' : 'scaleY(1)',
@@ -695,7 +637,7 @@ export default function LiveOverviewDashboard({
                     </div>
 
                     {/* Column Label */}
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{m.month}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{m.month}</div>
                   </div>
                 );
               })}
@@ -703,23 +645,22 @@ export default function LiveOverviewDashboard({
           </div>
         </div>
 
-        {/* Right Column (36%): Pie Charts & Formula Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Right Column (Breakdown Donut Charts) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 
-          {/* Requirements 5 & 6 Side-by-Side Grid or Card Stacks */}
           {/* Requirement 5: Pie Chart comparing Motorcycles vs Cars */}
           <div className="card" style={{
             background: '#ffffff',
             borderRadius: 20,
             border: '1px solid #e2e8f0',
-            padding: 20,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            padding: '24px 28px',
+            boxShadow: '0 2px 6px rgba(15,23,42,0.03)'
           }}>
-            <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <i className="ri-pie-chart-2-line" style={{ color: '#2563eb' }}></i> Gate Traffic: Motorcycles vs Cars
+            <h4 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+              Gate Traffic: Motorcycles vs Cars
             </h4>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, height: 150 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 22, height: 190 }}>
               <div style={{ width: 140, height: 140, position: 'relative', flexShrink: 0 }}>
                 <Doughnut data={vehiclePieData} options={vehiclePieOptions} />
                 <div style={{
@@ -730,30 +671,30 @@ export default function LiveOverviewDashboard({
                   textAlign: 'center',
                   pointerEvents: 'none'
                 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: '#0f172a' }}>
                     {currentTermData.vehicleType.motorcycles.pct}%
                   </div>
-                  <div style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>Moto Ratio</div>
+                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Moto</div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flexGrow: 1 }}>
-                <div style={{ padding: '8px 12px', background: '#eff6ff', borderRadius: 10, border: '1px solid #dbeafe' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#1e40af', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexGrow: 1 }}>
+                <div style={{ padding: '12px 16px', background: '#eff6ff', borderRadius: 14, border: '1px solid #dbeafe' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1e40af', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb' }}></span>
-                    <i className="ri-motorbike-line"></i> Motorcycles (จักรยานยนต์)
+                    <i className="ri-motorbike-line"></i> Motorcycles
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#1e3a8a', marginTop: 2 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#1e3a8a', marginTop: 4 }}>
                     {currentTermData.vehicleType.motorcycles.trips.toLocaleString()} trips ({currentTermData.vehicleType.motorcycles.pct}%)
                   </div>
                 </div>
 
-                <div style={{ padding: '8px 12px', background: '#ecfdf5', borderRadius: 10, border: '1px solid #a7f3d0' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ padding: '12px 16px', background: '#ecfdf5', borderRadius: 14, border: '1px solid #a7f3d0' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669' }}></span>
-                    <i className="ri-car-line"></i> Cars (รถยนต์)
+                    <i className="ri-car-line"></i> Cars
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#064e3b', marginTop: 2 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#064e3b', marginTop: 4 }}>
                     {currentTermData.vehicleType.cars.trips.toLocaleString()} trips ({currentTermData.vehicleType.cars.pct}%)
                   </div>
                 </div>
@@ -766,14 +707,14 @@ export default function LiveOverviewDashboard({
             background: '#ffffff',
             borderRadius: 20,
             border: '1px solid #e2e8f0',
-            padding: 20,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            padding: '24px 28px',
+            boxShadow: '0 2px 6px rgba(15,23,42,0.03)'
           }}>
-            <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <i className="ri-pie-chart-box-line" style={{ color: '#7c3aed' }}></i> Gate Traffic: Registered vs Unregistered
+            <h4 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+              Gate Traffic: Registered vs Unregistered
             </h4>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, height: 150 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 22, height: 190 }}>
               <div style={{ width: 140, height: 140, position: 'relative', flexShrink: 0 }}>
                 <Doughnut data={userPieData} options={userPieOptions} />
                 <div style={{
@@ -784,40 +725,36 @@ export default function LiveOverviewDashboard({
                   textAlign: 'center',
                   pointerEvents: 'none'
                 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: '#0f172a' }}>
                     {currentTermData.userType.registered.pct}%
                   </div>
-                  <div style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>Reg. Ratio</div>
+                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Reg.</div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flexGrow: 1 }}>
-                <div style={{ padding: '8px 12px', background: '#f3e8ff', borderRadius: 10, border: '1px solid #e9d5ff' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#6b21a8', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexGrow: 1 }}>
+                <div style={{ padding: '12px 16px', background: '#f3e8ff', borderRadius: 14, border: '1px solid #e9d5ff' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#6b21a8', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c3aed' }}></span>
-                    <i className="ri-user-star-line"></i> Registered Users
+                    <i className="ri-user-star-line"></i> Registered
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#581c87', marginTop: 2 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#581c87', marginTop: 4 }}>
                     {currentTermData.userType.registered.trips.toLocaleString()} trips ({currentTermData.userType.registered.pct}%)
                   </div>
                 </div>
 
-                <div style={{ padding: '8px 12px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fde68a' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ padding: '12px 16px', background: '#fffbeb', borderRadius: 14, border: '1px solid #fde68a' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }}></span>
-                    <i className="ri-user-shared-line"></i> Unregistered (Guest)
+                    <i className="ri-user-shared-line"></i> Unregistered
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#78350f', marginTop: 2 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#78350f', marginTop: 4 }}>
                     {currentTermData.userType.unregistered.trips.toLocaleString()} trips ({currentTermData.userType.unregistered.pct}%)
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-
-
-
 
         </div>
       </div>

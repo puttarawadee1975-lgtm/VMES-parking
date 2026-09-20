@@ -121,35 +121,64 @@ export function getEnglishFormattedTime(dateInput = new Date()) {
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Preset Parking Spots:
-// 1. Zone A Floor G
-// 2. Zone B Floor G
-// 3. Zone C Floor G
-// Building: VMES Building
+// Permanent Fixed 22 Parking Spots across 4 Zones (VMES Building, Floor G)
 export const PRESET_ZONES = [
+  // Zone A (10 Spots: Spot A-01 to Spot A-10)
+  ...Array.from({ length: 10 }, (_, i) => {
+    const num = String(i + 1).padStart(2, '0');
+    return {
+      id: `VMES-G-ZONEA-A${num}`,
+      zone: 'Zone A',
+      building: 'VMES Building',
+      floor: 'Floor G',
+      pillar: `Spot A-${num}`,
+      description: `VMES Floor G - Zone A Spot A-${num}`
+    };
+  }),
+
+  // Zone B (2 Spots: Spot B-01 to Spot B-02)
+  ...Array.from({ length: 2 }, (_, i) => {
+    const num = String(i + 1).padStart(2, '0');
+    return {
+      id: `VMES-G-ZONEB-B${num}`,
+      zone: 'Zone B',
+      building: 'VMES Building',
+      floor: 'Floor G',
+      pillar: `Spot B-${num}`,
+      description: `VMES Floor G - Zone B Spot B-${num}`
+    };
+  }),
+
+  // Zone C (9 Spots: Spot C-01 to Spot C-09)
+  ...Array.from({ length: 9 }, (_, i) => {
+    const num = String(i + 1).padStart(2, '0');
+    return {
+      id: `VMES-G-ZONEC-C${num}`,
+      zone: 'Zone C',
+      building: 'VMES Building',
+      floor: 'Floor G',
+      pillar: `Spot C-${num}`,
+      description: `VMES Floor G - Zone C Spot C-${num}`
+    };
+  }),
+
+  // Zone D (1 Spot: Spot D-01)
   {
-    id: 'ZONE-A',
-    zone: 'Zone A',
+    id: 'VMES-G-ZONED-D01',
+    zone: 'Zone D',
     building: 'VMES Building',
     floor: 'Floor G',
-    pillar: 'G05-G09',
-    description: 'VIP Front Entrance Zone'
-  },
-  {
-    id: 'ZONE-B',
-    zone: 'Zone B',
-    building: 'VMES Building',
-    floor: 'Floor G',
-    pillar: 'G06-G10',
-    description: 'East Wing Zone'
-  },
-  {
-    id: 'ZONE-C',
-    zone: 'Zone C',
-    building: 'VMES Building',
-    floor: 'Floor G',
-    pillar: 'G11-G15',
-    description: 'West Wing Zone'
+    pillar: 'Spot D-01',
+    description: 'VMES Floor G - Zone D Spot D-01',
+    imageUrl: '/static/zone_d_building.jpg,/static/zone_d_spot.jpg',
+    imageUrls: [
+      '/static/zone_d_building.jpg',
+      '/static/zone_d_spot.jpg'
+    ],
+    images: [
+      require('../../assets/zone_d_building.jpg'),
+      require('../../assets/zone_d_spot.jpg')
+    ]
   }
 ];
 

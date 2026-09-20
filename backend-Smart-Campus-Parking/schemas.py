@@ -39,6 +39,7 @@ class DetectionLogCreate(BaseModel):
     zone: Optional[str] = Field("-", description="Gate zone")
     violation: Optional[bool] = None  # Computed automatically if omitted
     image_url: Optional[str] = Field(None, description="URL or path to captured CCTV snapshot image")
+    snapshot_base64: Optional[str] = Field(None, description="Base64 encoded CCTV image string stored directly in DB")
     timestamp: Optional[datetime] = None
 
 
@@ -82,7 +83,9 @@ class SavedSpotCreate(BaseModel):
     zone: str = Field(..., description="e.g. Zone A")
     building: str = Field(default="VMES Building", description="e.g. VMES Building")
     floor: str = Field(default="Floor G", description="e.g. Floor G")
-    pillar: str = Field(..., description="e.g. G05-G09")
+    pillar: str = Field(..., description="e.g. Spot A-01")
+    imageUrl: Optional[str] = None
+    imageUrls: Optional[List[str]] = None
     savedDate: Optional[str] = None
     savedTime: Optional[str] = None
 
@@ -95,7 +98,7 @@ class SpotReservationCreate(BaseModel):
     zone: str = Field(..., description="e.g. Zone A")
     building: str = Field(default="VMES Building", description="e.g. VMES Building")
     floor: str = Field(default="Floor G", description="e.g. Floor G")
-    pillar: str = Field(..., description="e.g. Pillar G05-G09")
+    pillar: str = Field(..., description="e.g. Spot A-01")
     durationMinutes: int = Field(default=30, description="Hold duration in minutes")
     plate: Optional[str] = "1AB 8924 BKK"
     user_email: Optional[str] = "65070042@student.university.ac.th"

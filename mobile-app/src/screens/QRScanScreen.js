@@ -54,25 +54,43 @@ export default function QRScanScreen({
     } catch (e) {}
 
     try {
-      let spotData;
+      let spotData = null;
       const now = new Date();
-      try {
-        spotData = JSON.parse(data);
-      } catch (e) {
-        const defaultPreset = PRESET_ZONES[selectedMockZone] || PRESET_ZONES[0];
+      if (typeof data === 'string' && data.startsWith('{') && data.endsWith('}')) {
+        try {
+          spotData = JSON.parse(data);
+        } catch (e) {}
+      }
+
+      if (!spotData) {
+        const strData = String(data).toUpperCase();
+        const foundPreset = PRESET_ZONES.find(p => 
+          p.id.toUpperCase() === strData || 
+          p.pillar.toUpperCase() === strData || 
+          strData.includes(p.pillar.toUpperCase().replace('SPOT ', ''))
+        );
+        const defaultPreset = foundPreset || PRESET_ZONES[selectedMockZone] || PRESET_ZONES[0];
         spotData = {
           zone: defaultPreset.zone,
           building: defaultPreset.building,
           floor: defaultPreset.floor,
-          pillar: defaultPreset.pillar
+          pillar: defaultPreset.pillar,
+          spot_id: defaultPreset.id,
+          imageUrl: defaultPreset.imageUrl,
+          imageUrls: defaultPreset.imageUrls,
+          images: defaultPreset.images
         };
       }
 
       setScannedSpotData({
-        zone: spotData.zone || (spotData.building && spotData.building.startsWith('Zone') ? spotData.building : "Zone A"),
-        building: (!spotData.building || spotData.building.startsWith('Zone')) ? "VMES Building" : spotData.building,
+        zone: spotData.zone || "Zone A",
+        building: spotData.building || "VMES Building",
         floor: spotData.floor || "Floor G",
-        pillar: spotData.pillar || "G05-G09",
+        pillar: spotData.pillar || "Spot A-01",
+        spot_id: spotData.spot_id || "VMES-G-ZONEA-A01",
+        imageUrl: spotData.imageUrl,
+        imageUrls: spotData.imageUrls,
+        images: spotData.images,
         savedDate: getEnglishFormattedDate(now),
         savedTime: getEnglishFormattedTime(now),
         timestamp: now.getTime()
@@ -194,7 +212,7 @@ export default function QRScanScreen({
       <View style={{ position: 'absolute', bottom: 40, left: 0, right: 0, zIndex: 30 }} className="items-center px-6">
         <View className="bg-black/60 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex-row items-center">
           <Ionicons name="information-circle-outline" size={18} color="#38bdf8" style={{ marginRight: 8 }} />
-          <Text className="text-white text-xs font-semibold">Align parking pillar QR code inside the frame to scan</Text>
+          <Text className="text-white text-xs font-semibold">Align parking spot QR code inside the frame to scan</Text>
         </View>
       </View>
 
@@ -229,8 +247,10 @@ export default function QRScanScreen({
                 <Text className="text-slate-900 font-bold text-sm">{scannedSpotData.floor}</Text>
               </View>
               <View className="flex-row justify-between items-center pb-2 border-b border-slate-200">
-                <Text className="text-slate-500 font-medium text-xs">Pillar</Text>
-                <Text className="text-emerald-600 font-extrabold text-sm">{scannedSpotData.pillar}</Text>
+                <Text className="text-slate-500 font-medium text-xs">Spot</Text>
+                <Text className="text-emerald-600 font-extrabold text-sm">
+                  {(scannedSpotData.pillar || '').replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim()}
+                </Text>
               </View>
               <View className="flex-row justify-between items-center pb-2 border-b border-slate-200">
                 <Text className="text-slate-500 font-medium text-xs">Building</Text>
