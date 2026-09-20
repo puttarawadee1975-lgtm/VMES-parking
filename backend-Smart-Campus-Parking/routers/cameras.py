@@ -10,6 +10,8 @@ from starlette.responses import StreamingResponse, JSONResponse
 
 load_dotenv()
 
+PREVIEW_FRAME_INTERVAL = 0.1  # Encode at most 10 preview frames/second.
+
 router = APIRouter(prefix="/cameras", tags=["Live Cameras"])
 
 
@@ -54,94 +56,106 @@ def create_status_frame(message: str, sub_message: str = "") -> bytes:
     return b""
 
 
-class Camera1Streamer:
+class CameraStreamer:
     """
-    Thread-safe MJPEG streamer for Camera 1 (Gate 1 Entry).
-    Reads exclusively from the CAMERA_1_RTSP_URL environment variable.
+    Thread-safe MJPEG streamer with independent state for each camera.
+    Reads exclusively from the configured environment variable.
     Maintains a single shared capture thread while clients are actively viewing.
     """
 
-    def __init__(self):
+    def __init__(self, camera_id: int, rtsp_env_var: str):
+        self.camera_id = camera_id
+        self.rtsp_env_var = rtsp_env_var
         self._lock = threading.Lock()
         self._thread = None
         self._running = False
         self._client_count = 0
         self._latest_jpeg = None
+        self._frame_sequence = 0
         self._last_frame_time = 0.0
         self._is_connected = False
 
     def _get_rtsp_url(self) -> str:
         # Re-read from environment to support updates without full server rebuild
         load_dotenv()
-        return (os.getenv("CAMERA_1_RTSP_URL") or "").strip()
+        return (os.getenv(self.rtsp_env_var) or "").strip()
 
     def _capture_loop(self):
-        print("[CAMERA 1] Background capture worker started.")
+        print(f"[CAMERA {self.camera_id}] Background capture worker started.")
         cap = None
         last_reconnect_attempt = 0.0
+        next_encode_time = 0.0
 
         while self._running:
             # If no clients are listening, clean up and exit thread to save bandwidth/resources
             with self._lock:
                 if self._client_count <= 0:
                     self._running = False
-                    print("[CAMERA 1] No active viewers. Stopping capture worker.")
+                    print(f"[CAMERA {self.camera_id}] No active viewers. Stopping capture worker.")
                     break
 
-            rtsp_url = self._get_rtsp_url()
-            if not rtsp_url:
-                with self._lock:
-                    self._is_connected = False
-                    self._latest_jpeg = create_status_frame(
-                        "CAMERA 1: CAMERA_1_RTSP_URL not configured",
-                        "Please set CAMERA_1_RTSP_URL in the local environment.",
-                    )
-                time.sleep(1.0)
-                continue
-
-            # Open or reconnect capture object
+            # Resolve configuration only when opening/reconnecting, not for every frame.
             if cap is None or not cap.isOpened():
+                rtsp_url = self._get_rtsp_url()
+                if not rtsp_url:
+                    with self._lock:
+                        self._is_connected = False
+                        self._latest_jpeg = create_status_frame(
+                            f"CAMERA {self.camera_id}: {self.rtsp_env_var} not configured",
+                            f"Please set {self.rtsp_env_var} in the local environment.",
+                        )
+                        self._frame_sequence += 1
+                    time.sleep(1.0)
+                    continue
+
                 now = time.time()
                 if now - last_reconnect_attempt < 3.0:
                     time.sleep(0.5)
                     continue
 
                 last_reconnect_attempt = now
-                print("[CAMERA 1] Connecting to RTSP stream...")
+                print(f"[CAMERA {self.camera_id}] Connecting to RTSP stream...")
                 cap = cv2.VideoCapture(rtsp_url)
                 if not cap.isOpened():
-                    print("[CAMERA 1 WARNING] Could not open RTSP source. Retrying in 3s...")
+                    print(f"[CAMERA {self.camera_id} WARNING] Could not open RTSP source. Retrying in 3s...")
                     with self._lock:
                         self._is_connected = False
                         self._latest_jpeg = create_status_frame(
-                            "CAMERA 1: Connecting to RTSP...",
+                            f"CAMERA {self.camera_id}: Connecting to RTSP...",
                             "Waiting for camera response on local network.",
                         )
+                        self._frame_sequence += 1
                     continue
                 else:
                     # Best-effort OpenCV buffering hint to minimize latency if supported by backend
                     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                    print("[CAMERA 1] Successfully connected to RTSP stream.")
+                    print(f"[CAMERA {self.camera_id}] Successfully connected to RTSP stream.")
                     with self._lock:
                         self._is_connected = True
 
             ret, frame = cap.read()
             if not ret or frame is None:
-                print("[CAMERA 1 WARNING] Frame read failed. Reconnecting...")
+                print(f"[CAMERA {self.camera_id} WARNING] Frame read failed. Reconnecting...")
                 with self._lock:
                     self._is_connected = False
                     self._latest_jpeg = create_status_frame(
-                        "CAMERA 1: Signal Lost",
+                        f"CAMERA {self.camera_id}: Signal Lost",
                         "Attempting reconnection to camera...",
                     )
+                    self._frame_sequence += 1
                 if cap is not None:
                     cap.release()
                     cap = None
                 time.sleep(1.0)
                 continue
 
-            # Successfully grabbed frame: encode to JPEG for MJPEG stream
-            # Encode at quality 70 to ensure low latency and low CPU usage
+            # Keep reading between encodes to avoid accumulating stale camera frames.
+            now = time.monotonic()
+            if now < next_encode_time:
+                continue
+            next_encode_time = now + PREVIEW_FRAME_INTERVAL
+
+            # Controlled full-resolution preview test: encode the original capture frame.
             encode_ret, buffer = cv2.imencode(
                 ".jpg",
                 frame,
@@ -150,6 +164,7 @@ class Camera1Streamer:
             if encode_ret:
                 with self._lock:
                     self._latest_jpeg = buffer.tobytes()
+                    self._frame_sequence += 1
                     self._last_frame_time = time.time()
                     self._is_connected = True
 
@@ -158,7 +173,7 @@ class Camera1Streamer:
         with self._lock:
             self._running = False
             self._is_connected = False
-        print("[CAMERA 1] Background capture worker exited.")
+        print(f"[CAMERA {self.camera_id}] Background capture worker exited.")
 
     def add_client(self):
         with self._lock:
@@ -179,12 +194,25 @@ class Camera1Streamer:
         with self._lock:
             return self._latest_jpeg
 
+    def get_latest_frame(self):
+        """Return an atomic snapshot so each viewer can skip already-sent frames."""
+        with self._lock:
+            return self._frame_sequence, self._latest_jpeg
+
     def is_connected(self) -> bool:
         with self._lock:
             return self._is_connected
 
 
+class Camera1Streamer(CameraStreamer):
+    """Retain the existing Camera 1 constructor and configuration."""
+
+    def __init__(self):
+        super().__init__(1, "CAMERA_1_RTSP_URL")
+
+
 camera1_streamer = Camera1Streamer()
+camera2_streamer = CameraStreamer(2, "CAMERA_2_RTSP_URL")
 
 
 @router.get("/status/1")
@@ -208,27 +236,52 @@ async def stream_camera_1():
     """
     Provides an HTTP MJPEG stream (multipart/x-mixed-replace) of Camera 1 for the Admin Web console.
     """
-    camera1_streamer.add_client()
+    return create_camera_stream(camera1_streamer)
+
+
+def create_camera_stream(streamer: CameraStreamer):
+    streamer.add_client()
 
     async def frame_generator():
+        last_sequence = -1
         try:
             while True:
-                jpeg_bytes = camera1_streamer.get_latest_jpeg()
-                if jpeg_bytes:
+                sequence, jpeg_bytes = streamer.get_latest_frame()
+                if jpeg_bytes and sequence != last_sequence:
+                    last_sequence = sequence
                     yield (
                         b"--frame\r\n"
                         b"Content-Type: image/jpeg\r\n\r\n"
                         + jpeg_bytes
                         + b"\r\n"
                     )
-                # Cap generator rate at ~25 fps on the async event loop
+                # Check for fresh frames without resending an unchanged JPEG.
                 await asyncio.sleep(0.04)
         except (GeneratorExit, asyncio.CancelledError):
             pass
         finally:
-            camera1_streamer.remove_client()
+            streamer.remove_client()
 
     return StreamingResponse(
         frame_generator(),
         media_type="multipart/x-mixed-replace; boundary=frame",
     )
+
+
+@router.get("/status/2")
+async def get_camera_2_status():
+    """Return EXIT camera status without revealing its source."""
+    return JSONResponse(
+        {
+            "camera_id": 2,
+            "name": "Gate 2 (Exit Gate)",
+            "configured": bool(camera2_streamer._get_rtsp_url()),
+            "connected": camera2_streamer.is_connected(),
+        }
+    )
+
+
+@router.get("/stream/2")
+async def stream_camera_2():
+    """Provide the independent EXIT camera MJPEG stream."""
+    return create_camera_stream(camera2_streamer)

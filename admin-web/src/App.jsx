@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import KpiCards from './components/KpiCards';
@@ -10,7 +10,7 @@ import AnnouncementsTable from './components/AnnouncementsTable';
 import ParkingOccupancyView from './components/ParkingOccupancyView';
 import ViolationsTable from './components/ViolationsTable';
 import LiveOverviewDashboard from './components/LiveOverviewDashboard';
-import { fetchAPI, getImageUrl, getApiHost } from './api';
+import { fetchAPI, getImageUrl } from './api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -23,13 +23,88 @@ export default function App() {
 
   const [logs, setLogs] = useState([]);
   const [selectedTerm, setSelectedTerm] = useState('2026-1');
+  const [enforcementActive, setEnforcementActive] = useState(true);
+  const [cameraEnforcementState, setCameraEnforcementState] = useState('checking');
+  const [scanMessage, setScanMessage] = useState('');
+  const cameraSession = useRef(null);
+  const scanInFlight = useRef(false);
+  const scanController = useRef(null);
 
   const handleNavigateToViolations = (userName) => {
     setViolationUserFilter(userName || '');
     setActiveTab('access-history');
   };
 
+  useEffect(() => {
+    if (activeTab !== 'live-camera') return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const session = { queue: Promise.resolve(), togglePending: false, timer: null };
+    cameraSession.current = session;
+    setCameraEnforcementState('checking');
+    setScanMessage('');
+
+    const readEnforcement = async () => {
+      const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(10000)]);
+      const response = await fetchAPI('/admin/enforcement-status', { signal: requestSignal });
+      requestSignal.throwIfAborted();
+      if (!response?.ok) throw new Error('Enforcement status unavailable');
+      const data = await response.json();
+      requestSignal.throwIfAborted();
+      if (typeof data.enforcement_active !== 'boolean') throw new Error('Invalid enforcement status');
+      return data.enforcement_active;
+    };
+    // Serialize polling and toggle verification; schedule only after completion.
+    const enqueue = (toggle = false) => {
+      clearTimeout(session.timer);
+      session.queue = session.queue.then(async () => {
+        if (signal.aborted) return;
+        clearTimeout(session.timer);
+        try {
+          let active = await readEnforcement();
+          if (toggle) {
+            const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(10000)]);
+            const response = await fetchAPI(`/admin/toggle-enforcement?active=${!active}`, {
+              method: 'POST', signal: requestSignal,
+            });
+            requestSignal.throwIfAborted();
+            if (!response?.ok) throw new Error('Enforcement update failed');
+            active = await readEnforcement();
+          }
+          if (!signal.aborted) {
+            setEnforcementActive(active);
+            setCameraEnforcementState(session.togglePending && !toggle ? 'updating' : 'ready');
+          }
+        } catch {
+          if (!signal.aborted) setCameraEnforcementState('unavailable');
+        } finally {
+          if (toggle) session.togglePending = false;
+          if (!signal.aborted) session.timer = setTimeout(() => enqueue(), 5000);
+        }
+      });
+    };
+    session.toggle = () => {
+      if (signal.aborted || session.togglePending) return;
+      session.togglePending = true;
+      setCameraEnforcementState('updating');
+      enqueue(true);
+    };
+    enqueue();
+    return () => {
+      controller.abort();
+      clearTimeout(session.timer);
+      scanController.current?.abort();
+      scanController.current = null;
+      scanInFlight.current = false;
+      if (cameraSession.current === session) cameraSession.current = null;
+    };
+  }, [activeTab]);
+
   const handleToggleEnforcement = async () => {
+    if (activeTab === 'live-camera') {
+      cameraSession.current?.toggle();
+      return;
+    }
     const nextStatus = !enforcementActive;
     setEnforcementActive(nextStatus);
     try {
@@ -40,11 +115,13 @@ export default function App() {
   };
 
   // Fetch real data from Backend FastAPI + MongoDB
-  const fetchBackendData = useCallback(async () => {
+  const fetchBackendData = useCallback(async (signal) => {
+    if (signal?.aborted) return;
     try {
       // 0. Fetch Enforcement System Status
-      const resEnforce = await fetchAPI('/admin/enforcement-status');
-      if (resEnforce.ok) {
+      const resEnforce = await fetchAPI('/admin/enforcement-status', { signal });
+      if (signal?.aborted) return;
+      if (resEnforce?.ok) {
         const dataEnforce = await resEnforce.json();
         if (typeof dataEnforce.enforcement_active === 'boolean') {
           setEnforcementActive(dataEnforce.enforcement_active);
@@ -52,10 +129,12 @@ export default function App() {
       }
     } catch (e) {}
 
+    if (signal?.aborted) return;
     try {
       // 1. Fetch Detections
-      const resDet = await fetchAPI('/detections');
-      if (resDet.ok) {
+      const resDet = await fetchAPI('/detections', { signal });
+      if (signal?.aborted) return;
+      if (resDet?.ok) {
         const dataDet = await resDet.json();
         if (Array.isArray(dataDet)) {
           const transformedLogs = dataDet.map(item => {
@@ -99,10 +178,7 @@ export default function App() {
               penaltyApplied: item.penalty_applied,
               gate: gateName,
               zone: item.zone || 'Zone A',
-              // Resolve local snapshot URLs to absolute localhost URL so the
-              // Admin Web browser can fetch them from the local FastAPI server.
-              // Records without image_url remain null and InspectionTable falls
-              // back to its existing Unsplash placeholder automatically.
+              // Preserve embedded snapshots and resolve relative images through the shared API host.
               imageUrl: (() => {
                 const rawImg = item.snapshot_base64 || item.image_url;
                 if (!rawImg) return null;
@@ -114,24 +190,30 @@ export default function App() {
         }
       }
     } catch (e) {
+      if (signal?.aborted) return;
       console.log('Backend connection notice (detections):', e.message);
     }
 
+    if (signal?.aborted) return;
     try {
       // 2. Fetch Analytics
-      const resAnalytics = await fetchAPI('/admin/analytics');
-      if (resAnalytics.ok) {
+      const resAnalytics = await fetchAPI('/admin/analytics', { signal });
+      if (signal?.aborted) return;
+      if (resAnalytics?.ok) {
         const analytics = await resAnalytics.json();
         setTotalScans(analytics.total_scans || 0);
         setViolationsCount(analytics.violations_count || 0);
       }
     } catch (e) {
+      if (signal?.aborted) return;
       console.log('Backend connection notice (analytics):', e.message);
     }
+    if (signal?.aborted) return;
     try {
       // 3. Fetch Parking Status
-      const resPark = await fetchAPI('/parking/status');
-      if (resPark.ok) {
+      const resPark = await fetchAPI('/parking/status', { signal });
+      if (signal?.aborted) return;
+      if (resPark?.ok) {
         const zones = await resPark.json();
         if (Array.isArray(zones) && zones.length > 0) {
           // Filter ONLY Car Zones (Zone A & Zone C) for Car Available Spot KPI
@@ -151,37 +233,66 @@ export default function App() {
         }
       }
     } catch (e) {
+      if (signal?.aborted) return;
       console.log('Backend connection notice (parking):', e.message);
     }
 
+    if (signal?.aborted) return;
     try {
       // 4. Fetch Vehicles from Backend (Exact MongoDB Registered Vehicles)
-      const resVeh = await fetchAPI('/admin/all-vehicles');
-      if (resVeh.ok) {
+      const resVeh = await fetchAPI('/admin/all-vehicles', { signal });
+      if (signal?.aborted) return;
+      if (resVeh?.ok) {
         const backendVehicles = await resVeh.json();
         if (Array.isArray(backendVehicles)) {
           setVehicles(backendVehicles);
         }
       }
     } catch (e) {
+      if (signal?.aborted) return;
       console.log('Backend connection notice (vehicles):', e.message);
     }
   }, []);
 
 
   useEffect(() => {
-    fetchBackendData();
-    const interval = setInterval(fetchBackendData, 3000);
-    return () => clearInterval(interval);
-  }, [fetchBackendData]);
+    // Keep heavy general Admin polling off the live-camera view.
+    if (activeTab === 'live-camera') return;
+    const controller = new AbortController();
+    const refresh = () => fetchBackendData(controller.signal);
+    refresh();
+    const interval = setInterval(refresh, 3000);
+    return () => {
+      clearInterval(interval);
+      controller.abort();
+    };
+  }, [fetchBackendData, activeTab]);
 
   const handleTriggerScan = async (gateType = 'ENTRY') => {
-    const nextIdx = (currentIndex + 1) % vehicles.length;
-    setCurrentIndex(nextIdx);
-    const item = vehicles[nextIdx];
-
-    // Trigger actual backend API call
+    if (scanInFlight.current) return;
+    scanInFlight.current = true;
+    const controller = new AbortController();
+    scanController.current = controller;
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
+    let submissionStarted = false;
+    const session = cameraSession.current;
+    const showMessage = (message) => {
+      if (cameraSession.current === session) setScanMessage(message);
+    };
+    showMessage(`Submitting ${gateType} scan…`);
     try {
+      const response = await fetchAPI('/admin/all-vehicles', { signal });
+      signal.throwIfAborted();
+      if (!response?.ok) throw new Error('Unable to refresh vehicles. Scan was not submitted.');
+      const freshVehicles = await response.json();
+      signal.throwIfAborted();
+      if (!Array.isArray(freshVehicles) || freshVehicles.length === 0) {
+        throw new Error('No vehicles available. Scan was not submitted.');
+      }
+      setVehicles(freshVehicles);
+      const nextIdx = (currentIndex + 1) % freshVehicles.length;
+      const item = freshVehicles[nextIdx];
+      setCurrentIndex(nextIdx);
       const combinedVehicleStr = (item.vehicle || '') + ' ' + (item.brand || '') + ' ' + (item.model || '');
       const isCar = item.vehicle_type === 'car' || item.vehicle?.includes('🚗') || /car|รถยนต์|mazda|toyota|camry|civic|altis|benz|bmw|accord|nissan/i.test(combinedVehicleStr);
       const payload = {
@@ -192,16 +303,31 @@ export default function App() {
         zone: 'Zone A'
       };
 
-      await fetch('https://smart-campus-parking-deploy.onrender.com/detections', {
+      signal.throwIfAborted();
+      submissionStarted = true;
+      const result = await fetch('https://smart-campus-parking-deploy.onrender.com/detections', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      // Refresh state immediately after posting detection
-      fetchBackendData();
+      signal.throwIfAborted();
+      if (!result.ok) throw new Error('Scan submission failed.');
+      showMessage(`${gateType} scan submitted successfully.`);
+      if (activeTab !== 'live-camera') fetchBackendData();
     } catch (e) {
-      console.warn('Scan trigger API notice:', e);
+      if (!controller.signal.aborted) {
+        showMessage(signal.aborted
+          ? (submissionStarted ? 'Scan timed out. Submission outcome is unknown; check history before retrying.' : 'Vehicle lookup timed out. Scan was not submitted.')
+          : (e.message || 'Scan request failed.'));
+      }
+    } finally {
+      // An older cancelled operation must not unlock a newer scan after re-entry.
+      if (scanController.current === controller) {
+        scanController.current = null;
+        scanInFlight.current = false;
+      }
     }
   };
 
@@ -295,6 +421,22 @@ export default function App() {
               <span className="text-muted text-xs">2-Camera Stream</span>
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
+              <span role="status">
+                Parking Access Mode: {cameraEnforcementState === 'ready'
+                  ? (enforcementActive ? 'ON' : 'PAUSED')
+                  : cameraEnforcementState === 'unavailable' ? 'Unavailable — retrying'
+                  : cameraEnforcementState === 'updating' ? 'Updating…' : 'Checking…'}
+              </span>
+              <button
+                className="btn btn-secondary btn-sm"
+                disabled={cameraEnforcementState !== 'ready'}
+                onClick={handleToggleEnforcement}
+              >
+                {enforcementActive ? 'Pause enforcement' : 'Enable enforcement'}
+              </button>
+            </div>
+            {scanMessage && <p role="status">{scanMessage}</p>}
             <div className="grid-2-col gap-16 mt-16" style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <CameraStream
                 gateName="Gate 1 (Entry Gate)"
@@ -302,7 +444,8 @@ export default function App() {
                 gateType="ENTRY"
                 currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]}
                 onTriggerScan={() => handleTriggerScan('ENTRY')}
-                streamUrl={`${getApiHost()}/cameras/stream/1`}
+                streamUrl="http://localhost:8000/cameras/stream/1"
+                statusUrl="http://localhost:8000/cameras/status/1"
               />
               <CameraStream
                 gateName="Gate 2 (Exit Gate)"
@@ -310,6 +453,8 @@ export default function App() {
                 gateType="EXIT"
                 currentDetection={logs.find(l => l.gate.includes('EXIT'))}
                 onTriggerScan={() => handleTriggerScan('EXIT')}
+                streamUrl="http://localhost:8000/cameras/stream/2"
+                statusUrl="http://localhost:8000/cameras/status/2"
               />
             </div>
           </div>
