@@ -1,6 +1,54 @@
 import React, { useState, useMemo } from 'react';
 import { fetchAPI } from '../api';
 
+const formatDateDisplay = (dateVal) => {
+  if (!dateVal) return '-';
+  const str = String(dateVal).trim();
+
+  // 1. If string is already in "DD Month YYYY" format e.g. "20 September 2026"
+  if (/^\d{1,2}\s+[A-Za-z]+\s+\d{4}$/.test(str)) {
+    return str;
+  }
+
+  // 2. If ISO or YYYY-MM-DD string e.g. "2026-09-21" or "2026-09-21T10:46:37"
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const monthIdx = parseInt(isoMatch[2], 10) - 1;
+    const day = parseInt(isoMatch[3], 10);
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    if (monthNames[monthIdx]) {
+      return `${day} ${monthNames[monthIdx]} ${year}`;
+    }
+  }
+
+  // 3. Fallback to JS Date parsing
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const day = d.getDate();
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  return str;
+};
+
+const formatTimeDisplay = (timeStr) => {
+  if (!timeStr) return '';
+  let str = String(timeStr).trim();
+  // Ensure space before AM/PM e.g. "5:21PM" -> "5:21 PM"
+  str = str.replace(/([0-9]{1,2}:[0-9]{2})\s*([AP]M)/gi, '$1 $2');
+  // Ensure 2-digit hour e.g. "5:21 PM" -> "05:21 PM"
+  str = str.replace(/^([0-9]):([0-9]{2})\s*([AP]M)/gi, '0$1:$2 $3');
+  return str;
+};
+
 // Zone layout structure for visual parking slot grid
 
 // Definition of zone layout spots for visual slot grid
@@ -634,13 +682,14 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                       if (!rawIn.includes('(')) {
                         rawIn += ' (Gate 1 Entry)';
                       }
-                      const cleanInTime = rawIn;
+                      const cleanInTime = formatTimeDisplay(rawIn);
 
                       const cleanOutTime = spot.exitTime
-                        ? String(spot.exitTime).replace(/^Today\s*•?\s*/i, '')
+                        ? (spot.exitTime.includes('Active') ? 'Active (In Building)' : formatTimeDisplay(String(spot.exitTime).replace(/^Today\s*•?\s*/i, '')))
                         : 'Active (In Building)';
 
-                      const recordDate = spot.rawDate || spot.savedDate || (spot.timestamp ? String(spot.timestamp).slice(0, 10) : new Date().toISOString().split('T')[0]);
+                      const rawRecordDate = spot.rawDate || spot.savedDate || (spot.timestamp ? String(spot.timestamp).slice(0, 10) : new Date().toISOString().split('T')[0]);
+                      const recordDate = formatDateDisplay(rawRecordDate);
 
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}>
