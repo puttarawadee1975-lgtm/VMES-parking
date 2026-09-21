@@ -11,8 +11,10 @@ import numpy as np
 from collections import Counter
 from ultralytics import YOLO
 from PIL import Image, ImageDraw, ImageFont
+from dotenv import load_dotenv
 
 # ================= Configuration =================
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/detections")
 DEFAULT_ZONE = os.getenv("DEFAULT_ZONE", "Zone A (Building 1 - Car)")
 
@@ -87,10 +89,17 @@ class LatestFrameCapture:
 
 
 # Video Capture (webcam index, video file, or RTSP stream)
-source_value = sys.argv[1] if len(sys.argv) > 1 else os.getenv("VIDEO_SOURCE", "1")
+# Explicit sources win; otherwise select this process's camera, then the legacy webcam.
+if len(sys.argv) > 1:
+    source_value = sys.argv[1]
+elif "VIDEO_SOURCE" in os.environ:
+    source_value = os.environ["VIDEO_SOURCE"]
+else:
+    camera_source_key = {"01": "CAMERA_1_RTSP_URL", "02": "CAMERA_2_RTSP_URL"}.get(CAMERA_ID)
+    source_value = ((os.getenv(camera_source_key) or "").strip() if camera_source_key else "") or "1"
 video_source = int(source_value) if source_value.isdigit() else source_value
 
-if isinstance(video_source, str) and video_source.lower().startswith("rtsp://"):
+if isinstance(video_source, str) and video_source.lower().startswith(("rtsp://", "rtsps://")):
     print("[AI PIPELINE] Opening RTSP video source (credentials hidden)")
 else:
     print(f"[AI PIPELINE] Opening video source: {video_source}")
@@ -103,7 +112,7 @@ if not cap.isOpened() and isinstance(video_source, int) and video_source != 0:
     cap = LatestFrameCapture(0)
 
 if not cap.isOpened():
-    print(f"[AI PIPELINE ERROR] Cannot open video source: {video_source}", file=sys.stderr)
+    print("[AI PIPELINE ERROR] Cannot open the configured video source (source hidden).", file=sys.stderr)
     print("Please make sure the camera, video file, or stream is available.")
 
 # Thai Font for display
@@ -118,12 +127,17 @@ recent_helmets = []
 recent_vehicle_types = []
 stable_vehicle_type = None
 last_submitted_plate = None
+submitted_plates = set()  # Process-local history; never cleared when a plate disappears.
 missing_plate_scans = 0
 PLATE_CLEAR_SCANS = 5  # Re-arm only after plate disappears for several OCR scans
 
 def clean_text(text: str) -> str:
     text = text.upper().replace(" ", "")
     return re.sub(r"[^ก-ฮ0-9A-Z-]", "", text)
+
+def normalize_plate_key(plate: str) -> str:
+    return clean_text(plate).replace("-", "")
+
 
 def extract_thai_plate(texts: list) -> str:
     # 1. Motorcycle: 1กก + 2048
@@ -222,9 +236,12 @@ def post_detection_to_backend(
         "image_url": image_url,
         "snapshot_base64": snapshot_base64,
     }
+    accepted = False
     try:
         res = requests.post(API_URL, json=payload, timeout=3.0)
         if res.status_code in [200, 201]:
+            accepted = True
+            submitted_plates.add(normalize_plate_key(plate))
             data = res.json()
             print(f"\n[API SUCCESS] Sent Detection -> Plate: {plate} | Type: {vehicle_type} | Violation: {data.get('violation')} | User: {data.get('matched_user')}")
         else:
@@ -235,6 +252,8 @@ def post_detection_to_backend(
             f"Type: {vehicle_type} | "
             f"Could not send to {API_URL}: {e}"
         )
+
+    return accepted
 
 print("\n" + "="*60)
 print(f"Smart Campus Parking AI Pipeline Running...")
@@ -386,9 +405,12 @@ while cap.isOpened():
             stable_plate = Counter(recent_plates).most_common(1)[0][0]
             current_display_plate = stable_plate
 
-            # Submit once per vehicle appearance.
-            # The same plate is not allowed again until it leaves the camera view.
-            if stable_plate != last_submitted_plate and recent_plates.count(stable_plate) >= 2:
+            # Keep OCR/display re-arming separate from process-lifetime submission history.
+            if (
+                stable_plate != last_submitted_plate
+                and normalize_plate_key(stable_plate) not in submitted_plates
+                and recent_plates.count(stable_plate) >= 2
+            ):
                 # Vehicle type must come from an actual YOLO vehicle detection.
                 # Do not silently classify an unknown vehicle as a car.
                 if stable_vehicle_type is None:
@@ -417,7 +439,7 @@ while cap.isOpened():
                         cam_id=CAMERA_ID,
                     )
 
-                    post_detection_to_backend(
+                    accepted = post_detection_to_backend(
                         plate=stable_plate,
                         vehicle_type=v_type,
                         helmet_detected=stable_helmet_state if is_motorcycle else None,
@@ -426,7 +448,8 @@ while cap.isOpened():
                         snapshot_base64=event_b64,
                     )
 
-                    last_submitted_plate = stable_plate
+                    if accepted:
+                        last_submitted_plate = stable_plate
 
         else:
             missing_plate_scans += 1
