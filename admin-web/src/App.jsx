@@ -29,6 +29,8 @@ export default function App() {
   const cameraSession = useRef(null);
   const scanInFlight = useRef(false);
   const scanController = useRef(null);
+  const historyPollingActive = useRef(false);
+  const detectionsRequest = useRef(null);
 
   const handleNavigateToViolations = (userName) => {
     setViolationUserFilter(userName || '');
@@ -114,28 +116,20 @@ export default function App() {
     }
   };
 
-  // Fetch real data from Backend FastAPI + MongoDB
-  const fetchBackendData = useCallback(async (signal) => {
-    if (signal?.aborted) return;
-    try {
-      // 0. Fetch Enforcement System Status
-      const resEnforce = await fetchAPI('/admin/enforcement-status', { signal });
-      if (signal?.aborted) return;
-      if (resEnforce?.ok) {
-        const dataEnforce = await resEnforce.json();
-        if (typeof dataEnforce.enforcement_active === 'boolean') {
-          setEnforcementActive(dataEnforce.enforcement_active);
-        }
-      }
-    } catch (e) {}
-
-    if (signal?.aborted) return;
+  const fetchDetections = useCallback(async (parentSignal) => {
+    if (parentSignal?.aborted || detectionsRequest.current) return;
+    const controller = new AbortController();
+    detectionsRequest.current = controller;
+    const signal = AbortSignal.any([
+      controller.signal, AbortSignal.timeout(10000), ...(parentSignal ? [parentSignal] : []),
+    ]);
     try {
       // 1. Fetch Detections
       const resDet = await fetchAPI('/detections', { signal });
       if (signal?.aborted) return;
       if (resDet?.ok) {
         const dataDet = await resDet.json();
+        if (signal.aborted) return;
         if (Array.isArray(dataDet)) {
           const transformedLogs = dataDet.map(item => {
             const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
@@ -192,7 +186,52 @@ export default function App() {
     } catch (e) {
       if (signal?.aborted) return;
       console.log('Backend connection notice (detections):', e.message);
+    } finally {
+      if (detectionsRequest.current === controller) detectionsRequest.current = null;
     }
+  }, []);
+
+  useEffect(() => {
+    const isHistory = activeTab === 'access-history' || activeTab === 'violations';
+    historyPollingActive.current = isHistory;
+    if (!isHistory) return;
+
+    // Cancel an older batch's detection request before history takes ownership.
+    detectionsRequest.current?.abort();
+    detectionsRequest.current = null;
+    const controller = new AbortController();
+    let timer;
+    const refresh = async () => {
+      await fetchDetections(controller.signal);
+      if (!controller.signal.aborted) timer = setTimeout(refresh, 3000);
+    };
+    refresh();
+    return () => {
+      historyPollingActive.current = false;
+      controller.abort();
+      clearTimeout(timer);
+      detectionsRequest.current?.abort();
+      detectionsRequest.current = null;
+    };
+  }, [activeTab, fetchDetections]);
+
+  // Fetch real data from Backend FastAPI + MongoDB
+  const fetchBackendData = useCallback(async (signal) => {
+    if (signal?.aborted) return;
+    try {
+      // 0. Fetch Enforcement System Status
+      const resEnforce = await fetchAPI('/admin/enforcement-status', { signal });
+      if (signal?.aborted) return;
+      if (resEnforce?.ok) {
+        const dataEnforce = await resEnforce.json();
+        if (typeof dataEnforce.enforcement_active === 'boolean') {
+          setEnforcementActive(dataEnforce.enforcement_active);
+        }
+      }
+    } catch (e) {}
+
+    // Visible history owns detection polling independently of this batch.
+    if (!historyPollingActive.current) await fetchDetections(signal);
 
     if (signal?.aborted) return;
     try {
@@ -252,7 +291,7 @@ export default function App() {
       if (signal?.aborted) return;
       console.log('Backend connection notice (vehicles):', e.message);
     }
-  }, []);
+  }, [fetchDetections]);
 
 
   useEffect(() => {
