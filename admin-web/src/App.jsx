@@ -31,6 +31,7 @@ export default function App() {
   const scanController = useRef(null);
   const historyPollingActive = useRef(false);
   const detectionsRequest = useRef(null);
+  const snapshotCache = useRef(new Map());
 
   const handleNavigateToViolations = (userName) => {
     setViolationUserFilter(userName || '');
@@ -116,6 +117,28 @@ export default function App() {
     }
   };
 
+  const getDetectionSnapshot = useCallback(async (detectionId, signal) => {
+    if (!detectionId) return null;
+
+    if (snapshotCache.current.has(detectionId)) {
+      return snapshotCache.current.get(detectionId);
+    }
+
+    try {
+      const response = await fetchAPI(`/detections/${detectionId}/snapshot`, { signal });
+      if (!response?.ok) return null;
+
+      const data = await response.json();
+      const rawImg = data.snapshot_base64 || data.image_url || null;
+      const imageUrl = rawImg ? getImageUrl(rawImg) : null;
+
+      snapshotCache.current.set(detectionId, imageUrl);
+      return imageUrl;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const fetchDetections = useCallback(async (parentSignal) => {
     if (parentSignal?.aborted || detectionsRequest.current) return;
     const controller = new AbortController();
@@ -131,7 +154,7 @@ export default function App() {
         const dataDet = await resDet.json();
         if (signal.aborted) return;
         if (Array.isArray(dataDet)) {
-          const transformedLogs = dataDet.map(item => {
+          const transformedLogs = await Promise.all(dataDet.map(async item => {
             const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
             const timeStr = dateObj.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const isV = item.violation || false;
@@ -172,14 +195,10 @@ export default function App() {
               penaltyApplied: item.penalty_applied,
               gate: gateName,
               zone: item.zone || 'Zone A',
-              // Preserve embedded snapshots and resolve relative images through the shared API host.
-              imageUrl: (() => {
-                const rawImg = item.snapshot_base64 || item.image_url;
-                if (!rawImg) return null;
-                return getImageUrl(rawImg);
-              })(),
+              // Load each stored snapshot once and reuse it from the in-memory cache.
+              imageUrl: await getDetectionSnapshot(item.id, signal),
             };
-          });
+          }));
           setLogs(transformedLogs);
         }
       }

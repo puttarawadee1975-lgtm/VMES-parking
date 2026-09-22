@@ -53,7 +53,7 @@ async def get_parking_status():
                 seen_plates.add(sp.get("plate"))
 
     if detection_logs_collection is not None:
-        logs = list(detection_logs_collection.find({}, {"_id": 0}).sort("timestamp", -1).limit(200))
+        logs = list(detection_logs_collection.find({}, {"_id": 0, "image_url": 0, "snapshot_base64": 0}).sort("timestamp", -1).limit(200))
         for l in logs:
             plate = l.get("plate") or l.get("license_plate") or "-"
             gate = str(l.get("gate_type") or l.get("gate") or "").lower()
@@ -400,7 +400,7 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
     from database import detection_logs_collection
     if detection_logs_collection is not None:
         try:
-            logs = list(detection_logs_collection.find({}, {"_id": 0}).sort("timestamp", -1).limit(100))
+            logs = list(detection_logs_collection.find({}, {"_id": 0, "image_url": 0, "snapshot_base64": 0}).sort("timestamp", -1).limit(100))
             for l in logs:
                 l_term = l.get("term", "2026-1")
                 if term != "ALL" and l_term != term:

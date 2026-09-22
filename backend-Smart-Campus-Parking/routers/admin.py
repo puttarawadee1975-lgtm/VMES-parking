@@ -619,7 +619,7 @@ async def get_admin_analytics():
                 total_trips = math.ceil(real_total / 2)
             
             # Deduplicate violations per trip/session per vehicle plate
-            all_logs = list(detection_logs_collection.find().sort("timestamp", 1))
+            all_logs = list(detection_logs_collection.find({}, {"image_url": 0, "snapshot_base64": 0}).sort("timestamp", 1))
             
             plate_logs = {}
             for log in all_logs:
@@ -783,7 +783,7 @@ async def get_term_summary(term: str = "2026-1"):
     # 1. Fetch all detections from MongoDB Atlas
     all_detections = []
     if detection_logs_collection is not None:
-        all_detections = list(detection_logs_collection.find({}, {"_id": 0}))
+        all_detections = list(detection_logs_collection.find({}, {"_id": 0, "image_url": 0, "snapshot_base64": 0}))
 
     # 2. Fetch registered plates from MongoDB Atlas
     reg_plates = set()

@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, status
+from bson import ObjectId
 from database import detection_logs_collection, users_collection, parking_status_collection, registered_vehicles_collection
 from schemas import DetectionLogCreate, DetectionLogResponse
 
@@ -273,10 +274,10 @@ async def get_all_detections(days: int = 30):
     from datetime import timedelta
     if detection_logs_collection is not None:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        docs = list(detection_logs_collection.find({"timestamp": {"$gte": cutoff}}).sort("timestamp", -1).limit(200))
+        docs = list(detection_logs_collection.find({"timestamp": {"$gte": cutoff}}, {"snapshot_base64": 0}).sort("timestamp", -1).limit(200))
         if not docs:
             # Fallback to recent logs if database has less data
-            docs = list(detection_logs_collection.find().sort("timestamp", -1).limit(200))
+            docs = list(detection_logs_collection.find({}, {"snapshot_base64": 0}).sort("timestamp", -1).limit(200))
 
         if docs:
             result = []
@@ -297,6 +298,30 @@ async def get_all_detections(days: int = 30):
                 ))
             return result
     return IN_MEMORY_DETECTIONS
+
+
+
+@router.get("/{detection_id}/snapshot")
+async def get_detection_snapshot(detection_id: str):
+    """Return snapshot data for one detection only."""
+    if detection_logs_collection is None:
+        raise HTTPException(status_code=503, detail="Detection database unavailable")
+
+    if not ObjectId.is_valid(detection_id):
+        raise HTTPException(status_code=400, detail="Invalid detection ID")
+
+    doc = detection_logs_collection.find_one(
+        {"_id": ObjectId(detection_id)},
+        {"snapshot_base64": 1, "image_url": 1, "_id": 0},
+    )
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="Detection not found")
+
+    return {
+        "image_url": doc.get("snapshot_base64") or doc.get("image_url"),
+        "snapshot_base64": doc.get("snapshot_base64"),
+    }
 
 
 def clean_text(text: str) -> str:

@@ -22,7 +22,7 @@ async def get_live_detections(
     if violation_only is not None:
         filter_query["violation"] = violation_only
 
-    cursor = detection_logs_collection.find(filter_query).sort("timestamp", -1).limit(limit)
+    cursor = detection_logs_collection.find(filter_query, {"image_url": 0, "snapshot_base64": 0}).sort("timestamp", -1).limit(limit)
     results = []
 
     for doc in cursor:
