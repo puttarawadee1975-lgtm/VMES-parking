@@ -28,7 +28,8 @@
           "cameraPermission": "Allow VMES Parking to access your camera to scan parking pillar QR codes."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ]
   }
 }
