@@ -26,6 +26,7 @@ export const loginRequest = {
 
 export const ALLOWED_ADMIN_EMAILS = [
   'u6814509@au.edu',
+  'u6642032@au.edu',
   'admin@au.edu'
 ];
 
