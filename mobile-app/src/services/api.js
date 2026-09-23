@@ -20,19 +20,50 @@ const getHeaders = () => {
   return headers;
 };
 
-// Helper function to fetch with local backend fallback (matches admin-web behavior)
+let cachedWorkingHost = null;
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 1200) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return response;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+};
+
+// Helper function to fetch with local backend fallback & host caching for max performance
 const fetchAPI = async (endpoint, options = {}) => {
-  const localHosts = [
+  if (cachedWorkingHost) {
+    try {
+      const res = await fetchWithTimeout(`${cachedWorkingHost}${endpoint}`, options, 4000);
+      if (res.ok) return res;
+    } catch (e) {
+      cachedWorkingHost = null;
+    }
+  }
+
+  const candidateHosts = [
+    'http://192.168.1.104:8000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://10.0.2.2:8000',
+    API_BASE_URL,
   ];
-  for (const host of localHosts) {
+
+  for (const host of candidateHosts) {
     try {
-      const res = await fetch(`${host}${endpoint}`, options);
-      if (res.ok) return res;
+      const res = await fetchWithTimeout(`${host}${endpoint}`, options, 1200);
+      if (res.ok) {
+        cachedWorkingHost = host;
+        return res;
+      }
     } catch (e) {}
   }
+
   return fetch(`${API_BASE_URL}${endpoint}`, options);
 };
 

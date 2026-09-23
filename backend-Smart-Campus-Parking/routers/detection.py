@@ -9,8 +9,16 @@ from schemas import DetectionLogCreate, DetectionLogResponse
 
 router = APIRouter(prefix="/detections", tags=["AI Detections"])
 
-def ensure_utc(value: datetime) -> datetime:
-    """Treat timezone-naive MongoDB datetimes as UTC for API serialization."""
+def ensure_utc(value) -> datetime:
+    """Treat timezone-naive MongoDB datetimes or ISO strings as UTC for API serialization."""
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        except Exception:
+            value = datetime.now(timezone.utc)
+    elif not isinstance(value, datetime):
+        value = datetime.now(timezone.utc)
+
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
@@ -270,33 +278,38 @@ IN_MEMORY_DETECTIONS = []
 async def get_all_detections(days: int = 30):
     """
     Get AI detection logs within the 30-day retention window for App & Admin Web.
+    Optimized with MongoDB projection to prevent heavy base64 payload lag.
     """
     from datetime import timedelta
     if detection_logs_collection is not None:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        docs = list(detection_logs_collection.find({"timestamp": {"$gte": cutoff}}, {"snapshot_base64": 0}).sort("timestamp", -1).limit(200))
+        projection = {"snapshot_base64": 0}
+        docs = list(detection_logs_collection.find({"timestamp": {"$gte": cutoff}}, projection).sort("timestamp", -1).limit(200))
         if not docs:
-            # Fallback to recent logs if database has less data
-            docs = list(detection_logs_collection.find({}, {"snapshot_base64": 0}).sort("timestamp", -1).limit(200))
+            docs = list(detection_logs_collection.find({}, projection).sort("timestamp", -1).limit(200))
 
-        if docs:
-            result = []
-            for doc in docs:
-                result.append(DetectionLogResponse(
-                    id=str(doc.get("_id", "id")),
-                    license_plate=doc.get("license_plate", ""),
-                    vehicle_type=doc.get("vehicle_type", "motorcycle"),
-                    helmet_detected=doc.get("helmet_detected"),
-                    violation=doc.get("violation", False),
-                    penalty_applied=doc.get("penalty_applied"),
-                    gate_type=doc.get("gate_type", "ENTRY"),
-                    zone=doc.get("zone", "-"),
-                    timestamp=ensure_utc(doc.get("timestamp", datetime.now(timezone.utc))),
-                    matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered",
-                    image_url=doc.get("snapshot_base64") or doc.get("image_url") or doc.get("snapshot_url") or doc.get("photo") or None,
-                    snapshot_base64=doc.get("snapshot_base64") or None,
-                ))
-            return result
+            if docs:
+                result = []
+                for doc in docs:
+                    result.append(DetectionLogResponse(
+                        id=str(doc.get("_id", "id")),
+                        license_plate=doc.get("license_plate", ""),
+                        vehicle_type=doc.get("vehicle_type", "motorcycle"),
+                        helmet_detected=doc.get("helmet_detected"),
+                        violation=doc.get("violation", False),
+                        penalty_applied=doc.get("penalty_applied"),
+                        gate_type=doc.get("gate_type", "ENTRY"),
+                        zone=doc.get("zone", "-"),
+                        timestamp=ensure_utc(doc.get("timestamp", datetime.now(timezone.utc))),
+                        matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered",
+                        image_url=doc.get("image_url") or doc.get("snapshot_url") or doc.get("photo") or None,
+                        snapshot_base64=None,
+                    ))
+                return result
+    except Exception as e:
+        print(f"[DETECTION FETCH WARNING] MongoDB read notice: {e}")
+>>>>>>> e5c525f (feat: update building zones config, fix occupancy stats to 18 car spots, and improve AI detection logging)
+
     return IN_MEMORY_DETECTIONS
 
 

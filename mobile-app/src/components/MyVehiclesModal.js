@@ -152,7 +152,9 @@ export default function MyVehiclesModal({
             </View>
           ) : (
             vehicles.map((v, i) => {
-              const isCar = v.model?.includes('🚗');
+              const modelStr = (v.model || '').toLowerCase();
+              const typeStr = (v.vehicle_type || v.vehicleType || '').toLowerCase();
+              const isCar = typeStr === 'car' || typeStr === 'automobile' || modelStr.includes('🚗') || modelStr.includes('🚘') || /car|automobile|civic|accord|camry|altis|yaris|city|jazz|benz|bmw|toyota|nissan|mazda|sedan|suv|truck|fortuner|crv|hrv|byd|mg|tesla/i.test(modelStr);
               return (
                 <TouchableOpacity
                   key={i}

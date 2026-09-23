@@ -10,9 +10,32 @@ import AnnouncementsTable from './components/AnnouncementsTable';
 import ParkingOccupancyView from './components/ParkingOccupancyView';
 import ViolationsTable from './components/ViolationsTable';
 import LiveOverviewDashboard from './components/LiveOverviewDashboard';
+import AdminLoginScreen from './components/AdminLoginScreen';
 import { fetchAPI, getImageUrl } from './api';
 
 export default function App() {
+  const [adminUser, setAdminUser] = useState(null);
+
+  const handleLoginSuccess = (userObj) => {
+    try {
+      sessionStorage.setItem('vmes_admin_user', JSON.stringify(userObj));
+    } catch (e) {}
+    setAdminUser(userObj);
+  };
+
+  const handleLogout = () => {
+    try {
+      sessionStorage.removeItem('vmes_admin_user');
+      localStorage.removeItem('vmes_admin_user');
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('msal') || key.includes('login') || key.includes('vmes')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {}
+    setAdminUser(null);
+  };
+
   const [activeTab, setActiveTab] = useState('overview');
   const [violationUserFilter, setViolationUserFilter] = useState('');
   const [vehicles, setVehicles] = useState([]);
@@ -138,7 +161,6 @@ export default function App() {
       return null;
     }
   }, []);
-
   const fetchDetections = useCallback(async (parentSignal) => {
     if (parentSignal?.aborted || detectionsRequest.current) return;
     const controller = new AbortController();
@@ -158,8 +180,8 @@ export default function App() {
             const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
             const timeStr = dateObj.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const isV = item.violation || false;
-            const vType = isV ? (item.violation_type || (item.vehicle_type === 'car' ? 'Parked >30 Mins' : 'No Helmet')).replace(' (-10 pts)', '') : '-';
-            const hText = isV ? (item.vehicle_type === 'car' ? 'Parked >30 Mins' : 'No Helmet') : '-';
+            const vType = isV ? (item.violation_type || 'No Helmet').replace(' (-10 pts)', '') : '-';
+            const hText = isV ? (item.violation_type || 'No Helmet') : '-';
             let gateName = 'Gate 1 (Entry Gate)';
             if (item.gate_type) {
               const gt = String(item.gate_type).toLowerCase();
@@ -434,9 +456,19 @@ export default function App() {
 
   const currentMeta = titles[activeTab] || titles['overview'];
 
+  if (!adminUser) {
+    return <AdminLoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="app-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onClearViolationFilter={() => setViolationUserFilter('')} />
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onClearViolationFilter={() => setViolationUserFilter('')}
+        adminUser={adminUser}
+        onLogout={handleLogout}
+      />
 
       <main className="main-content">
         <Header
@@ -444,6 +476,8 @@ export default function App() {
           pageSubtitle={currentMeta.subtitle}
           selectedTerm={selectedTerm}
           onSelectTerm={setSelectedTerm}
+          adminUser={adminUser}
+          onLogout={handleLogout}
         />
 
         {activeTab === 'overview' && (

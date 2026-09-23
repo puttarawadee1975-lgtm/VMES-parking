@@ -24,7 +24,7 @@ def get_database_client():
             MONGO_URI,
             serverSelectionTimeoutMS=5000,
             connectTimeoutMS=5000,
-            socketTimeoutMS=5000
+            retryWrites=True
         )
         # Verify connection immediately via ping
         client.admin.command('ping')

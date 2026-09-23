@@ -47,7 +47,7 @@ export default function QRScanScreen({
     if (scannedLock) return;
     setScannedLock(true);
 
-    const data = typeof result === 'object' ? result.data : result;
+    const data = typeof result === 'object' ? (result.data || result) : result;
 
     try {
       if (Platform.OS !== 'web') Vibration.vibrate(50);
@@ -56,49 +56,49 @@ export default function QRScanScreen({
     try {
       let spotData = null;
       const now = new Date();
-      if (typeof data === 'string' && data.startsWith('{') && data.endsWith('}')) {
+      if (typeof data === 'string' && data.trim().startsWith('{') && data.trim().endsWith('}')) {
         try {
           spotData = JSON.parse(data);
         } catch (e) {}
       }
 
-      if (!spotData) {
-        const strData = String(data).toUpperCase();
-        const foundPreset = PRESET_ZONES.find(p => 
-          p.id.toUpperCase() === strData || 
-          p.pillar.toUpperCase() === strData || 
-          strData.includes(p.pillar.toUpperCase().replace('SPOT ', ''))
-        );
-        const defaultPreset = foundPreset || PRESET_ZONES[selectedMockZone] || PRESET_ZONES[0];
-        spotData = {
-          zone: defaultPreset.zone,
-          building: defaultPreset.building,
-          floor: defaultPreset.floor,
-          pillar: defaultPreset.pillar,
-          spot_id: defaultPreset.id,
-          imageUrl: defaultPreset.imageUrl,
-          imageUrls: defaultPreset.imageUrls,
-          images: defaultPreset.images
-        };
-      }
+      const rawSearchStr = typeof data === 'string' ? data.toUpperCase() : '';
+      const spotId = spotData?.spot_id || spotData?.spotId || spotData?.id || '';
+      const pillar = spotData?.pillar || spotData?.spot || '';
+      const zone = spotData?.zone || '';
 
-      setScannedSpotData({
-        zone: spotData.zone || "Zone A",
-        building: spotData.building || "VMES Building",
-        floor: spotData.floor || "Floor G",
-        pillar: spotData.pillar || "Spot A-01",
-        spot_id: spotData.spot_id || "VMES-G-ZONEA-A01",
-        imageUrl: spotData.imageUrl,
-        imageUrls: spotData.imageUrls,
-        images: spotData.images,
+      const matchedPreset = PRESET_ZONES.find(p => {
+        const pId = p.id.toUpperCase();
+        const pPillar = p.pillar.toUpperCase();
+        const pNum = pPillar.replace('SPOT ', '');
+        return (
+          (spotId && pId === String(spotId).toUpperCase()) ||
+          (pillar && pPillar === String(pillar).toUpperCase()) ||
+          (pillar && String(pillar).toUpperCase().includes(pNum)) ||
+          (rawSearchStr && (pId === rawSearchStr || pPillar === rawSearchStr || rawSearchStr.includes(pNum)))
+        );
+      }) || PRESET_ZONES[selectedMockZone] || PRESET_ZONES[0];
+
+      const finalSpotData = {
+        zone: spotData?.zone || matchedPreset.zone,
+        building: spotData?.building || matchedPreset.building,
+        floor: spotData?.floor || matchedPreset.floor,
+        pillar: spotData?.pillar || matchedPreset.pillar,
+        spot_id: spotId || matchedPreset.id,
+        imageUrl: spotData?.imageUrl || matchedPreset.imageUrl,
+        imageUrls: spotData?.imageUrls || matchedPreset.imageUrls,
+        images: spotData?.images || matchedPreset.images,
         savedDate: getEnglishFormattedDate(now),
         savedTime: getEnglishFormattedTime(now),
         timestamp: now.getTime()
-      });
+      };
+
+      setScannedSpotData(finalSpotData);
     } catch (error) {
+      console.warn("Scan Error:", error);
       Alert.alert(
         "Scan Error",
-        "Could not read QR Code data",
+        "Could not read QR Code data. Please try again.",
         [{ text: "Try Again", onPress: () => setScannedLock(false) }]
       );
     }

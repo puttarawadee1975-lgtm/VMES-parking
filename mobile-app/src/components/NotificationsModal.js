@@ -36,8 +36,6 @@ export default function NotificationsModal({
           dbNotis.forEach(item => {
             const isWarning = item.scoreDeducted > 0 || 
                               item.type === 'vmes_parking_warning' || 
-                              item.type === 'vmes_parking_30min_warning' ||
-                              item.type === 'vmes_overtime_penalty' ||
                               item.type === 'helmet_violation' ||
                               (item.type && (item.type.includes('warning') || item.type.includes('penalty') || item.type.includes('violation')));
 
@@ -115,8 +113,6 @@ export default function NotificationsModal({
     if (selectedFilter === 'PARKING') {
       return (
         n.category === 'Parking Alert' ||
-        n.rawType === 'vmes_overtime_penalty' ||
-        n.rawType === 'vmes_parking_30min_warning' ||
         (n.title && (n.title.toLowerCase().includes('vmes') || n.title.toLowerCase().includes('parking')))
       );
     }
@@ -137,12 +133,6 @@ export default function NotificationsModal({
     if (rawType === 'helmet_violation' || (type === 'warning' && item.scoreDeducted > 0 && item.category === 'Safety Alert')) {
       return { name: 'shield-outline', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
     }
-    if (rawType === 'vmes_overtime_penalty' || (type === 'warning' && item.scoreDeducted > 0)) {
-      return { name: 'time-outline', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
-    }
-    if (rawType === 'vmes_parking_30min_warning' || item.title.includes('30 Mins Max')) {
-      return { name: 'car-outline', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
-    }
     if (type === 'announcement') {
       return { name: 'megaphone-outline', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
     }
@@ -150,10 +140,6 @@ export default function NotificationsModal({
   };
 
   const handleOpenDetail = (item) => {
-    // VMES 30-Min Parking Limit is an informative notice only — no detail modal pop up
-    if (item.rawType === 'vmes_parking_30min_warning' || (item.title && item.title.includes('30 Mins Max'))) {
-      return;
-    }
 
     if (item.type === 'warning' || item.category === 'Safety Alert' || item.scoreDeducted > 0) {
       setShowDrivingScoreModal(true);
@@ -240,7 +226,7 @@ export default function NotificationsModal({
               ) : (
                 filteredNotis.map(item => {
                   const iconConfig = getIcon(item);
-                  const isClickable = item.rawType !== 'vmes_parking_30min_warning' && !(item.title && item.title.includes('30 Mins Max'));
+                  const isClickable = true;
 
                   return (
                     <TouchableOpacity

@@ -44,22 +44,24 @@ export default function AuthScreen({
         />
         <Text className="text-4xl font-black text-slate-900 tracking-tight text-center">VMES Parking</Text>
         <Text className="text-blue-600 font-bold text-xs mt-1 uppercase tracking-wider text-center">
-          VMES Building Campus Parking & Safety
-        </Text>
-
-        <Text className="text-slate-500 text-xs mt-2 text-center leading-relaxed px-2">
-          Intelligent motorcycle parking management & automated safety monitoring system
+          VMES Building Campus Parking
         </Text>
       </View>
 
       <View className="space-y-3 max-w-sm mx-auto w-full">
         {/* Microsoft Sign In */}
         <TouchableOpacity
-          onPress={() => setShowAccountModal(true)}
+          onPress={onOpenMicrosoftModal}
           className="flex-row bg-white border border-slate-200 p-4 rounded-2xl items-center justify-center shadow-sm active:opacity-80"
         >
-          <Ionicons name="logo-microsoft" size={20} color="#f25022" />
-          <Text className="text-slate-800 font-bold text-sm ml-3 text-center">Sign in with Microsoft (@au.edu)</Text>
+          {/* Authentic Microsoft 4-Color Logo (Red, Green, Blue, Yellow) */}
+          <View style={{ width: 18, height: 18, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignContent: 'space-between' }}>
+            <View style={{ width: 8.2, height: 8.2, backgroundColor: '#F25022' }} />
+            <View style={{ width: 8.2, height: 8.2, backgroundColor: '#7FBA00' }} />
+            <View style={{ width: 8.2, height: 8.2, backgroundColor: '#00A4EF' }} />
+            <View style={{ width: 8.2, height: 8.2, backgroundColor: '#FFB900' }} />
+          </View>
+          <Text className="text-slate-800 font-bold text-sm ml-3 text-center">Sign in with Microsoft</Text>
         </TouchableOpacity>
 
         <View className="flex-row items-center my-3">
@@ -88,7 +90,12 @@ export default function AuthScreen({
           <View className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100">
             <View className="flex-row justify-between items-center mb-4">
               <View className="flex-row items-center">
-                <Ionicons name="logo-microsoft" size={24} color="#f25022" className="mr-2" />
+                <View style={{ width: 20, height: 20, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignContent: 'space-between', marginRight: 8 }}>
+                  <View style={{ width: 9.2, height: 9.2, backgroundColor: '#F25022' }} />
+                  <View style={{ width: 9.2, height: 9.2, backgroundColor: '#7FBA00' }} />
+                  <View style={{ width: 9.2, height: 9.2, backgroundColor: '#00A4EF' }} />
+                  <View style={{ width: 9.2, height: 9.2, backgroundColor: '#FFB900' }} />
+                </View>
                 <Text className="text-slate-900 font-bold text-lg ml-2">Microsoft Account Sign In</Text>
               </View>
               <TouchableOpacity onPress={() => setShowAccountModal(false)}>

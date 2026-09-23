@@ -52,16 +52,26 @@ export default function LiveOverviewDashboard({
   }, [selectedTerm]);
 
   const computedHourlyFromLogs = useMemo(() => {
-    if (!logs || logs.length === 0) return null;
     const targetSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+    const buildingCapacity = 18;
+
+    if (!logs || logs.length === 0) {
+      return targetSlots.map(t => ({
+        time: t,
+        avgSlots: 0,
+        ratePct: 0.0,
+        capacity: buildingCapacity
+      }));
+    }
+
     const hourToSlot = {
-      3: '09:00', 4: '09:00', 5: '09:00', 6: '09:00', 7: '09:00', 8: '09:00', 9: '09:00',
-      10: '10:00', 11: '11:00', 12: '12:00', 13: '13:00', 14: '14:00', 15: '15:00', 16: '16:00', 17: '17:00', 18: '18:00'
+      9: '09:00', 10: '10:00', 11: '11:00', 12: '12:00', 13: '13:00', 14: '14:00', 15: '15:00', 16: '16:00', 17: '17:00', 18: '18:00'
     };
+
     let running = 0;
     const slotMap = {};
     const sortedLogs = [...logs].sort((a, b) => new Date(a.rawDate || a.timestamp || 0) - new Date(b.rawDate || b.timestamp || 0));
-    
+
     sortedLogs.forEach(l => {
       const gt = String(l.gate_type || l.gate || '').toUpperCase();
       if (gt.includes('EXIT') || gt.includes('GATE 2')) {
@@ -70,29 +80,33 @@ export default function LiveOverviewDashboard({
         running += 1;
       }
       const d = l.rawDate ? new Date(l.rawDate) : (l.timestamp ? new Date(l.timestamp) : null);
-      if (d && !isNaN(d)) {
+      if (d && !isNaN(d.getTime())) {
         const h = d.getHours();
-        const sKey = h >= 18 ? '18:00' : hourToSlot[h];
+        const sKey = h >= 18 ? '18:00' : (h < 9 ? '09:00' : hourToSlot[h]);
         if (sKey) {
           slotMap[sKey] = running;
         }
       }
     });
 
-    const maxOcc = Math.max(...Object.values(slotMap), 1);
     let lastVal = 0;
     return targetSlots.map(t => {
-      let raw = slotMap[t] || 0;
-      if (raw === 0 && lastVal > 0 && ['15:00', '16:00', '17:00', '18:00'].includes(t)) {
-        const decay = { '15:00': 0.70, '16:00': 0.50, '17:00': 0.30, '18:00': 0.15 }[t];
-        raw = Math.round(lastVal * decay);
-      } else if (raw > 0) {
+      let raw = slotMap[t];
+      if (raw === undefined || raw === null) {
+        raw = lastVal;
+      } else {
         lastVal = raw;
       }
-      const rel = raw / maxOcc;
-      const avgSlots = Math.round(rel * 460);
-      const ratePct = parseFloat(((avgSlots / 500) * 100).toFixed(1));
-      return { time: t, avgSlots, ratePct };
+
+      const avgSlots = Math.min(buildingCapacity, Math.max(0, raw));
+      const ratePct = parseFloat(((avgSlots / buildingCapacity) * 100).toFixed(1));
+
+      return {
+        time: t,
+        avgSlots: avgSlots,
+        ratePct: ratePct,
+        capacity: buildingCapacity
+      };
     });
   }, [logs]);
 
@@ -104,6 +118,64 @@ export default function LiveOverviewDashboard({
     const rates = activeHourly.map(h => h.ratePct || 0);
     const avgOccRate = rates.length > 0 ? (rates.reduce((a, b) => a + b, 0) / rates.length).toFixed(1) : '0.0';
 
+    // Calculate vehicleType dynamically based on logs
+    let computedVehicleType = liveTermSummary?.vehicleType;
+    if (!computedVehicleType) {
+      if (!logs || logs.length === 0) {
+        computedVehicleType = {
+          motorcycles: { trips: 0, pct: 0 },
+          cars: { trips: 0, pct: 0 }
+        };
+      } else {
+        let motoCount = 0;
+        let carCount = 0;
+        logs.forEach(l => {
+          const vStr = String(l.vehicle || l.vehicle_type || '').toLowerCase();
+          if (vStr.includes('motorcycle') || vStr.includes('bike') || vStr.includes('moto') || vStr.includes('มอเตอร์ไซค์')) {
+            motoCount++;
+          } else {
+            carCount++;
+          }
+        });
+        const total = motoCount + carCount;
+        const motoPct = total > 0 ? parseFloat(((motoCount / total) * 100).toFixed(1)) : 0;
+        const carPct = total > 0 ? parseFloat(((carCount / total) * 100).toFixed(1)) : 0;
+        computedVehicleType = {
+          motorcycles: { trips: motoCount, pct: motoPct },
+          cars: { trips: carCount, pct: carPct }
+        };
+      }
+    }
+
+    // Calculate userType dynamically based on logs
+    let computedUserType = liveTermSummary?.userType;
+    if (!computedUserType) {
+      if (!logs || logs.length === 0) {
+        computedUserType = {
+          registered: { trips: 0, pct: 0 },
+          unregistered: { trips: 0, pct: 0 }
+        };
+      } else {
+        let regCount = 0;
+        let unregCount = 0;
+        logs.forEach(l => {
+          const ownerStr = String(l.owner || '').toLowerCase();
+          if (ownerStr && !ownerStr.includes('guest') && !ownerStr.includes('unregistered') && ownerStr !== 'unknown') {
+            regCount++;
+          } else {
+            unregCount++;
+          }
+        });
+        const total = regCount + unregCount;
+        const regPct = total > 0 ? parseFloat(((regCount / total) * 100).toFixed(1)) : 0;
+        const unregPct = total > 0 ? parseFloat(((unregCount / total) * 100).toFixed(1)) : 0;
+        computedUserType = {
+          registered: { trips: regCount, pct: regPct },
+          unregistered: { trips: unregCount, pct: unregPct }
+        };
+      }
+    }
+
     return {
       label: (ACADEMIC_TERMS[selectedTerm]?.label || 'Semester 1 / 2026').replace(/\s*\(.*?\)/g, ''),
       period: ACADEMIC_TERMS[selectedTerm]?.period || '',
@@ -111,14 +183,8 @@ export default function LiveOverviewDashboard({
       violationsCount: liveTermSummary?.violationsCount ?? (logs ? logs.filter(l => l.violation).length : 0),
       avgSafetyScore: liveTermSummary?.avgSafetyScore ?? 100,
       avgOccupancyRate: `${avgOccRate}%`,
-      vehicleType: liveTermSummary?.vehicleType ?? {
-        motorcycles: { trips: Math.round((logs?.length || 0) * 0.68), pct: 68.0 },
-        cars: { trips: Math.round((logs?.length || 0) * 0.32), pct: 32.0 }
-      },
-      userType: liveTermSummary?.userType ?? {
-        registered: { trips: Math.round((logs?.length || 0) * 0.78), pct: 78.0 },
-        unregistered: { trips: Math.round((logs?.length || 0) * 0.22), pct: 22.0 }
-      },
+      vehicleType: computedVehicleType,
+      userType: computedUserType,
       hourlyOccupancy: activeHourly,
       monthlyTrend: []
     };
@@ -226,7 +292,7 @@ export default function LiveOverviewDashboard({
             const item = currentTermData.hourlyOccupancy[idx];
             return [
               `Occupancy Rate: ${context.parsed.y}%`,
-              `Avg Occupied Slots: ${item?.avgSlots || 0} / ${item?.capacity || 19} slots`
+              `Avg Occupied Slots: ${item?.avgSlots || 0} / ${item?.capacity || 18} slots`
             ];
           }
         }
@@ -253,15 +319,16 @@ export default function LiveOverviewDashboard({
   // Chart 5 Config: Gate Traffic Motorcycles vs Cars Pie/Doughnut Chart
   const vehiclePieData = useMemo(() => {
     const vt = currentTermData.vehicleType;
+    const isZero = vt.motorcycles.trips === 0 && vt.cars.trips === 0;
     return {
       labels: ['Motorcycles', 'Cars'],
       datasets: [
         {
-          data: [vt.motorcycles.trips, vt.cars.trips],
-          backgroundColor: ['#2563eb', '#059669'],
-          borderWidth: 3,
+          data: isZero ? [1] : [vt.motorcycles.trips, vt.cars.trips],
+          backgroundColor: isZero ? ['#f1f5f9'] : ['#2563eb', '#059669'],
+          borderWidth: isZero ? 0 : 3,
           borderColor: '#ffffff',
-          hoverOffset: 6
+          hoverOffset: isZero ? 0 : 6
         }
       ]
     };
@@ -279,6 +346,7 @@ export default function LiveOverviewDashboard({
         callbacks: {
           label: (context) => {
             const vt = currentTermData.vehicleType;
+            if (vt.motorcycles.trips === 0 && vt.cars.trips === 0) return ' No trips recorded';
             const isMoto = context.dataIndex === 0;
             const item = isMoto ? vt.motorcycles : vt.cars;
             return ` Gate Traffic: ${item.trips.toLocaleString()} trips (${item.pct}%)`;
@@ -292,15 +360,16 @@ export default function LiveOverviewDashboard({
   // Chart 6 Config: Gate Traffic Registered vs Unregistered Users Pie/Doughnut Chart
   const userPieData = useMemo(() => {
     const ut = currentTermData.userType;
+    const isZero = ut.registered.trips === 0 && ut.unregistered.trips === 0;
     return {
       labels: ['Registered Users', 'Unregistered / Guests'],
       datasets: [
         {
-          data: [ut.registered.trips, ut.unregistered.trips],
-          backgroundColor: ['#7c3aed', '#f59e0b'],
-          borderWidth: 3,
+          data: isZero ? [1] : [ut.registered.trips, ut.unregistered.trips],
+          backgroundColor: isZero ? ['#f1f5f9'] : ['#7c3aed', '#f59e0b'],
+          borderWidth: isZero ? 0 : 3,
           borderColor: '#ffffff',
-          hoverOffset: 6
+          hoverOffset: isZero ? 0 : 6
         }
       ]
     };
@@ -318,6 +387,7 @@ export default function LiveOverviewDashboard({
         callbacks: {
           label: (context) => {
             const ut = currentTermData.userType;
+            if (ut.registered.trips === 0 && ut.unregistered.trips === 0) return ' No trips recorded';
             const isReg = context.dataIndex === 0;
             const item = isReg ? ut.registered : ut.unregistered;
             return ` Gate Traffic: ${item.trips.toLocaleString()} trips (${item.pct}%)`;
@@ -663,19 +733,6 @@ export default function LiveOverviewDashboard({
             <div style={{ display: 'flex', alignItems: 'center', gap: 22, height: 190 }}>
               <div style={{ width: 140, height: 140, position: 'relative', flexShrink: 0 }}>
                 <Doughnut data={vehiclePieData} options={vehiclePieOptions} />
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
-                  pointerEvents: 'none'
-                }}>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: '#0f172a' }}>
-                    {currentTermData.vehicleType.motorcycles.pct}%
-                  </div>
-                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Moto</div>
-                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexGrow: 1 }}>
@@ -717,19 +774,6 @@ export default function LiveOverviewDashboard({
             <div style={{ display: 'flex', alignItems: 'center', gap: 22, height: 190 }}>
               <div style={{ width: 140, height: 140, position: 'relative', flexShrink: 0 }}>
                 <Doughnut data={userPieData} options={userPieOptions} />
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
-                  pointerEvents: 'none'
-                }}>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: '#0f172a' }}>
-                    {currentTermData.userType.registered.pct}%
-                  </div>
-                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Reg.</div>
-                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexGrow: 1 }}>

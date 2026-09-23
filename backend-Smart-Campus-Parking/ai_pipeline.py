@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 # ================= Configuration =================
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/detections")
-DEFAULT_ZONE = os.getenv("DEFAULT_ZONE", "Zone A (Building 1 - Car)")
+DEFAULT_ZONE = os.getenv("DEFAULT_ZONE", "Zone A")
 
 # Camera IDs follow the backend camera-order convention: 01 = ENTRY, 02 = EXIT.
 _requested_gate = os.getenv("GATE_TYPE", "ENTRY").upper()
@@ -282,6 +282,9 @@ while cap.isOpened():
     # ---------- 1. YOLO Helmet Detection ----------
     if frame_count % HELMET_INTERVAL == 0:
         helmet_results = helmet_model(frame, conf=0.45, device=DEVICE, verbose=False)
+        frame_found_person = False
+        frame_has_no_helmet_violation = False
+
         for result in helmet_results:
             for box in result.boxes:
                 cls = int(box.cls[0])
@@ -289,9 +292,10 @@ while cap.isOpened():
                 label = helmet_model.names[cls]
 
                 if label in ["with_helmet", "no_helmet"]:
+                    frame_found_person = True
                     has_helmet = (label == "with_helmet")
-                    recent_helmets.append(has_helmet)
-                    recent_helmets = recent_helmets[-10:]
+                    if label == "no_helmet":
+                        frame_has_no_helmet_violation = True
 
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     box_color = (0, 255, 0) if has_helmet else (0, 0, 255)
@@ -299,6 +303,12 @@ while cap.isOpened():
 
                     cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
                     cv2.putText(frame, box_text, (x1, max(20, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, box_color, 2)
+
+        if frame_found_person:
+            # Multi-rider rule: If ANY rider (driver or pillion) has no helmet, flag as False (Violation)
+            overall_frame_helmet_ok = not frame_has_no_helmet_violation
+            recent_helmets.append(overall_frame_helmet_ok)
+            recent_helmets = recent_helmets[-10:]
 
     if recent_helmets:
         stable_helmet_state = Counter(recent_helmets).most_common(1)[0][0]

@@ -162,9 +162,8 @@ export default function AnnouncementsTable() {
       <div className="table-container">
         {(!announcements || announcements.length === 0) ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
-            <i className="ri-megaphone-off-line" style={{ fontSize: 36, color: '#d97706', display: 'block', marginBottom: 12 }}></i>
-            <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>No Announcements Posted</div>
-            <div style={{ fontSize: 13, color: '#64748b' }}>Post announcements to display them on students' Mobile App home screens.</div>
+            <i className="ri-megaphone-off-line" style={{ fontSize: 36, color: '#94a3b8', display: 'block', marginBottom: 12 }}></i>
+            <div style={{ fontWeight: 600, color: '#0f172a' }}>No Announcements Posted</div>
           </div>
         ) : (
           <table className="table">

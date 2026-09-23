@@ -37,6 +37,7 @@ export default function InspectionTable({
   const [violationFilter, setViolationFilter] = useState(initialViolationFilter); // 'all' | 'violations_only' | 'pass_only'
   const [gateFilter, setGateFilter] = useState('all'); // 'all' | 'entry' | 'exit'
   const [selectedSnapshot, setSelectedSnapshot] = useState(null);
+  const [modalImageError, setModalImageError] = useState(false);
 
   React.useEffect(() => {
     setSearchQuery(initialSearchQuery || '');
@@ -54,7 +55,6 @@ export default function InspectionTable({
     // 1. Violation Filter
     if (violationFilter === 'violations_only' && !item.isViolation) return false;
     if (violationFilter === 'helmet_only' && (!item.isViolation || (item.violationType && !item.violationType.toLowerCase().includes('helmet')))) return false;
-    if (violationFilter === 'overtime_only' && (!item.isViolation || (item.violationType && !item.violationType.toLowerCase().includes('overtime')))) return false;
     if (violationFilter === 'pass_only' && item.isViolation) return false;
 
     // 1.5 Gate Direction Filter (Entry / Exit)
@@ -168,7 +168,6 @@ export default function InspectionTable({
               <option value="all">All Logs & Scans</option>
               <option value="violations_only">All Violations (-10 pts)</option>
               <option value="helmet_only">No Helmet Violations (-10 pts)</option>
-              <option value="overtime_only">VMES Overtime Violations (-10 pts)</option>
               <option value="pass_only">Pass Granted</option>
             </select>
 
@@ -243,9 +242,8 @@ export default function InspectionTable({
       <div className="table-container">
         {(!displayLogs || displayLogs.length === 0) ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
-            <i className="ri-radar-line" style={{ fontSize: 36, color: '#2563eb', display: 'block', marginBottom: 12 }}></i>
-            <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>No Vehicle Detections Found</div>
-            <div style={{ fontSize: 13, color: '#64748b' }}>There are no gate scans matching the selected date filter.</div>
+            <i className="ri-radar-line" style={{ fontSize: 36, color: '#94a3b8', display: 'block', marginBottom: 12 }}></i>
+            <div style={{ fontWeight: 600, color: '#0f172a' }}>No Vehicle Detections Found</div>
           </div>
         ) : (
           <table className="table">
@@ -264,12 +262,20 @@ export default function InspectionTable({
             <tbody>
               {displayLogs.map((item, index) => {
                 const isCar = (item.vehicle || '').toLowerCase().includes('car');
-                const rawUrl = item.imageUrl || item.image_url || item.snapshot_base64 || item.snapshotUrl || item.image;
-                const snapshotUrl = rawUrl
-                  ? ((rawUrl.startsWith('http') || rawUrl.startsWith('data:')) ? rawUrl : `http://${window.location.hostname}:8000${rawUrl}`)
-                  : (isCar
-                    ? 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80'
-                    : 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80');
+                const rawUrl = item.imageUrl || item.image_url || item.snapshot_base64 || item.snapshotUrl || item.image || item.photo || item.cctv_image_url || item.snapshot_url;
+                const cleanUrl = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+                const hasPhoto = Boolean(
+                  cleanUrl &&
+                  cleanUrl.length > 15 &&
+                  cleanUrl !== '-' &&
+                  cleanUrl !== 'null' &&
+                  cleanUrl !== 'undefined' &&
+                  !cleanUrl.endsWith('base64,') &&
+                  !cleanUrl.endsWith('base64')
+                );
+                const snapshotUrl = hasPhoto
+                  ? ((cleanUrl.startsWith('http') || cleanUrl.startsWith('data:')) ? cleanUrl : `http://${window.location.hostname}:8000${cleanUrl.startsWith('/') ? '' : '/'}${cleanUrl}`)
+                  : null;
 
                 const formattedDate = (() => {
                   let d = new Date();
@@ -291,26 +297,32 @@ export default function InspectionTable({
                       {(() => {
                         const vType = item.violationType || (item.helmet || '');
                         const isHelmetViol = String(vType).toUpperCase().includes('NO HELMET');
-                        const isOvertime = String(vType).toUpperCase().includes('OVERTIME') || String(vType).toUpperCase().includes('30') || (item.isViolation && item.vehicle?.toLowerCase().includes('car'));
                         
                         if (isHelmetViol) {
                           return <span style={{ color: '#0f172a', fontWeight: 600 }}>No Helmet</span>;
                         }
-                        if (isOvertime) {
-                          return <span style={{ color: '#0f172a', fontWeight: 600 }}>Parked &gt;30 Mins</span>;
+                        if (item.isViolation && vType && vType !== '-') {
+                          return <span style={{ color: '#0f172a', fontWeight: 600 }}>{vType}</span>;
                         }
                         return <span style={{ color: '#0f172a', fontWeight: 600 }}>-</span>;
                       })()}
                     </td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{item.gate}</td>
                     <td>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                        onClick={() => setSelectedSnapshot({ ...item, snapshotUrl })}
-                      >
-                        <i className="ri-image-line" style={{ color: '#0f172a' }}></i> View Photo
-                      </button>
+                      {hasPhoto ? (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          onClick={() => {
+                            setModalImageError(false);
+                            setSelectedSnapshot({ ...item, snapshotUrl });
+                          }}
+                        >
+                          <i className="ri-image-line" style={{ color: '#0f172a' }}></i> View Photo
+                        </button>
+                      ) : (
+                        <span style={{ color: '#0f172a', fontWeight: 600 }}>-</span>
+                      )}
                     </td>
                     <td>
                       <span style={{ color: (item.isViolation && item.penaltyApplied !== false) ? '#dc2626' : '#059669', fontWeight: 700 }}>
@@ -362,13 +374,21 @@ export default function InspectionTable({
             </div>
 
             {/* Image Frame */}
-            <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#000000', marginBottom: 16 }}>
-              <img
-                src={selectedSnapshot.snapshotUrl}
-                alt="CCTV Gate Entry Snapshot"
-                style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }}
-              />
-            </div>
+            {selectedSnapshot.snapshotUrl && !modalImageError ? (
+              <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#f8fafc', marginBottom: 16 }}>
+                <img
+                  src={selectedSnapshot.snapshotUrl}
+                  alt="CCTV Gate Entry Snapshot"
+                  onError={() => setModalImageError(true)}
+                  style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }}
+                />
+              </div>
+            ) : (
+              <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#f8fafc', height: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', gap: 8, marginBottom: 16 }}>
+                <i className="ri-image-off-line" style={{ fontSize: 36 }}></i>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>No CCTV Snapshot Available</span>
+              </div>
+            )}
 
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>

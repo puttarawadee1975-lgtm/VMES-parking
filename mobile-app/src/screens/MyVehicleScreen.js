@@ -8,6 +8,25 @@ import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
 import DrivingScoreModal from '../components/DrivingScoreModal';
 import EditVehicleModal from '../components/EditVehicleModal';
 
+const checkIsCar = (v) => {
+  if (!v) return false;
+  const typeStr = (typeof v === 'string' ? v : (v.vehicle_type || v.vehicleType || '')).toLowerCase();
+  if (typeStr === 'car' || typeStr === 'automobile') return true;
+  if (typeStr === 'motorcycle' || typeStr === 'bike') return false;
+
+  const modelStr = (typeof v === 'string' ? v : `${v.model || ''} ${v.plate || ''}`).toLowerCase();
+  if (modelStr.includes('🚗') || modelStr.includes('🚘') || modelStr.includes('🏎️')) return true;
+  if (modelStr.includes('🛵') || modelStr.includes('🏍️')) return false;
+
+  const carKeywords = [
+    'car', 'automobile', 'civic', 'accord', 'camry', 'altis', 'yaris', 'city',
+    'jazz', 'benz', 'bmw', 'toyota', 'honda civic', 'honda city', 'nissan',
+    'mazda', 'sedan', 'suv', 'truck', 'fortuner', 'pajero', 'crv', 'hrv',
+    'cx-5', 'cx-30', 'isuzu', 'byd', 'mg', 'tesla', 'subaru', 'ford'
+  ];
+  return carKeywords.some((k) => modelStr.includes(k));
+};
+
 export default function MyVehicleScreen({
   currentUser,
   onOpenMicrosoftModal,
@@ -512,34 +531,38 @@ export default function MyVehicleScreen({
               </TouchableOpacity>
             </View>
           ) : (
-            currentUser.vehicles.map((v, i) => (
-              <TouchableOpacity
-                key={i}
-                activeOpacity={0.8}
-                onPress={() => setEditingVehicle(v)}
-                className="flex-row items-center p-3.5 bg-slate-50 rounded-xl border border-slate-200 mb-2 justify-between active:bg-blue-50/50"
-              >
-                <View className="flex-row items-center flex-1 mr-2">
-                  <View className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 items-center justify-center mr-3">
-                    {v.model?.includes('🚗') ? (
-                      <Ionicons name="car-outline" size={20} color="#64748b" />
-                    ) : (
-                      <FontAwesome5 name="motorcycle" size={16} color="#64748b" />
-                    )}
+            currentUser.vehicles.map((v, i) => {
+              const isCar = checkIsCar(v);
+              const emoji = isCar ? '🚗' : '🛵';
+              return (
+                <TouchableOpacity
+                  key={i}
+                  activeOpacity={0.8}
+                  onPress={() => setEditingVehicle(v)}
+                  className="flex-row items-center p-3.5 bg-slate-50 rounded-xl border border-slate-200 mb-2 justify-between active:bg-blue-50/50"
+                >
+                  <View className="flex-row items-center flex-1 mr-2">
+                    <View className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 items-center justify-center mr-3">
+                      {isCar ? (
+                        <Ionicons name="car-outline" size={20} color="#2563eb" />
+                      ) : (
+                        <FontAwesome5 name="motorcycle" size={16} color="#2563eb" />
+                      )}
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-slate-900 font-bold text-xs">{formatDisplayPlate(v.plate)}</Text>
+                      <Text className="text-slate-500 text-[10px] mt-0.5">{emoji} {v.model?.replace(/^[🛵🏍️🚗🚘?❓\s]+/, '')}</Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-slate-900 font-bold text-xs">{formatDisplayPlate(v.plate)}</Text>
-                    <Text className="text-slate-500 text-[10px] mt-0.5">{v.model?.replace(/^[🛵🚗?❓\s]+/, '')}</Text>
+                  <View className="flex-row items-center gap-2">
+                    <View className="flex-row items-center px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+                      <Ionicons name="create-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
+                      <Text className="text-blue-700 font-bold text-[11px]">Edit</Text>
+                    </View>
                   </View>
-                </View>
-                <View className="flex-row items-center gap-2">
-                  <View className="flex-row items-center px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-                    <Ionicons name="create-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
-                    <Text className="text-blue-700 font-bold text-[11px]">Edit</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
       </View>
@@ -573,7 +596,8 @@ export default function MyVehicleScreen({
             </View>
           ) : (
             myTripHistory.map((trip, i) => {
-              const isMotorcycle = trip.vehicleType === 'motorcycle' || !trip.model?.includes('🚗');
+              const isCar = checkIsCar(trip);
+              const isMotorcycle = !isCar;
               const hasHelmetStatus = isMotorcycle && trip.helmet;
 
               return (

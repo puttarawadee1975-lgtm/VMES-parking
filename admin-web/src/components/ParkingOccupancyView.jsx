@@ -5,35 +5,50 @@ const formatDateDisplay = (dateVal) => {
   if (!dateVal) return '-';
   const str = String(dateVal).trim();
 
-  // 1. If string is already in "DD Month YYYY" format e.g. "20 September 2026"
-  if (/^\d{1,2}\s+[A-Za-z]+\s+\d{4}$/.test(str)) {
+  // 1. Check if already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
     return str;
   }
 
-  // 2. If ISO or YYYY-MM-DD string e.g. "2026-09-21" or "2026-09-21T10:46:37"
+  // 2. Check if ISO or YYYY-MM-DD prefix e.g. "2026-09-21T10:46:37"
   const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
-    const year = parseInt(isoMatch[1], 10);
-    const monthIdx = parseInt(isoMatch[2], 10) - 1;
-    const day = parseInt(isoMatch[3], 10);
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    if (monthNames[monthIdx]) {
-      return `${day} ${monthNames[monthIdx]} ${year}`;
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  // 3. Check if "DD Month YYYY" or "D Month YYYY" e.g. "20 September 2026"
+  const textMatch = str.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+  if (textMatch) {
+    const day = parseInt(textMatch[1], 10);
+    const monthStr = textMatch[2].toLowerCase();
+    const year = textMatch[3];
+    const months = {
+      january: '01', jan: '01',
+      february: '02', feb: '02',
+      march: '03', mar: '03',
+      april: '04', apr: '04',
+      may: '05',
+      june: '06', jun: '06',
+      july: '07', jul: '07',
+      august: '08', aug: '08',
+      september: '09', sep: '09', sept: '09',
+      october: '10', oct: '10',
+      november: '11', nov: '11',
+      december: '12', dec: '12'
+    };
+    if (months[monthStr]) {
+      const paddedDay = day < 10 ? `0${day}` : `${day}`;
+      return `${year}-${months[monthStr]}-${paddedDay}`;
     }
   }
 
-  // 3. Fallback to JS Date parsing
+  // 4. Fallback to JS Date parsing
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
-    const day = d.getDate();
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   return str;
@@ -66,8 +81,7 @@ const ZONE_PILLAR_LAYOUTS = {
     { pillar: 'Spot A-10', spotId: null, label: 'A-10' }
   ],
   'Zone B': [
-    { pillar: 'Spot B-01', spotId: 'SPOT-65070042', label: 'B-01' },
-    { pillar: 'Spot B-02', spotId: 'SPOT-65070118', label: 'B-02' }
+    { pillar: 'Spot B-01', spotId: 'SPOT-65070042', label: 'B-01' }
   ],
   'Zone C': [
     { pillar: 'Spot C-01', spotId: 'SPOT-SOMCHAI-P', label: 'C-01' },
@@ -77,17 +91,23 @@ const ZONE_PILLAR_LAYOUTS = {
     { pillar: 'Spot C-05', spotId: null, label: 'C-05' },
     { pillar: 'Spot C-06', spotId: null, label: 'C-06' },
     { pillar: 'Spot C-07', spotId: null, label: 'C-07' },
-    { pillar: 'Spot C-08', spotId: null, label: 'C-08' },
-    { pillar: 'Spot C-09', spotId: null, label: 'C-09' }
+    { pillar: 'Spot C-08', spotId: null, label: 'C-08' }
   ],
   'Zone D': [
-    { pillar: 'Spot D-01', spotId: 'SPOT-65070244', label: 'D-01' }
+    { pillar: 'Spot D-01', spotId: null, label: 'D-01' }
   ]
 };
 
+const DEFAULT_ZONES_INITIAL = [
+  { id: 'Zone A', name: 'Zone A', tag: 'Cars Only', numericCapacity: 10, total_slots: 10, capacity: '10 Spots', location: 'Floor G Automobile Deck A', pillars: 'Spots A-01 - A-10' },
+  { id: 'Zone B', name: 'Zone B', tag: 'Motorcycle Only', numericCapacity: 0, total_slots: 0, capacity: '1 Spot', location: 'Floor G Automobile Deck B', pillars: 'Spot B-01' },
+  { id: 'Zone C', name: 'Zone C', tag: 'Cars Only', numericCapacity: 8, total_slots: 8, capacity: '8 Spots', location: 'Floor G Automobile Deck C', pillars: 'Spots C-01 - C-08' },
+  { id: 'Zone D', name: 'Zone D', tag: 'Motorcycle Only', numericCapacity: 0, total_slots: 0, capacity: '1 Spot', location: 'Floor G Motorcycle Deck D', pillars: 'Spot D-01' }
+];
+
 export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehicles = [], selectedTerm: propSelectedTerm, setSelectedTerm: propSetSelectedTerm }) {
   const {
-    total = 21,
+    total = 18,
     occupied = 0,
     available = 0,
     rate = 0
@@ -126,7 +146,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   }, [selectedTerm]);
 
   // Dynamic Building Zones State (Loaded from MongoDB Atlas)
-  const [zones, setZones] = useState([]);
+  const [zones, setZones] = useState(DEFAULT_ZONES_INITIAL);
 
   // Fetch building zones from MongoDB Atlas on mount
   React.useEffect(() => {
@@ -163,12 +183,6 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   const [formImageUrl, setFormImageUrl] = useState('');
   const [formDescription, setFormDescription] = useState('');
 
-  // Count active spots per zone
-  const getZoneActiveCount = (zoneName) => {
-    return parkedSpots.filter(s => s.status === 'Active Parked' && s.zone.toUpperCase().includes(zoneName.toUpperCase())).length;
-  };
-
-
   // Combine active parked spots with historical detection logs and date records
   const allCombinedSpots = useMemo(() => {
     const list = [...parkedSpots];
@@ -188,22 +202,25 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       if (!seenPlatesAndDates.has(key)) {
         seenPlatesAndDates.add(key);
         const isExit = (l.gate || '').toUpperCase().includes('EXIT') || (l.gate_type || '').toUpperCase().includes('EXIT') || l.status === 'Completed';
+        const isGuest = l.role === 'Guest' || l.studentId === 'GUEST' || (l.owner && l.owner.toLowerCase().includes('guest')) || !l.owner;
+        const hasSavedSpot = Boolean(l.isSpotSaved || (l.floor && l.floor !== '-' && (l.pillar || l.spot) && (l.pillar || l.spot) !== '-'));
+
         list.push({
           id: l.id || `LOG-${index + 100}`,
-          owner: l.owner || 'Registered Driver',
-          studentId: l.studentId || l.ownerEmail?.split('@')[0] || (l.owner ? l.owner.split(' ')[0].toUpperCase() : 'STUDENT'),
-          role: l.role || 'Student',
+          owner: l.owner || (isGuest ? 'Guest Driver' : 'Registered Driver'),
+          studentId: l.studentId || (isGuest ? 'GUEST' : (l.ownerEmail ? l.ownerEmail.split('@')[0].toUpperCase() : 'STUDENT')),
+          role: l.role || (isGuest ? 'Guest' : 'Student'),
           plate: plate,
-          province: l.province || 'กรุงเทพมหานคร',
-          zone: l.zone || 'Zone A',
-          floor: l.floor || 'Floor G',
-          pillar: l.pillar || l.spot || 'A-01',
+          province: (plate === '-' || !plate || plate === 'Unregistered') ? '-' : (l.province || '-'),
+          zone: l.zone && l.zone !== '-' ? l.zone.split('(')[0].trim() : 'Zone A',
+          floor: hasSavedSpot ? l.floor : '-',
+          pillar: hasSavedSpot ? (l.pillar || l.spot) : '-',
           entryTime: l.time ? `${l.time} (${l.gate || 'Gate 1 Entry'})` : '08:24 AM (Gate 1 Entry)',
           exitTime: isExit ? '05:30 PM (Gate 2 Exit)' : 'Active (In Building)',
           rawDate: logDate,
           savedDate: logDate,
           status: isExit ? 'Exited' : 'Active Parked',
-          isSpotSaved: true
+          isSpotSaved: hasSavedSpot
         });
       }
     });
@@ -234,18 +251,18 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       // 3. Date Filter
       let matchDate = true;
       const isActiveNow = spot.status === 'Active Parked' || (spot.exitTime && spot.exitTime.toLowerCase().includes('active'));
-      const rawD = spot.rawDate || spot.savedDate || (spot.timestamp ? String(spot.timestamp).slice(0, 10) : null);
-      const itemDateStr = rawD ? String(rawD).slice(0, 10) : new Date().toISOString().split('T')[0];
+      const rawD = spot.rawDate || spot.savedDate || (spot.timestamp ? String(spot.timestamp) : null);
+      const itemDateStr = formatDateDisplay(rawD);
 
       const todayObj = new Date();
-      const todayStr = todayObj.toISOString().split('T')[0];
+      const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
 
       if (dateFilter === 'today') {
         matchDate = itemDateStr === todayStr || isActiveNow;
       } else if (dateFilter === 'yesterday') {
         const yestObj = new Date(todayObj);
         yestObj.setDate(yestObj.getDate() - 1);
-        const yestStr = yestObj.toISOString().split('T')[0];
+        const yestStr = `${yestObj.getFullYear()}-${String(yestObj.getMonth() + 1).padStart(2, '0')}-${String(yestObj.getDate()).padStart(2, '0')}`;
         matchDate = itemDateStr === yestStr;
       } else if (dateFilter === 'custom' && selectedDate) {
         matchDate = itemDateStr === selectedDate;
@@ -256,9 +273,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       // 4. Status Filter
       let matchStatus = true;
       if (reservationFilter === 'ACTIVE') {
-        matchStatus = dateFilter === 'all' || dateFilter === 'yesterday' || dateFilter === 'custom' ? true : isActiveNow;
+        matchStatus = isActiveNow;
       } else if (reservationFilter === 'EXITED') {
-        matchStatus = !isActiveNow || spot.status === 'Exited' || spot.status === 'Completed';
+        matchStatus = !isActiveNow;
       } else if (reservationFilter === 'ALL') {
         matchStatus = true;
       }
@@ -275,11 +292,11 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       entryTime: l.time || '08:00 AM',
       exitTime: l.status === 'Completed' ? 'Exit Gate 1' : 'Active (In Building)',
       duration: 'Live',
-      spot: l.pillar || `Spot ${l.zone ? l.zone.replace('Zone ', '') : 'A'}-01`,
-      zone: l.zone || 'Zone A',
-      studentId: l.studentId || l.ownerEmail?.split('@')[0] || 'STUDENT',
-      owner: l.owner || 'Registered Driver',
-      role: l.role || 'Student',
+      spot: (l.pillar && l.pillar !== '-') ? l.pillar : ((l.spot && l.spot !== '-') ? l.spot : '-'),
+      zone: l.zone && l.zone !== '-' ? l.zone.split('(')[0].trim() : 'Zone A',
+      studentId: l.studentId || ((l.role === 'Guest' || !l.owner) ? 'GUEST' : (l.ownerEmail ? l.ownerEmail.split('@')[0].toUpperCase() : 'STUDENT')),
+      owner: l.owner || ((l.role === 'Guest' || !l.owner) ? 'Guest Driver' : 'Registered Driver'),
+      role: l.role || ((l.studentId === 'GUEST' || !l.owner) ? 'Guest' : 'Student'),
       plate: l.plate || l.license_plate || '-',
       province: l.province || 'กรุงเทพมหานคร',
       vehicleName: l.vehicle || l.vehicleName || 'Vehicle',
@@ -386,12 +403,28 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
   };
 
 
-  const totalActiveSpotsCount = parkedSpots.filter(s => s.status === 'Active Parked').length;
+  // Active vehicles currently inside building
+  const activeVehiclesList = useMemo(() => {
+    return allCombinedSpots.filter(s => {
+      const isExit = s.status === 'Exited' || s.status === 'Completed' || (s.exitTime && !s.exitTime.toLowerCase().includes('active'));
+      return !isExit;
+    });
+  }, [allCombinedSpots]);
+
+  // Count active spots per zone
+  const getZoneActiveCount = (zoneName) => {
+    return activeVehiclesList.filter(s => {
+      const zStr = (s.zone || '').toUpperCase();
+      return zStr.includes(zoneName.toUpperCase());
+    }).length;
+  };
+
+  const totalActiveSpotsCount = activeVehiclesList.length;
   const currentSelectedZoneObj = zones.find(z => z.name.toUpperCase() === selectedZoneId.toUpperCase() || z.id.toUpperCase() === selectedZoneId.toUpperCase());
   const isMotorcycleZone = currentSelectedZoneObj ? /motorcycle/i.test(currentSelectedZoneObj.tag || '') : false;
 
   const totalCarCapacity = useMemo(() => {
-    if (!Array.isArray(zones) || zones.length === 0) return 19;
+    if (!Array.isArray(zones) || zones.length === 0) return 18;
     const carZones = zones.filter(z => {
       const zName = (z.zone || z.name || z.id || '').toUpperCase();
       return zName.includes('ZONE A') || zName.includes('ZONE C');
@@ -400,12 +433,26 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       const cap = (z.numericCapacity !== undefined && z.numericCapacity !== null) ? z.numericCapacity : (z.total_slots || parseInt(z.capacity) || 0);
       return acc + cap;
     }, 0);
-    return sum > 0 ? sum : 19;
+    return sum > 0 ? sum : 18;
   }, [zones]);
-  const calcOccupiedCarsCount = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType === 'car' || s.zone?.includes('Zone A') || s.zone?.includes('Zone C')) && s.vehicleType !== 'motorcycle' && !s.zone?.includes('Zone B')).length;
-  const occupiedCarsCount = (parkingOccupancy && parkingOccupancy.occupied !== undefined) ? parkingOccupancy.occupied : calcOccupiedCarsCount;
-  const availableCarSpots = (parkingOccupancy && parkingOccupancy.available !== undefined) ? parkingOccupancy.available : Math.max(0, totalCarCapacity - occupiedCarsCount);
-  const estMotos = parkedSpots.filter(s => s.status === 'Active Parked' && (s.vehicleType?.toLowerCase() === 'motorcycle' || (s.vehicleName && s.vehicleName.toLowerCase().includes('motorcycle')))).length;
+
+  const occupiedCarsCount = useMemo(() => {
+    return activeVehiclesList.filter(s => {
+      const vType = (s.vehicleType || s.vehicle_type || '').toLowerCase();
+      const zStr = (s.zone || '').toUpperCase();
+      return vType !== 'motorcycle' && !zStr.includes('ZONE B');
+    }).length;
+  }, [activeVehiclesList]);
+
+  const availableCarSpots = Math.max(0, totalCarCapacity - occupiedCarsCount);
+
+  const estMotos = useMemo(() => {
+    return activeVehiclesList.filter(s => {
+      const vType = (s.vehicleType || s.vehicle_type || '').toLowerCase();
+      const zStr = (s.zone || '').toUpperCase();
+      return vType === 'motorcycle' || zStr.includes('ZONE B');
+    }).length;
+  }, [activeVehiclesList]);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const exitedTodayCount = (logs || []).filter(h => h.status === 'Completed' || (h.rawDate && h.rawDate.startsWith(todayStr))).length;
@@ -534,11 +581,6 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                {selectedZoneId === 'ALL'
-                  ? 'Track real-time vehicle entry and exit timestamps.'
-                  : `${currentSelectedZoneObj?.location || ''}`}
-              </div>
             </div>
 
             {/* Controls: Search, Status, Date & Zone Filters */}
@@ -613,13 +655,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
               {/* Date Filter Dropdown */}
               <select
                 value={dateFilter}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setDateFilter(val);
-                  if (val === 'all') {
-                    setReservationFilter('ALL');
-                  }
-                }}
+                onChange={(e) => setDateFilter(e.target.value)}
                 style={{
                   padding: '8px 12px',
                   fontSize: 12,
@@ -705,11 +741,13 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                           </td>
                           <td style={{ padding: '14px 16px' }}>
                             <span style={{ fontWeight: 800, color: '#0f172a', fontSize: 13 }}>
-                              {spot.plate}
+                              {spot.plate || '-'}
                             </span>
-                            <span style={{ fontSize: 13, color: '#0f172a', fontWeight: 600, marginLeft: 6 }}>
-                              ({spot.province})
-                            </span>
+                            {spot.plate && spot.plate !== '-' && spot.plate !== 'Unregistered' && spot.province && spot.province !== '-' && (
+                              <span style={{ fontSize: 13, color: '#0f172a', fontWeight: 600, marginLeft: 6 }}>
+                                ({spot.province})
+                              </span>
+                            )}
                           </td>
                           <td style={{ padding: '14px 16px', fontSize: 13, color: '#0f172a', fontWeight: 800 }}>
                             {spot.zone}

@@ -8,6 +8,13 @@ import AnnouncementDetailModal from '../components/AnnouncementDetailModal';
 import AllAnnouncementsModal from '../components/AllAnnouncementsModal';
 import { getParkingStatus, getAnnouncements } from '../services/api';
 
+const INITIAL_PARKING_ZONES = [
+  { id: 'Zone A', zone: 'Zone A', building: 'VMES Building', floor: 'Floor G', available_slots: 10, availableSlots: 10, total_slots: 10, totalSlots: 10 },
+  { id: 'Zone B', zone: 'Zone B', building: 'VMES Building', floor: 'Floor G', available_slots: 2, availableSlots: 2, total_slots: 2, totalSlots: 2 },
+  { id: 'Zone C', zone: 'Zone C', building: 'VMES Building', floor: 'Floor G', available_slots: 8, availableSlots: 8, total_slots: 8, totalSlots: 8 },
+  { id: 'Zone D', zone: 'Zone D', building: 'VMES Building', floor: 'Floor G', available_slots: 1, availableSlots: 1, total_slots: 1, totalSlots: 1 },
+];
+
 export default function StudentHomeScreen({
   currentUser,
   parkedSpot,
@@ -22,19 +29,22 @@ export default function StudentHomeScreen({
   const [showAllAnnouncementsModal, setShowAllAnnouncementsModal] = useState(false);
 
   const isGuest = currentUser?.role === 'guest';
-  const [parkingZones, setParkingZones] = useState([]);
+  const [parkingZones, setParkingZones] = useState(INITIAL_PARKING_ZONES);
   const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchParkingData = async () => {
-    setLoading(true);
-    const data = await getParkingStatus();
+    setRefreshing(true);
+    try {
+      const data = await getParkingStatus();
 
-    if (data) {
-      setParkingZones(data);
+      if (data && Array.isArray(data) && data.length > 0) {
+        setParkingZones(data);
+      }
+    } finally {
+      setRefreshing(false);
     }
-
-    setLoading(false);
   };
 
   const fetchAnnouncements = async () => {
@@ -107,60 +117,72 @@ export default function StudentHomeScreen({
       <View className="mb-4">
         <View className="mb-3 flex-row justify-between items-center">
           <View className="flex-1 mr-2">
-            <Text className="text-xl font-bold text-slate-900">Parking Availability</Text>
+            <Text className="text-xl font-bold text-slate-900">Car Parking Availability</Text>
             <Text className="text-slate-500 text-xs mt-0.5">
-              Real-time space availability
+              Real-time car space availability
             </Text>
           </View>
         </View>
 
-        {/* 1. Single Total Available Parking Spots Card */}
+        {/* 1. Single Total Available Car Parking Spots Card */}
         {loading && parkingZones.length === 0 ? (
           <View className="bg-white py-12 rounded-3xl items-center justify-center border border-slate-200">
             <ActivityIndicator size="large" color="#3b82f6" />
-            <Text className="text-slate-500 mt-3 text-sm">Fetching parking data...</Text>
+            <Text className="text-slate-500 mt-3 text-sm">Fetching car parking data...</Text>
           </View>
         ) : (
           (() => {
-            const carZones = parkingZones.filter(zone => {
-              const zName = (zone.zone || zone.name || '').toUpperCase();
-              return zName.includes('ZONE A') || zName.includes('ZONE C');
+            const getAvail = (z) => (z.available_slots !== undefined ? z.available_slots : (z.availableSlots !== undefined ? z.availableSlots : 0));
+            const getTotal = (z) => (z.total_slots !== undefined ? z.total_slots : (z.totalSlots !== undefined ? z.totalSlots : 0));
+
+            // Filter ONLY Car Zones (Zone A & Zone C) for Car Parking Spots KPI (18 total car spots)
+            const carZones = parkingZones.filter(z => {
+              const zName = (z.zone || z.id || z.name || '').toUpperCase();
+              return zName.includes('ZONE A') || zName.includes('ZONE C') || zName.includes('A-') || zName.includes('C-');
             });
-            const totalAvailable = carZones.reduce((sum, zone) => sum + (zone.available_slots || 0), 0);
-            const totalSlots = carZones.reduce((sum, zone) => sum + (zone.total_slots || 0), 0);
+
+            const totalAvailable = carZones.reduce((sum, zone) => sum + getAvail(zone), 0);
+            const totalSlots = carZones.reduce((sum, zone) => sum + getTotal(zone), 0);
 
             return (
               <View style={{ minHeight: 196 }} className="bg-white border border-slate-200 py-6 px-4 rounded-3xl relative shadow-sm items-center justify-center">
                 {/* Refresh Icon (Top Right of Card) */}
                 <TouchableOpacity
                   onPress={fetchParkingData}
-                  disabled={loading}
-                  className="absolute top-4 right-4 bg-slate-50 p-2 rounded-full border border-slate-100"
+                  disabled={refreshing}
+                  activeOpacity={0.7}
+                  className="absolute top-4 right-4 bg-slate-50 p-2.5 rounded-full border border-slate-100 shadow-xs"
                 >
-                  <Ionicons name="refresh" size={20} color={loading ? "#94a3b8" : "#3b82f6"} />
+                  <Ionicons name="refresh" size={20} color={refreshing ? "#94a3b8" : "#3b82f6"} />
                 </TouchableOpacity>
 
                 {/* Title */}
                 <Text className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-1">
-                  VMES Building
+                  VMES Building (Car Parking)
                 </Text>
 
-                {/* Huge Centered Number / Status */}
-                <Text
-                  style={{ fontSize: 72, lineHeight: 76 }}
-                  className={`font-black tracking-tighter ${totalAvailable > 0 ? 'text-emerald-500' : 'text-red-500'}`}
-                >
-                  {totalAvailable > 0 ? totalAvailable : 'FULL'}
-                </Text>
+                {/* Huge Centered Number / Status OR Loading Spinner */}
+                {refreshing ? (
+                  <View style={{ height: 76, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color="#10b981" />
+                  </View>
+                ) : (
+                  <Text
+                    style={{ fontSize: 72, lineHeight: 76 }}
+                    className={`font-black tracking-tighter ${totalAvailable > 0 ? 'text-emerald-500' : 'text-red-500'}`}
+                  >
+                    {totalAvailable > 0 ? totalAvailable : 'FULL'}
+                  </Text>
+                )}
 
                 {/* Subtext */}
                 <Text className={`text-xs font-bold uppercase tracking-widest mt-2 ${totalAvailable > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {totalAvailable > 0 ? 'Available Spots' : 'No Spots Available'}
+                  {totalAvailable > 0 ? 'Available Car Spots' : 'No Car Spots Available'}
                 </Text>
 
                 {totalSlots > 0 && (
                   <Text className="text-xs text-slate-400 font-medium mt-1">
-                    Out of {totalSlots} total capacity
+                    Out of {totalSlots} total car capacity
                   </Text>
                 )}
               </View>

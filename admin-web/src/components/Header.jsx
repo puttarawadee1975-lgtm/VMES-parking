@@ -4,7 +4,7 @@ export const ACADEMIC_TERMS = {
   '2026-1': { label: 'Semester 1 / 2026', period: '01 Jun 2026 – 31 Oct 2026', hasData: true }
 };
 
-export default function Header({ pageTitle, pageSubtitle, selectedTerm = '2026-1', onSelectTerm }) {
+export default function Header({ pageTitle, pageSubtitle, selectedTerm = '2026-1', onSelectTerm, adminUser, onLogout }) {
   return (
     <header className="top-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -16,7 +16,7 @@ export default function Header({ pageTitle, pageSubtitle, selectedTerm = '2026-1
       </div>
 
       <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Academic Term Selector Dropdown (Replaces Parking Access Mode Toggle) */}
+        {/* Academic Term Selector Dropdown */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -64,6 +64,7 @@ export default function Header({ pageTitle, pageSubtitle, selectedTerm = '2026-1
               ))}
           </select>
         </div>
+
       </div>
     </header>
   );

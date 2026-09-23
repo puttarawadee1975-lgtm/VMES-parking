@@ -155,8 +155,7 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
         {(!filteredVehicles || filteredVehicles.length === 0) ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
             <i className="ri-user-search-line" style={{ fontSize: 36, color: '#94a3b8', display: 'block', marginBottom: 12 }}></i>
-            <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>No Drivers Found</div>
-            <div style={{ fontSize: 13, color: '#64748b' }}>No student driver matches your Student ID or Name search query.</div>
+            <div style={{ fontWeight: 600, color: '#0f172a' }}>No Drivers Found</div>
           </div>
         ) : (
           <table className="table">

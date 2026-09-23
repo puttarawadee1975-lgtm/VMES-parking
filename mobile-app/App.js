@@ -103,46 +103,16 @@ function MainApp() {
               };
               fetchUserVehiclesAndLogin(formattedUser);
             } else {
-              const fallbackStudent = {
-                role: 'student',
-                name: 'Student U6814509',
-                studentId: '6814509',
-                email: 'u6814509@au.edu',
-                vehicles: [
-                  { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
-                ],
-                safetyScore: 100
-              };
-              fetchUserVehiclesAndLogin(fallbackStudent);
+              showToast('❌ User data not found in system');
             }
           }).catch(err => {
             console.warn('[Auth] Backend Verification Error:', err);
-            const fallbackStudent = {
-              role: 'student',
-              name: 'Student U6814509',
-              studentId: '6814509',
-              email: 'u6814509@au.edu',
-              vehicles: [
-                { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
-              ],
-              safetyScore: 100
-            };
-            fetchUserVehiclesAndLogin(fallbackStudent);
+            showToast('❌ Login verification failed');
           });
         })
         .catch(err => {
           console.warn('[Auth] Exchange Code Error:', err);
-          const fallbackStudent = {
-            role: 'student',
-            name: 'Student U6814509',
-            studentId: '6814509',
-            email: 'u6814509@au.edu',
-            vehicles: [
-              { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
-            ],
-            safetyScore: 100
-          };
-          fetchUserVehiclesAndLogin(fallbackStudent);
+          showToast('❌ Microsoft authentication error');
         });
     }
   }, [response]);
@@ -299,8 +269,8 @@ function MainApp() {
   };
 
   const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    // Popup notifications disabled by user request
+    return;
   };
 
   // Auth Handlers
@@ -344,18 +314,6 @@ function MainApp() {
   };
 
   const handleMicrosoftLogin = async () => {
-    const studentEmail = 'u6814509@au.edu';
-    const student = {
-      role: 'student',
-      name: 'Student U6814509',
-      studentId: '6814509',
-      email: studentEmail,
-      vehicles: [
-        { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
-      ],
-      safetyScore: 100
-    };
-
     try {
       const res = await promptAsync({
         preferEphemeralSession: true,
@@ -363,11 +321,13 @@ function MainApp() {
         extraParams: { prompt: 'select_account' }
       });
       if (!res || res.type !== 'success') {
-        await fetchUserVehiclesAndLogin(student);
+        if (res?.type === 'cancel' || res?.type === 'dismiss') {
+          showToast('ℹ️ Sign in cancelled');
+        }
       }
     } catch (err) {
-      console.warn('Microsoft Auth Prompt Error, falling back to student session:', err);
-      await fetchUserVehiclesAndLogin(student);
+      console.warn('Microsoft Auth Prompt Error:', err);
+      showToast('⚠️ Could not open Microsoft sign in web flow');
     }
   };
 

@@ -91,12 +91,6 @@ export default function CameraStream({
           </div>
         </div>
       </div>
-
-      <div className="camera-footer" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-secondary btn-sm" onClick={() => onTriggerScan && onTriggerScan(gateType)}>
-          <i className="ri-refresh-line"></i> Trigger {gateType} Scan
-        </button>
-      </div>
     </div>
   );
 }

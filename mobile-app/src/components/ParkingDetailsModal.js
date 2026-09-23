@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Modal, SafeAreaView, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { getNavMapImage } from '../data/mockData';
+
 export default function ParkingDetailsModal({
   visible,
   onClose,
@@ -11,6 +13,7 @@ export default function ParkingDetailsModal({
 }) {
   const hasSpot = !!parkedSpot;
   const [activeImageIndex, setActiveImageIndex] = React.useState(0);
+  const [isZoomModalOpen, setIsZoomModalOpen] = React.useState(false);
 
   // Extract list of images (only active when spot is saved)
   const imageList = React.useMemo(() => {
@@ -27,14 +30,40 @@ export default function ParkingDetailsModal({
     }
     const p = parkedSpot.pillar || '';
     const z = parkedSpot.zone || '';
+    const navImg = getNavMapImage(p);
+    if (p.includes('C-08') || p.includes('C-8')) {
+      return [
+        require('../../assets/zone_c_c08_building.jpg'),
+        require('../../assets/zone_c_c08_spot.jpg'),
+        navImg
+      ];
+    }
+    if (z === 'Zone C' || z.includes('Zone C') || p.includes('C-')) {
+      return [
+        require('../../assets/zone_c_building.jpg'),
+        require('../../assets/zone_c_spot.jpg'),
+        navImg
+      ];
+    }
+    if (z === 'Zone B' || z.includes('Zone B') || p.includes('B-')) {
+      return [
+        require('../../assets/zone_b_building.jpg'),
+        require('../../assets/zone_b_spot.jpg'),
+        navImg
+      ];
+    }
     if (z === 'Zone D' || p.includes('D-01')) {
       return [
         require('../../assets/zone_d_building.jpg'),
-        require('../../assets/zone_d_spot.jpg')
+        require('../../assets/zone_d_spot.jpg'),
+        navImg
       ];
-      return [];
     }
-    return [];
+    return [
+      require('../../assets/zone_a_building.jpg'),
+      require('../../assets/zone_a_spot.jpg'),
+      navImg
+    ];
   }, [parkedSpot]);
 
   React.useEffect(() => {
@@ -128,12 +157,16 @@ export default function ParkingDetailsModal({
 
           {/* Multi-Image Gallery Box (With Left/Right arrows & count badge) */}
           <View style={{ marginBottom: 20 }}>
-            {imageList.length > 0 ? (
-              <View style={{ height: 210, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#cbd5e1', position: 'relative' }}>
-                <Image
-                  source={typeof imageList[activeImageIndex] === 'number' ? imageList[activeImageIndex] : { uri: imageList[activeImageIndex] }}
-                  style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
-                />
+            {imageList.length > 0 ? (() => {
+              const isNavMap = activeImageIndex === 2 || (typeof imageList[activeImageIndex] === 'string' && imageList[activeImageIndex].includes('nav_maps'));
+              return (
+                <View style={{ height: isNavMap ? 260 : 210, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#cbd5e1', position: 'relative' }}>
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => setIsZoomModalOpen(true)} style={{ width: '100%', height: '100%' }}>
+                    <Image
+                      source={typeof imageList[activeImageIndex] === 'number' ? imageList[activeImageIndex] : { uri: imageList[activeImageIndex] }}
+                      style={{ width: '100%', height: '100%', resizeMode: isNavMap ? 'contain' : 'cover' }}
+                    />
+                  </TouchableOpacity>
 
                 {/* Left & Right Arrow Navigation Buttons */}
                 {imageList.length > 1 && (
@@ -222,7 +255,7 @@ export default function ParkingDetailsModal({
                   </>
                 )}
               </View>
-            ) : (
+            ); })() : (
               <View style={{ height: 160, borderRadius: 20, backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#cbd5e1', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
                 <Ionicons name="image-outline" size={36} color="#94a3b8" style={{ marginBottom: 6 }} />
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748b' }}>Parking Location Image</Text>
@@ -262,6 +295,43 @@ export default function ParkingDetailsModal({
             )}
           </View>
         </ScrollView>
+
+        {/* Full Screen Image Zoom Modal */}
+        <Modal
+          visible={isZoomModalOpen}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsZoomModalOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.96)' }}>
+            <SafeAreaView style={{ flex: 1 }}>
+              {/* Top Bar - Only X button on top right */}
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingVertical: 10, zIndex: 10 }}>
+                <TouchableOpacity onPress={() => setIsZoomModalOpen(false)} style={{ padding: 10, backgroundColor: 'rgba(255, 255, 255, 0.18)', borderRadius: 24 }}>
+                  <Ionicons name="close" size={24} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Pinch-to-Zoom ScrollView Container */}
+              <ScrollView
+                maximumZoomScale={4}
+                minimumZoomScale={1}
+                zoomScale={1}
+                showsHorizontalScrollIndicator={false}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 10 }}
+                centerContent={true}
+              >
+                {imageList.length > 0 && (
+                  <Image
+                    source={typeof imageList[activeImageIndex] === 'number' ? imageList[activeImageIndex] : { uri: imageList[activeImageIndex] }}
+                    style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
+                  />
+                )}
+              </ScrollView>
+            </SafeAreaView>
+          </View>
+        </Modal>
       </SafeAreaView>
     </Modal>
   );

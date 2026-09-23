@@ -318,6 +318,7 @@ function SearchableProvinceSelect({ value, onChange }) {
 
 export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
   const [search, setSearch] = useState('');
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all'); // 'all' | 'car' | 'motorcycle'
   const [showModal, setShowModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null); // null for new, object for edit
   const [revokeConfirmVehicle, setRevokeConfirmVehicle] = useState(null); // vehicle to revoke
@@ -334,13 +335,28 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
   const [submitting, setSubmitting] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
+  const filtered = vehicles.filter(v => {
+    const isCar = v.vehicle_type === 'car' || /car|mazda|toyota|camry|civic|altis|benz|bmw|accord|nissan/i.test((v.vehicle_type || '') + ' ' + (v.vehicle || '') + ' ' + (v.brand || '') + ' ' + (v.model || ''));
 
-  const filtered = vehicles.filter(v => 
-    (v.plate || '').toLowerCase().includes(search.toLowerCase()) ||
-    (v.owner || '').toLowerCase().includes(search.toLowerCase()) ||
-    (v.id || '').toLowerCase().includes(search.toLowerCase()) ||
-    (v.vehicle || '').toLowerCase().includes(search.toLowerCase())
-  );
+    let matchType = true;
+    if (vehicleTypeFilter === 'car') {
+      matchType = isCar;
+    } else if (vehicleTypeFilter === 'motorcycle') {
+      matchType = !isCar;
+    }
+
+    const q = search.toLowerCase().trim();
+    const matchSearch = !q || (
+      (v.plate || '').toLowerCase().includes(q) ||
+      (v.owner || '').toLowerCase().includes(q) ||
+      (v.id || '').toLowerCase().includes(q) ||
+      (v.vehicle || '').toLowerCase().includes(q) ||
+      (v.brand || '').toLowerCase().includes(q) ||
+      (v.model || '').toLowerCase().includes(q)
+    );
+
+    return matchType && matchSearch;
+  });
 
   const handleOpenRegister = () => {
     setEditingVehicle(null);
@@ -478,7 +494,28 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
           <i className="ri-car-line"></i>
           <span>Vehicle Directory</span>
         </div>
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Vehicle Type Dropdown Filter */}
+          <select
+            value={vehicleTypeFilter}
+            onChange={(e) => setVehicleTypeFilter(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              fontSize: 12,
+              fontWeight: 600,
+              color: '#0f172a',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: 10,
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="all">All Vehicles</option>
+            <option value="car">Cars Only</option>
+            <option value="motorcycle">Motorcycles Only</option>
+          </select>
+
           <div className="search-box">
             <i className="ri-search-line"></i>
             <input 
@@ -516,9 +553,10 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
       <div className="table-container">
         {(!filtered || filtered.length === 0) ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
-            <i className="ri-car-line" style={{ fontSize: 36, color: '#2563eb', display: 'block', marginBottom: 12 }}></i>
-            <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>No Registered Vehicles Found</div>
-            <div style={{ fontSize: 13, color: '#64748b' }}>There are no registered campus vehicles matching your filter in MongoDB.</div>
+            <i className="ri-car-line" style={{ fontSize: 36, color: '#94a3b8', display: 'block', marginBottom: 12 }}></i>
+            <div style={{ fontWeight: 600, color: '#0f172a' }}>
+              {vehicleTypeFilter === 'car' ? 'No Registered Cars Found' : vehicleTypeFilter === 'motorcycle' ? 'No Registered Motorcycles Found' : 'No Registered Vehicles Found'}
+            </div>
           </div>
         ) : (
           <table className="table">
@@ -531,6 +569,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                 <th>License Plate</th>
                 <th>Vehicle Details</th>
                 <th>Vehicle Photo</th>
+                <th>Student ID Card</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -552,14 +591,35 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                     <td style={{ color: '#0f172a', fontWeight: 700 }}>{item.plate} {item.province && !item.plate.includes(item.province) ? item.province : ''}</td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{detailsStr}</td>
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>
-                      {item.vehicle_photo_url ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPhotoVehicle(item)}
+                        style={{
+                          background: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          color: '#2563eb',
+                          borderRadius: 8,
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <i className="ri-image-line" style={{ fontSize: 13 }}></i> Vehicle
+                      </button>
+                    </td>
+                    <td style={{ color: '#0f172a', fontWeight: 600 }}>
+                      {(item.id_card_photo_url || item.student_id_photo_url) ? (
                         <button
                           type="button"
                           onClick={() => setSelectedPhotoVehicle(item)}
                           style={{
-                            background: '#eff6ff',
-                            border: '1px solid #bfdbfe',
-                            color: '#2563eb',
+                            background: '#f0fdf4',
+                            border: '1px solid #bbf7d0',
+                            color: '#166534',
                             borderRadius: 8,
                             padding: '4px 10px',
                             fontSize: 11,
@@ -570,10 +630,10 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                             cursor: 'pointer'
                           }}
                         >
-                          <i className="ri-image-line" style={{ fontSize: 13 }}></i> View Photo
+                          <i className="ri-id-card-line" style={{ fontSize: 13 }}></i> View ID Card
                         </button>
                       ) : (
-                        <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>No Photo</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>No ID Photo</span>
                       )}
                     </td>
                     <td>
@@ -594,18 +654,18 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
         )}
       </div>
 
-      {/* Vehicle Photo View Modal */}
+      {/* Vehicle & Student ID Card Photo View Modal */}
       {selectedPhotoVehicle && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
         }}>
-          <div className="card" style={{ width: selectedPhotoVehicle.side_photo_url ? 680 : 480, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+          <div className="card" style={{ width: 680, padding: 24, borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
-                  Registered Vehicle Photos
+                  Registered Vehicle & Student ID Documents
                 </h4>
               </div>
               <button
@@ -631,11 +691,18 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
               </div>
             </div>
 
-            {/* 2 Photos Frame Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: selectedPhotoVehicle.side_photo_url ? '1fr 1fr' : '1fr', gap: 14 }}>
+            {/* Vehicle Photos Frame Grid: 1. Front Photo & 2. Side Photo */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: 14, 
+              marginBottom: (selectedPhotoVehicle.id_card_photo_url || selectedPhotoVehicle.student_id_photo_url) ? 14 : 0 
+            }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>1. Front Photo (Front & License Plate)</div>
-                <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <i className="ri-car-line"></i> 1. Front Photo (Front & License Plate)
+                </div>
+                <div style={{ width: '100%', height: 210, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
                   <img
                     src={getImageUrl(selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url)}
                     alt="Front Photo"
@@ -645,35 +712,36 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                 </div>
               </div>
 
-              {selectedPhotoVehicle.side_photo_url && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>2. Side Photo (Side View)</div>
-                  <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
-                    <img
-                      src={getImageUrl(selectedPhotoVehicle.side_photo_url)}
-                      alt="Side Photo"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=80'; }}
-                    />
-                  </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#0284c7', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <i className="ri-car-line"></i> 2. Side Photo (Side View)
                 </div>
-              )}
-
-              {selectedPhotoVehicle.student_id_photo_url && (
-                <div style={{ gridColumn: selectedPhotoVehicle.side_photo_url ? '1 / span 2' : 'auto', marginTop: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: selectedPhotoVehicle.owner_role === 'staff' ? '#6b21a8' : '#166534', marginBottom: 6 }}>
-                    🪪 3. {selectedPhotoVehicle.owner_role === 'staff' ? 'Faculty / Staff ID' : 'Student ID'} Photo (Identity Verification)
-                  </div>
-                  <div style={{ width: '100%', height: 200, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: `1px solid ${selectedPhotoVehicle.owner_role === 'staff' ? '#e9d5ff' : '#bbf7d0'}` }}>
-                    <img
-                      src={getImageUrl(selectedPhotoVehicle.student_id_photo_url)}
-                      alt="ID Photo"
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    />
-                  </div>
+                <div style={{ width: '100%', height: 210, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
+                  <img
+                    src={getImageUrl(selectedPhotoVehicle.side_photo_url || selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url)}
+                    alt="Side Photo"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=600&auto=format&fit=crop&q=80'; }}
+                  />
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* Student ID Card Section */}
+            {(selectedPhotoVehicle.id_card_photo_url || selectedPhotoVehicle.student_id_photo_url) && (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <i className="ri-id-card-line"></i> 3. Student ID Card (Identity Verification)
+                </div>
+                <div style={{ width: '100%', height: 200, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img
+                    src={getImageUrl(selectedPhotoVehicle.id_card_photo_url || selectedPhotoVehicle.student_id_photo_url)}
+                    alt="Student ID Card"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </div>
+              </div>
+            )}
 
             <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
               <button

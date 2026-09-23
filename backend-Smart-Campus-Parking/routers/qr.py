@@ -8,7 +8,7 @@ from typing import Optional, List
 
 router = APIRouter(tags=["Fixed Parking Spot QR Codes"])
 
-# Permanent Fixed 22 Spots Registry (VMES Building, Floor G)
+# Permanent Fixed 19 Spots Registry (VMES Building, Floor G)
 PERMANENT_SPOTS = [
     # Zone A (10 Spots: Spot A-01 to Spot A-10)
     *[{
@@ -17,43 +17,46 @@ PERMANENT_SPOTS = [
         "floor": "Floor G",
         "zone": "Zone A",
         "pillar": f"Spot A-{i:02d}",
-        "description": f"VMES Floor G - Zone A Parking Spot A-{i:02d}"
+        "description": f"VMES Floor G - Zone A Parking Spot A-{i:02d}",
+        "imageUrl": f"/static/zone_a_building.jpg,/static/zone_a_spot.jpg,/static/nav_maps/nav_A-{i:02d}.png",
+        "imageUrls": [
+            "/static/zone_a_building.jpg",
+            "/static/zone_a_spot.jpg",
+            f"/static/nav_maps/nav_A-{i:02d}.png"
+        ]
     } for i in range(1, 11)],
     
-    # Zone B (2 Spots: Spot B-01 to Spot B-02)
+    # Zone B (1 Spot: Spot B-01)
     *[{
         "spot_id": f"VMES-G-ZONEB-B{i:02d}",
         "building": "VMES Building",
         "floor": "Floor G",
         "zone": "Zone B",
         "pillar": f"Spot B-{i:02d}",
-        "description": f"VMES Floor G - Zone B Parking Spot B-{i:02d}"
-    } for i in range(1, 3)],
+        "description": f"VMES Floor G - Zone B Parking Spot B-{i:02d}",
+        "imageUrl": f"/static/zone_b_building.jpg,/static/zone_b_spot.jpg,/static/nav_maps/nav_B-{i:02d}.png",
+        "imageUrls": [
+            "/static/zone_b_building.jpg",
+            "/static/zone_b_spot.jpg",
+            f"/static/nav_maps/nav_B-{i:02d}.png"
+        ]
+    } for i in range(1, 2)],
 
-    # Zone C (9 Spots: Spot C-01 to Spot C-09)
+    # Zone C (8 Spots: Spot C-01 to Spot C-08)
     *[{
         "spot_id": f"VMES-G-ZONEC-C{i:02d}",
         "building": "VMES Building",
         "floor": "Floor G",
         "zone": "Zone C",
         "pillar": f"Spot C-{i:02d}",
-        "description": f"VMES Floor G - Zone C Parking Spot C-{i:02d}"
-    } for i in range(1, 10)],
-
-    # Zone D (1 Spot: Spot D-01)
-    {
-        "spot_id": "VMES-G-ZONED-D01",
-        "building": "VMES Building",
-        "floor": "Floor G",
-        "zone": "Zone D",
-        "pillar": "Spot D-01",
-        "description": "VMES Floor G - Zone D Parking Spot D-01",
-        "imageUrl": "/static/zone_d_building.jpg,/static/zone_d_spot.jpg",
+        "description": f"VMES Floor G - Zone C Parking Spot C-{i:02d}",
+        "imageUrl": f"/static/zone_c_c08_building.jpg,/static/zone_c_c08_spot.jpg,/static/nav_maps/nav_C-{i:02d}.png" if i == 8 else f"/static/zone_c_building.jpg,/static/zone_c_spot.jpg,/static/nav_maps/nav_C-{i:02d}.png",
         "imageUrls": [
-            "/static/zone_d_building.jpg",
-            "/static/zone_d_spot.jpg"
+            "/static/zone_c_c08_building.jpg" if i == 8 else "/static/zone_c_building.jpg",
+            "/static/zone_c_c08_spot.jpg" if i == 8 else "/static/zone_c_spot.jpg",
+            f"/static/nav_maps/nav_C-{i:02d}.png"
         ]
-    }
+    } for i in range(1, 9)]
 ]
 
 def generate_qr_data_uri(payload_dict: dict) -> str:
@@ -77,7 +80,7 @@ class QRCodeVerifyPayload(BaseModel):
     qr_code_data: str
 
 def sync_parking_spots_to_mongodb():
-    """Ensure all 22 parking spots and their specific image URLs are persisted in MongoDB Atlas."""
+    """Ensure all 21 parking spots and their specific image URLs are persisted in MongoDB Atlas."""
     from database import parking_spots_collection
     if parking_spots_collection is None:
         return
@@ -115,7 +118,7 @@ def sync_parking_spots_to_mongodb():
 @router.get("/api/qr/spots")
 async def get_all_fixed_qr_spots():
     """
-    Returns the permanent fixed registry of all 22 parking spot QR codes (VMES Building, Floor G).
+    Returns the permanent fixed registry of all 21 parking spot QR codes (VMES Building, Floor G).
     Includes QR JSON payload strings, Base64 Data URI images, and MongoDB Atlas stored spot images.
     """
     from database import parking_spots_collection
@@ -153,7 +156,7 @@ async def get_all_fixed_qr_spots():
         "zones": {
             "Zone A": 10,
             "Zone B": 2,
-            "Zone C": 9,
+            "Zone C": 8,
             "Zone D": 1
         },
         "spots": spots_list
@@ -163,7 +166,7 @@ async def get_all_fixed_qr_spots():
 @router.post("/api/verify-qr")
 async def verify_qr_code(payload: QRCodeVerifyPayload):
     """
-    Verifies scanned QR code payload string or spot ID against the 22 fixed spots.
+    Verifies scanned QR code payload string or spot ID against the 21 fixed spots.
     """
     raw_data = payload.qr_code_data.strip()
     

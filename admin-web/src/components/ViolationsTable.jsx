@@ -163,10 +163,20 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
             </thead>
             <tbody>
               {filteredLogs.map((item, i) => {
-                const rawUrl = item.imageUrl || item.image_url || item.snapshot_base64 || item.snapshotUrl || item.image;
-                const snapshotUrl = rawUrl
-                  ? ((rawUrl.startsWith('http') || rawUrl.startsWith('data:')) ? rawUrl : `http://${window.location.hostname}:8000${rawUrl}`)
-                  : 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80';
+                const rawUrl = item.imageUrl || item.image_url || item.snapshot_base64 || item.snapshotUrl || item.image || item.photo || item.cctv_image_url || item.snapshot_url;
+                const cleanUrl = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+                const hasPhoto = Boolean(
+                  cleanUrl &&
+                  cleanUrl.length > 15 &&
+                  cleanUrl !== '-' &&
+                  cleanUrl !== 'null' &&
+                  cleanUrl !== 'undefined' &&
+                  !cleanUrl.endsWith('base64,') &&
+                  !cleanUrl.endsWith('base64')
+                );
+                const snapshotUrl = hasPhoto
+                  ? ((cleanUrl.startsWith('http') || cleanUrl.startsWith('data:')) ? cleanUrl : `http://${window.location.hostname}:8000${cleanUrl.startsWith('/') ? '' : '/'}${cleanUrl}`)
+                  : null;
                 return (
                   <tr key={i}>
                     <td style={{ fontWeight: 700, color: '#0f172a' }}>LOG-V{String(i + 1).padStart(3, '0')}</td>
@@ -180,16 +190,23 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
                     </td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{item.gate}</td>
                     <td style={{ fontWeight: 600, color: '#0f172a' }}>
-                      {item.violationType?.replace(' (-10 pts)', '') || (item.vehicle?.toLowerCase().includes('car') ? 'Parked >30 Mins' : 'No Helmet')}
+                      {item.violationType?.replace(' (-10 pts)', '') || 'No Helmet'}
                     </td>
                     <td>
-                      <button 
-                        className="btn btn-secondary btn-sm" 
-                        style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                        onClick={() => setSelectedSnapshot({ ...item, snapshotUrl })}
-                      >
-                        <i className="ri-image-line" style={{ color: '#0f172a' }}></i> View Photo
-                      </button>
+                      {hasPhoto ? (
+                        <button 
+                          className="btn btn-secondary btn-sm" 
+                          style={{ color: '#0f172a', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          onClick={() => {
+                            setModalImageError(false);
+                            setSelectedSnapshot({ ...item, snapshotUrl });
+                          }}
+                        >
+                          <i className="ri-image-line" style={{ color: '#0f172a' }}></i> View Photo
+                        </button>
+                      ) : (
+                        <span style={{ color: '#0f172a', fontWeight: 600 }}>-</span>
+                      )}
                     </td>
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>
                       -10 Safety Points
@@ -240,13 +257,21 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
             </div>
 
             {/* Image Frame */}
-            <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#000000', marginBottom: 16 }}>
-              <img 
-                src={selectedSnapshot.snapshotUrl} 
-                alt="CCTV Helmet Violation" 
-                style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }}
-              />
-            </div>
+            {selectedSnapshot.snapshotUrl && !modalImageError ? (
+              <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#f8fafc', marginBottom: 16 }}>
+                <img 
+                  src={selectedSnapshot.snapshotUrl} 
+                  alt="CCTV Helmet Violation" 
+                  onError={() => setModalImageError(true)}
+                  style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }}
+                />
+              </div>
+            ) : (
+              <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #e2e8f0', background: '#f8fafc', height: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', gap: 8, marginBottom: 16 }}>
+                <i className="ri-image-off-line" style={{ fontSize: 36 }}></i>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>No CCTV Snapshot Available</span>
+              </div>
+            )}
 
             <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>

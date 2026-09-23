@@ -458,9 +458,10 @@ async def get_all_registered_vehicles():
                 "id": s_id,
                 "role": d.get("role", "Student").capitalize(),
                 "score": user_score,
-                "vehicle_photo_url": d.get("vehicle_photo_url") or d.get("front_photo_url") or (user_doc.get("vehicle_photo_url") if user_doc else None),
-                "front_photo_url": d.get("front_photo_url") or d.get("vehicle_photo_url"),
-                "side_photo_url": d.get("side_photo_url")
+                "vehicle_photo_url": d.get("vehicle_photo_url") or d.get("front_photo_url") or d.get("vehicle_front_photo") or d.get("vehicle_photo") or (user_doc.get("vehicle_photo_url") if user_doc else None) or (user_doc.get("vehicle_photo") if user_doc else None),
+                "front_photo_url": d.get("front_photo_url") or d.get("vehicle_front_photo") or d.get("vehicle_photo_url") or d.get("vehicle_photo"),
+                "side_photo_url": d.get("side_photo_url") or d.get("vehicle_side_photo"),
+                "id_card_photo_url": d.get("id_card_photo_url") or d.get("student_id_photo_url") or d.get("student_id_photo") or d.get("id_card_photo") or (user_doc.get("id_card_photo_url") if user_doc else None) or (user_doc.get("student_id_photo_url") if user_doc else None) or (user_doc.get("student_id_photo") if user_doc else None)
             })
             
     if users_collection is not None:
@@ -494,9 +495,10 @@ async def get_all_registered_vehicles():
                         "id": u.get("student_id", f"6507{len(vehicles)+1:04d}"),
                         "role": u.get("role", "Student").capitalize(),
                         "score": u_score,
-                        "vehicle_photo_url": v.get("vehicle_photo_url") or v.get("front_photo_url") or u.get("vehicle_photo_url"),
-                        "front_photo_url": v.get("front_photo_url") or v.get("vehicle_photo_url"),
-                        "side_photo_url": v.get("side_photo_url")
+                        "vehicle_photo_url": v.get("vehicle_photo_url") or v.get("front_photo_url") or v.get("vehicle_front_photo") or v.get("vehicle_photo") or u.get("vehicle_photo_url") or u.get("vehicle_photo"),
+                        "front_photo_url": v.get("front_photo_url") or v.get("vehicle_front_photo") or v.get("vehicle_photo_url") or v.get("vehicle_photo"),
+                        "side_photo_url": v.get("side_photo_url") or v.get("vehicle_side_photo"),
+                        "id_card_photo_url": v.get("id_card_photo_url") or v.get("student_id_photo_url") or v.get("student_id_photo") or v.get("id_card_photo") or u.get("id_card_photo_url") or u.get("student_id_photo_url") or u.get("student_id_photo")
                     })
 
                     
@@ -780,10 +782,10 @@ async def get_term_summary(term: str = "2026-1"):
     """
     from database import detection_logs_collection, users_collection, registered_vehicles_collection
     
-    # 1. Fetch all detections from MongoDB Atlas
+    # 1. Fetch all detections from MongoDB Atlas (excluding heavy base64 strings)
     all_detections = []
     if detection_logs_collection is not None:
-        all_detections = list(detection_logs_collection.find({}, {"_id": 0, "image_url": 0, "snapshot_base64": 0}))
+        all_detections = list(detection_logs_collection.find({}, {"_id": 0, "snapshot_base64": 0}))
 
     # 2. Fetch registered plates from MongoDB Atlas
     reg_plates = set()
@@ -823,7 +825,7 @@ async def get_term_summary(term: str = "2026-1"):
     from datetime import datetime
     from database import parking_status_collection
     
-    capacity = 19
+    capacity = 18
     if parking_status_collection is not None:
         pz_docs = list(parking_status_collection.find({}, {"total_slots": 1}))
         if pz_docs:
@@ -867,16 +869,15 @@ async def get_term_summary(term: str = "2026-1"):
     last_slots = 0
 
     for t in target_times:
-        raw_val = slot_running_map.get(t, 0)
-        if raw_val == 0 and last_slots > 0 and t in ['15:00', '16:00', '16:30']:
-            decay = {'15:00': 0.65, '16:00': 0.40, '16:30': 0.20}[t]
-            raw_val = round(last_slots * decay)
-        elif raw_val > 0:
+        raw_val = slot_running_map.get(t)
+        if raw_val is None:
+            raw_val = last_slots
+        else:
             last_slots = raw_val
-            
-        avg_slots = min(capacity, raw_val)
-        rate_pct = round((avg_slots / capacity) * 100, 1)
-        
+
+        avg_slots = min(capacity, max(0, raw_val))
+        rate_pct = round((avg_slots / capacity) * 100, 1) if capacity > 0 else 0.0
+
         hourly_occupancy_list.append({
             "time": t,
             "avgSlots": avg_slots,

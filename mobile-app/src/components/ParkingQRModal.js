@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getEnglishFormattedDate, getEnglishFormattedTime, PRESET_ZONES } from '../data/mockData';
+import { getEnglishFormattedDate, getEnglishFormattedTime, PRESET_ZONES, getNavMapImage, getThaiFormattedDate, getThaiFormattedTime } from '../data/mockData';
 
 // Predefined Zone QR presets (VMES Building, Floor G)
 const PRESET_PILLARS = PRESET_ZONES;
@@ -27,6 +27,7 @@ export default function ParkingQRModal({
   const [flashOn, setFlashOn] = useState(false);
   const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
   const [activeQRImageIndex, setActiveQRImageIndex] = useState(0);
+  const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
 
   const qrImageList = React.useMemo(() => {
     if (scannedSpot) {
@@ -42,12 +43,40 @@ export default function ParkingQRModal({
       }
       const p = scannedSpot.pillar || '';
       const z = scannedSpot.zone || '';
+      const navImg = getNavMapImage(p);
+      if (p.includes('C-08') || p.includes('C-8')) {
+        return [
+          require('../../assets/zone_c_c08_building.jpg'),
+          require('../../assets/zone_c_c08_spot.jpg'),
+          navImg
+        ];
+      }
+      if (z === 'Zone C' || z.includes('Zone C') || p.includes('C-')) {
+        return [
+          require('../../assets/zone_c_building.jpg'),
+          require('../../assets/zone_c_spot.jpg'),
+          navImg
+        ];
+      }
+      if (z === 'Zone B' || z.includes('Zone B') || p.includes('B-')) {
+        return [
+          require('../../assets/zone_b_building.jpg'),
+          require('../../assets/zone_b_spot.jpg'),
+          navImg
+        ];
+      }
       if (z === 'Zone D' || p.includes('D-01')) {
         return [
           require('../../assets/zone_d_building.jpg'),
-          require('../../assets/zone_d_spot.jpg')
+          require('../../assets/zone_d_spot.jpg'),
+          navImg
         ];
-      return [];
+      }
+      return [
+        require('../../assets/zone_a_building.jpg'),
+        require('../../assets/zone_a_spot.jpg'),
+        navImg
+      ];
     }
     return [];
   }, [scannedSpot]);
@@ -233,12 +262,16 @@ export default function ParkingQRModal({
 
             {/* Parking Location Image Box (Only Image or Placeholder "Parking Location Image") */}
             <View style={{ marginBottom: 16 }}>
-              {qrImageList.length > 0 ? (
-                <View style={{ height: 180, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', position: 'relative' }}>
-                  <Image
-                    source={typeof qrImageList[activeQRImageIndex] === 'number' ? qrImageList[activeQRImageIndex] : { uri: qrImageList[activeQRImageIndex] }}
-                    style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
-                  />
+              {qrImageList.length > 0 ? (() => {
+                const isNavMap = activeQRImageIndex === 2 || (typeof qrImageList[activeQRImageIndex] === 'string' && qrImageList[activeQRImageIndex].includes('nav_maps'));
+                return (
+                  <View style={{ height: isNavMap ? 245 : 180, borderRadius: 20, overflow: 'hidden', backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', position: 'relative' }}>
+                    <TouchableOpacity activeOpacity={0.9} onPress={() => setIsZoomModalOpen(true)} style={{ width: '100%', height: '100%' }}>
+                      <Image
+                        source={typeof qrImageList[activeQRImageIndex] === 'number' ? qrImageList[activeQRImageIndex] : { uri: qrImageList[activeQRImageIndex] }}
+                        style={{ width: '100%', height: '100%', resizeMode: isNavMap ? 'contain' : 'cover' }}
+                      />
+                    </TouchableOpacity>
 
                   {/* Left & Right Arrow Navigation Buttons (When multiple images exist) */}
                   {qrImageList.length > 1 && (
@@ -327,7 +360,7 @@ export default function ParkingQRModal({
                     </>
                   )}
                 </View>
-              ) : (
+              ); })() : (
                 <View style={{ height: 140, borderRadius: 20, backgroundColor: '#0f172a', borderWidth: 1.5, borderColor: '#334155', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
                   <Ionicons name="image-outline" size={32} color="#64748b" style={{ marginBottom: 6 }} />
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#94a3b8' }}>Parking Location Image</Text>
@@ -481,6 +514,43 @@ export default function ParkingQRModal({
             </View>
           </View>
         )}
+
+        {/* Full Screen Image Zoom Modal */}
+        <Modal
+          visible={isZoomModalOpen}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsZoomModalOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.96)' }}>
+            <SafeAreaView style={{ flex: 1 }}>
+              {/* Top Bar - Only X button on top right */}
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingVertical: 10, zIndex: 10 }}>
+                <TouchableOpacity onPress={() => setIsZoomModalOpen(false)} style={{ padding: 10, backgroundColor: 'rgba(255, 255, 255, 0.18)', borderRadius: 24 }}>
+                  <Ionicons name="close" size={24} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Pinch-to-Zoom ScrollView Container */}
+              <ScrollView
+                maximumZoomScale={4}
+                minimumZoomScale={1}
+                zoomScale={1}
+                showsHorizontalScrollIndicator={false}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 10 }}
+                centerContent={true}
+              >
+                {qrImageList.length > 0 && (
+                  <Image
+                    source={typeof qrImageList[activeQRImageIndex] === 'number' ? qrImageList[activeQRImageIndex] : { uri: qrImageList[activeQRImageIndex] }}
+                    style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
+                  />
+                )}
+              </ScrollView>
+            </SafeAreaView>
+          </View>
+        </Modal>
       </View>
     </Modal>
   );

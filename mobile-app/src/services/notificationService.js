@@ -4,9 +4,9 @@ import { Platform } from 'react-native';
 // Configure Expo Notifications presentation handler so push banners show up on device
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldShowAlert: false,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
   }),
 });
 
@@ -48,19 +48,6 @@ export async function registerForPushNotificationsAsync() {
  * Trigger a real local Push Notification alert on the user's phone
  */
 export async function sendLocalPhonePushNotification({ title, body, data = {} }) {
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: title || 'Campus Parking Alert',
-        body: body || 'You have a new parking notification.',
-        data: data,
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger: null, // trigger immediately on phone
-    });
-    console.log('[REAL PHONE PUSH SENT]', title, body);
-  } catch (err) {
-    console.warn('[PUSH NOTIFICATION ERROR]', err);
-  }
+  // Local push popup banners disabled by user request
+  return;
 }

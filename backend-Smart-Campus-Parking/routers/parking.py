@@ -24,9 +24,8 @@ async def get_parking_status():
             if bz_id and "numericCapacity" in bz:
                 zone_capacities[bz_id] = bz["numericCapacity"]
 
-    # 2. Count active saved spots per zone from MongoDB Atlas (QR scans + CCTV Gate entries)
+    # 2. Count active saved spots per zone from MongoDB Atlas (status == "Active Parked")
     active_saved_counts = {}
-    seen_plates = set()
 
     def normalize_zone_key(z_str: str) -> str:
         if not z_str:
@@ -43,7 +42,7 @@ async def get_parking_status():
         return z_str.split(" • ")[0].split(" (")[0].strip()
 
     if saved_spots_collection is not None:
-        active_spots = list(saved_spots_collection.find({"status": "Active Parked"}, {"_id": 0, "zone": 1, "plate": 1}))
+        active_spots = list(saved_spots_collection.find({"status": "Active Parked"}, {"_id": 0, "zone": 1}))
         for sp in active_spots:
             z_val = (sp.get("zone") or "").strip()
             z_key = normalize_zone_key(z_val)
@@ -71,12 +70,11 @@ async def get_parking_status():
 
     DEFAULT_BUILDING_ZONES = [
         {"zone": "Zone A • Floor G (VMES Building)", "total_slots": 10},
-        {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 0},
-        {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 9},
-        {"zone": "Zone D • Floor G (VMES Building)", "total_slots": 0},
+        {"zone": "Zone B • Floor G (VMES Building)", "total_slots": 1},
+        {"zone": "Zone C • Floor G (VMES Building)", "total_slots": 8},
     ]
 
-    docs = list(parking_status_collection.find({}, {"_id": 0}))
+    docs = list(parking_status_collection.find({}, {"_id": 0})) if parking_status_collection is not None else []
     if not docs:
         docs = DEFAULT_BUILDING_ZONES
 
@@ -84,6 +82,13 @@ async def get_parking_status():
     for doc in docs:
         z_key = normalize_zone_key(doc.get("zone", ""))
         new_total = zone_capacities.get(z_key, doc.get("total_slots", 0))
+        # Ensure default capacity fallback if 0
+        if new_total == 0:
+            if z_key == "Zone A": new_total = 10
+            elif z_key == "Zone B": new_total = 1
+            elif z_key == "Zone C": new_total = 8
+            else: new_total = 10
+
         new_occupied = active_saved_counts.get(z_key, 0)
         new_available = max(0, new_total - new_occupied)
 
@@ -105,7 +110,8 @@ async def get_parking_status():
                     "occupied_slots": new_occupied,
                     "available_slots": new_available,
                     "last_updated": now
-                }}
+                }},
+                upsert=True
             )
     return res
 
@@ -151,7 +157,7 @@ async def save_user_parking_spot(data: SavedSpotCreate, user_email: str = "demo@
     owner_name = "Registered Driver"
     plate_num = "-"
     role_str = "Student"
-    province_str = "กรุงเทพมหานคร"
+    province_str = "-"
     v_type = "car"
 
     if users_collection is not None:
@@ -373,7 +379,7 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                     "ownerEmail": email_str or "guest@visitor.ac.th",
                     "role": role_str,
                     "plate": plate_str,
-                    "province": item.get("province", "กรุงเทพมหานคร"),
+                    "province": item.get("province", "-") if plate_str != "-" else "-",
                     "vehicleType": item.get("vehicleType", item.get("vehicle_type", "car")),
                     "vehicleName": item.get("vehicleName", item.get("model", "Vehicle")),
                     "building": item.get("building", "VMES Building"),
@@ -486,7 +492,7 @@ async def get_occupied_parking_spots(term: str = "2026-1"):
                     "ownerEmail": owner_email,
                     "role": role_str,
                     "plate": l_plate,
-                    "province": l.get("province", "กรุงเทพมหานคร"),
+                    "province": l.get("province", "-") if l_plate != "-" else "-",
                     "vehicleType": l.get("vehicle_type") or l.get("vehicleType", "car"),
                     "vehicleName": l.get("vehicle") or l.get("vehicleName", "Scanned Vehicle"),
                     "building": "VMES Building",
@@ -580,10 +586,12 @@ async def register_vehicle_in_mongodb(data: VehicleRegisterCreate):
         "vehicle_front_photo": front_photo_data,
         "vehicle_side_photo": side_photo_data,
         "student_id_photo": student_id_photo_data,
+        "id_card_photo": student_id_photo_data,
         "vehicle_photo_url": main_photo_url,
         "front_photo_url": front_photo_data,
         "side_photo_url": side_photo_data,
         "student_id_photo_url": student_id_photo_data,
+        "id_card_photo_url": student_id_photo_data,
         "vehicle_front_photo_base64": data.vehicle_front_photo if (data.vehicle_front_photo and data.vehicle_front_photo.startswith("data:")) else None,
         "vehicle_side_photo_base64": data.vehicle_side_photo if (data.vehicle_side_photo and data.vehicle_side_photo.startswith("data:")) else None,
         "student_id_photo_base64": data.student_id_photo if (data.student_id_photo and data.student_id_photo.startswith("data:")) else None,
@@ -670,43 +678,55 @@ async def delete_vehicle_from_mongodb(user_email: str = "", plate: str = ""):
         return {"status": "success", "message": f"Vehicle {plate} deleted from MongoDB"}
     return {"status": "error", "message": "Vehicle plate or user_email missing or DB unavailable"}
 
-DEFAULT_4ZONES = [
+DEFAULT_ZONES = [
     {
-        "id": "ZONE-A",
+        "id": "Zone A",
         "name": "Zone A",
-        "tag": "VMES Building - Floor G",
+        "tag": "Cars Only",
         "type": "Car Only",
+        "numericCapacity": 10,
+        "total_slots": 10,
         "total": 10,
+        "capacity": "10 Spots",
         "location": "VMES Building Floor G (Spot A-01 to A-10)",
         "rate": "100%",
         "slots": [f"Spot A-{i:02d}" for i in range(1, 11)]
     },
     {
-        "id": "ZONE-B",
+        "id": "Zone B",
         "name": "Zone B",
-        "tag": "VMES Building - Floor G",
-        "type": "Car Only",
-        "total": 2,
-        "location": "VMES Building Floor G (Spot B-01 to B-02)",
-        "rate": "100%",
-        "slots": [f"Spot B-{i:02d}" for i in range(1, 3)]
-    },
-    {
-        "id": "ZONE-C",
-        "name": "Zone C",
-        "tag": "VMES Building - Floor G",
+        "tag": "Motorcycle Only",
         "type": "Motorcycle Only",
-        "total": 9,
-        "location": "VMES Building Floor G (Spot C-01 to C-09)",
+        "numericCapacity": 0,
+        "total_slots": 0,
+        "total": 0,
+        "capacity": "1 Spot",
+        "location": "VMES Building Floor G (Spot B-01)",
         "rate": "100%",
-        "slots": [f"Spot C-{i:02d}" for i in range(1, 10)]
+        "slots": ["Spot B-01"]
     },
     {
-        "id": "ZONE-D",
+        "id": "Zone C",
+        "name": "Zone C",
+        "tag": "Cars Only",
+        "type": "Car Only",
+        "numericCapacity": 8,
+        "total_slots": 8,
+        "total": 8,
+        "capacity": "8 Spots",
+        "location": "VMES Building Floor G (Spot C-01 to C-08)",
+        "rate": "100%",
+        "slots": [f"Spot C-{i:02d}" for i in range(1, 9)]
+    },
+    {
+        "id": "Zone D",
         "name": "Zone D",
-        "tag": "VMES Building - Floor G",
-        "type": "Reserved / Special",
-        "total": 1,
+        "tag": "Motorcycle Only",
+        "type": "Motorcycle Only",
+        "numericCapacity": 0,
+        "total_slots": 0,
+        "total": 0,
+        "capacity": "1 Spot",
         "location": "VMES Building Floor G (Spot D-01)",
         "rate": "100%",
         "slots": ["Spot D-01"]
@@ -720,9 +740,9 @@ async def get_building_zones_from_mongodb():
     """
     if building_zones_collection is not None:
         zones = list(building_zones_collection.find({}, {"_id": 0}))
-        if zones and len(zones) >= 4:
+        if zones and len(zones) > 0:
             return zones
-    return DEFAULT_4ZONES
+    return DEFAULT_ZONES
 
 @router.post("/building-zones")
 async def save_building_zones_to_mongodb(zones: list):
