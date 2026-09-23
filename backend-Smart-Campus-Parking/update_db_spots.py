@@ -8,7 +8,7 @@ from database import parking_spots_collection, saved_spots_collection, building_
 from routers.qr import PERMANENT_SPOTS
 
 def update_all_spots():
-    print("Updating MongoDB collections with 18 car spots (Zone A: 10, Zone B: 0, Zone C: 8)...")
+    print("Updating MongoDB collections with 18 car spots (Zone A: 10, Zone B: 0, Zone C: 8, Zone D: 0)...")
     
     if parking_spots_collection is None:
         print("Warning: parking_spots_collection is None. Skipping DB update.")
