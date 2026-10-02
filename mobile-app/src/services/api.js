@@ -1,8 +1,8 @@
 export const API_BASE_URL =
-  'https://smart-campus-parking-deploy.onrender.com';
+  'http://127.0.0.1:8000';
 
 export const WS_BASE_URL =
-  'wss://smart-campus-parking-deploy.onrender.com/ws/detections';
+  'ws://127.0.0.1:8000/ws/detections';
 
 let storedToken = null;
 

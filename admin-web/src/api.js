@@ -1,5 +1,5 @@
 // Central API Helper for Admin Web
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://smart-campus-parking-deploy.onrender.com';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export const getApiHost = () => {
   if (typeof window !== 'undefined') {
@@ -18,14 +18,6 @@ export const fetchAPI = async (endpoint, options = {}) => {
     return res;
   } catch (e) {
     console.warn(`[API] Network error fetching from ${host}${endpoint}:`, e);
-  }
-  // Fallback to production URL if local host failed
-  if (host !== API_BASE_URL) {
-    try {
-      return await fetch(`${API_BASE_URL}${endpoint}`, options);
-    } catch (e) {
-      console.error(`[API] Fallback fetch failed for ${API_BASE_URL}${endpoint}:`, e);
-    }
   }
   return null;
 };
