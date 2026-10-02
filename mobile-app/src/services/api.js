@@ -39,7 +39,7 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = 1500) => {
 const fetchAPI = async (endpoint, options = {}) => {
   if (cachedWorkingHost) {
     try {
-      const res = await fetchWithTimeout(`${cachedWorkingHost}${endpoint}`, options, 2000);
+      const res = await fetchWithTimeout(`${cachedWorkingHost}${endpoint}`, options, 2500);
       if (res.ok) return res;
     } catch (e) {
       cachedWorkingHost = null;
@@ -47,17 +47,18 @@ const fetchAPI = async (endpoint, options = {}) => {
   }
 
   const candidateHosts = [
+    'http://192.168.1.42:8000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://10.0.2.2:8000',
     API_BASE_URL,
   ];
 
-  // Try fast parallel connection to find the fastest active host immediately
+  // Try fast parallel connection to find the active host
   try {
     const fastHost = await Promise.any(
       candidateHosts.map(async (host) => {
-        const res = await fetchWithTimeout(`${host}${endpoint}`, options, 500);
+        const res = await fetchWithTimeout(`${host}${endpoint}`, options, 1500);
         if (res.ok) {
           cachedWorkingHost = host;
           return res;

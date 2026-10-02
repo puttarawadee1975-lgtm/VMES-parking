@@ -127,8 +127,8 @@ export default function StudentHomeScreen({
             const activeZones = (parkingZones && parkingZones.length > 0)
               ? parkingZones
               : [
-                  { zone: 'Zone A', total_slots: 10, available_slots: 10 },
-                  { zone: 'Zone C', total_slots: 8, available_slots: 8 }
+                  { zone: 'Zone A', total_slots: 10, available_slots: 8 },
+                  { zone: 'Zone C', total_slots: 8, available_slots: 7 }
                 ];
 
             const getAvail = (z) => (z.available_slots !== undefined ? z.available_slots : (z.availableSlots !== undefined ? z.availableSlots : 0));
