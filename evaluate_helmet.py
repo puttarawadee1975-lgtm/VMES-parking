@@ -39,6 +39,9 @@ def evaluate_on_dataset(data_yaml_path: str = None, roboflow_api_key: str = None
 
     model_path = os.path.join(os.path.dirname(__file__), "helmet_model.pt")
     if not os.path.exists(model_path):
+        model_path = os.path.join(os.path.dirname(__file__), "Backend", "helmet_model.pt")
+    
+    if not os.path.exists(model_path):
         print(f"[ERROR] Model file not found: {model_path}")
         return
 
@@ -162,11 +165,12 @@ def test_on_image(image_path: str, conf_threshold: float = 0.35):
         out_path = os.path.join(output_dir, f"result_{save_filename}")
         cv2.imwrite(out_path, img)
 
-        # Ground Truth check based on Thai filename keywords
+        # Ground Truth check based on Thai & English filename keywords
         gt_expected = []
-        if "ไม่ใส่" in filename:
+        fn_lower = filename.lower()
+        if "ไม่ใส่" in filename or "without" in fn_lower or "no_helmet" in fn_lower:
             gt_expected = ["no_helmet"]
-        elif "ใส่" in filename:
+        elif "ใส่" in filename or "with" in fn_lower or "helmet" in fn_lower:
             gt_expected = ["with_helmet"]
 
         match_badge = ""
