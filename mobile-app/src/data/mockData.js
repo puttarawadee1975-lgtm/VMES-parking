@@ -15,7 +15,9 @@ export const DEMO_ACCOUNTS = {
     name: 'Cherie A.',
     studentId: '65070042',
     email: '65070042@student.university.ac.th',
-    vehicles: [],
+    vehicles: [
+      { plate: '1AB 8924 Bangkok', model: '🛵 Honda PCX 160 (White)' }
+    ],
     safetyScore: 100
   },
   'thanawat.p@student.university.ac.th': {
@@ -23,9 +25,12 @@ export const DEMO_ACCOUNTS = {
     name: 'Thanawat Pongpanich',
     studentId: '64010589',
     email: 'thanawat.p@student.university.ac.th',
-    vehicles: [],
+    vehicles: [
+      { plate: '2EF 5519 Chiang Mai', model: '🛵 Yamaha NMAX (Gray)' }
+    ],
     safetyScore: 100
   },
+
 
   'faculty.staff@au.edu': {
     role: 'staff',

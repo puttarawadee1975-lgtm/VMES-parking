@@ -176,9 +176,9 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
                   <td style={{ 
                     fontWeight: 900, 
                     fontSize: '15px', 
-                    color: item.score >= 80 ? '#059669' : (item.score >= 60 ? '#d97706' : '#dc2626') 
+                    color: (item.score ?? 100) >= 51 ? '#059669' : '#dc2626' 
                   }}>
-                    {item.score} / 100
+                    {item.score ?? 100} / 100
                   </td>
                   <td>
                     {item.isViolation ? (
@@ -247,7 +247,7 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Current Score</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: adjustTarget.score >= 80 ? '#059669' : (adjustTarget.score >= 60 ? '#d97706' : '#dc2626') }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: (adjustTarget.score ?? 100) >= 51 ? '#059669' : '#dc2626' }}>
                   {adjustTarget.score} / 100
                 </div>
               </div>
@@ -303,7 +303,7 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
                   {adjustType === 'add' ? 'Points to Add:' : (adjustType === 'deduct' ? 'Points to Deduct:' : 'Target Score Value (0 - 100):')}
                 </label>
                 <div style={{ fontSize: 12, fontWeight: 800, color: '#2563eb' }}>
-                  Preview: {adjustTarget.score} → <span style={{ color: getPreviewScore() >= 80 ? '#059669' : (getPreviewScore() >= 60 ? '#d97706' : '#dc2626'), fontSize: 14 }}>{getPreviewScore()} / 100</span>
+                  Preview: {adjustTarget.score} → <span style={{ color: getPreviewScore() >= 51 ? '#059669' : '#dc2626', fontSize: 14 }}>{getPreviewScore()} / 100</span>
                 </div>
               </div>
               <input

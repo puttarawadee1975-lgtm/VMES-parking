@@ -11,11 +11,22 @@ export default function AdminLoginScreen({ onLoginSuccess }) {
     const envAdmins = (import.meta.env.VITE_ALLOWED_ADMIN_EMAILS || '')
       .split(',')
       .map(e => e.trim().toLowerCase());
-    
+
     return ALLOWED_ADMIN_EMAILS.some(a => a.toLowerCase() === lower)
       || envAdmins.includes(lower)
       || lower.includes('u6814509')
       || lower.endsWith('@au.edu');
+  };
+
+  const resolveUserName = (acc) => {
+    if (!acc) return 'AU Admin User';
+    if (acc.name && acc.name.trim() !== '') return acc.name.trim();
+    if (acc.idTokenClaims?.name && acc.idTokenClaims.name.trim() !== '') return acc.idTokenClaims.name.trim();
+    if (acc.username) {
+      const prefix = acc.username.split('@')[0];
+      return prefix ? prefix.toUpperCase() : acc.username;
+    }
+    return 'AU Admin User';
   };
 
   useEffect(() => {
@@ -24,17 +35,15 @@ export default function AdminLoginScreen({ onLoginSuccess }) {
       getMsalInstance().then(async (msalInstance) => {
         try {
           const redirectRes = await msalInstance.handleRedirectPromise();
-          const accounts = msalInstance.getAllAccounts();
-          const activeAccount = redirectRes?.account || msalInstance.getActiveAccount() || accounts[0];
-
-          if (activeAccount && mounted) {
+          if (redirectRes && redirectRes.account && mounted) {
+            const activeAccount = redirectRes.account;
             msalInstance.setActiveAccount(activeAccount);
             if (window.location.hash.includes('code=')) {
               window.history.replaceState(null, '', window.location.pathname);
             }
             const userObj = {
-              email: activeAccount.username || 'u6814509@au.edu',
-              name: activeAccount.name || activeAccount.username?.split('@')[0] || 'PHATTARAWADEE AODLUK',
+              email: activeAccount.username || '',
+              name: resolveUserName(activeAccount),
               role: 'admin',
               signedInAt: new Date().toISOString()
             };
@@ -54,26 +63,19 @@ export default function AdminLoginScreen({ onLoginSuccess }) {
     setLoading(true);
     setAuthError(null);
 
-    const defaultAdminUser = {
-      email: 'u6814509@au.edu',
-      name: 'PHATTARAWADEE AODLUK',
-      role: 'admin',
-      signedInAt: new Date().toISOString()
-    };
-
     try {
       if (isMsalConfigured) {
         const msalInstance = await getMsalInstance();
-        
-        // 1. Check if user is already authenticated
+
+        // 1. Check if user is already authenticated in MSAL
         const existingAccount = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
         if (existingAccount) {
           if (window.location.hash.includes('code=')) {
             window.history.replaceState(null, '', window.location.pathname);
           }
           const userObj = {
-            email: existingAccount.username || defaultAdminUser.email,
-            name: existingAccount.name || existingAccount.username?.split('@')[0] || defaultAdminUser.name,
+            email: existingAccount.username || '',
+            name: resolveUserName(existingAccount),
             role: 'admin',
             signedInAt: new Date().toISOString()
           };
@@ -93,8 +95,14 @@ export default function AdminLoginScreen({ onLoginSuccess }) {
       console.warn('MSAL authentication notice:', err);
     }
 
-    // Direct fallback if MSAL is not configured
-    if (onLoginSuccess) onLoginSuccess(defaultAdminUser);
+    // Direct fallback if MSAL is not configured or fails
+    const fallbackUser = {
+      email: 'admin@au.edu',
+      name: 'AU Admin',
+      role: 'admin',
+      signedInAt: new Date().toISOString()
+    };
+    if (onLoginSuccess) onLoginSuccess(fallbackUser);
     setLoading(false);
   };
 

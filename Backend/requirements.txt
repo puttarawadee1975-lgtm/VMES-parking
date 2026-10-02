@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+sqlalchemy
+opencv-python-headless
+numpy
+qrcode[pil]
+boto3

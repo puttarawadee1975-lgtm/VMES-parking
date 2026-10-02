@@ -48,12 +48,18 @@ __pycache__/
 # IDE configuration
 .claude/
 
-# DB data
+# Python virtual environments & runs
+venv/
+runs/
+
+# Backend Ignore Rules (New & Legacy)
+Backend/venv/
+Backend/data/snapshots/
+Backend/data/vehicle_photos/
+Backend/data/qr_codes/
+Backend/data/*.log
+Backend/data/db/
+
 backend-Smart-Campus-Parking/data/db/
 backend-Smart-Campus-Parking/data/*.log
 backend-Smart-Campus-Parking/data/vehicle_photos/
-
-
-# Python virtual environments
-venv/
-runs/

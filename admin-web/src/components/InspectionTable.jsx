@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getImageUrl } from '../api';
 
 const THAILAND_TIME_ZONE = 'Asia/Bangkok';
 
@@ -274,7 +275,7 @@ export default function InspectionTable({
                   !cleanUrl.endsWith('base64')
                 );
                 const snapshotUrl = hasPhoto
-                  ? ((cleanUrl.startsWith('http') || cleanUrl.startsWith('data:')) ? cleanUrl : `http://${window.location.hostname}:8000${cleanUrl.startsWith('/') ? '' : '/'}${cleanUrl}`)
+                  ? ((cleanUrl.startsWith('http') || cleanUrl.startsWith('data:')) ? cleanUrl : getImageUrl(cleanUrl))
                   : null;
 
                 const formattedDate = (() => {

@@ -208,7 +208,7 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
                 }}>
                   <Ionicons name="checkmark-circle-outline" size={36} color="#10b981" />
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginTop: 8 }}>
-                    Clean Driving Record
+                    Driving Record
                   </Text>
                   <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
                     No safety score deductions recorded

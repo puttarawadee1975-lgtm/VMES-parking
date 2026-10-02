@@ -1,13 +1,30 @@
 import re
+import os
+import base64
 from typing import List, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, status
-from bson import ObjectId
-from database import detection_logs_collection, users_collection, parking_status_collection, registered_vehicles_collection
+try:
+    from database import detection_logs_collection, users_collection, parking_status_collection, registered_vehicles_collection
+except ImportError:
+    detection_logs_collection = None
+    users_collection = None
+    parking_status_collection = None
+    registered_vehicles_collection = None
+
 from schemas import DetectionLogCreate, DetectionLogResponse
 
 router = APIRouter(prefix="/detections", tags=["AI Detections"])
+
+def save_base64_snapshot_to_disk(base64_str: str, license_plate: str, gate_type: str = "entry") -> Optional[str]:
+    """Decodes base64 Data URI and saves image snapshot via Storage Abstraction (Local / AWS S3)."""
+    try:
+        from storage import save_base64_snapshot
+        return save_base64_snapshot(base64_str, license_plate, gate_type)
+    except Exception as e:
+        print(f"[SNAPSHOT SAVE ERROR] {e}")
+        return None
 
 def ensure_utc(value) -> datetime:
     """Treat timezone-naive MongoDB datetimes or ISO strings as UTC for API serialization."""
@@ -167,6 +184,14 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         role_str = "Guest"
         student_id_str = "GUEST"
 
+    # Event snapshot handling: Save base64 to disk if provided
+    raw_b64 = payload.snapshot_base64 or (payload.image_url if payload.image_url and payload.image_url.startswith("data:") else None)
+    disk_snapshot_url = None
+    if raw_b64:
+        disk_snapshot_url = save_base64_snapshot_to_disk(raw_b64, payload.license_plate, resolved_gate_type)
+
+    final_img_url = disk_snapshot_url or (payload.image_url if payload.image_url and not payload.image_url.startswith("data:") else None)
+
     # Insert into detection_logs collection
     log_doc = {
         "license_plate": payload.license_plate,
@@ -185,8 +210,8 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         "role": role_str,
         "studentId": student_id_str,
         # Event snapshot captured by ai_pipeline.py or web camera
-        "image_url": payload.image_url or payload.snapshot_base64 or None,
-        "snapshot_base64": payload.snapshot_base64 or (payload.image_url if payload.image_url and payload.image_url.startswith("data:") else None),
+        "image_url": final_img_url,
+        "snapshot_base64": raw_b64,
     }
 
     inserted_id = "mock_id"
@@ -194,7 +219,7 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         res = detection_logs_collection.insert_one(log_doc)
         inserted_id = str(res.inserted_id)
 
-    resolved_img_url = payload.snapshot_base64 or payload.image_url or None
+    resolved_img_url = final_img_url or raw_b64 or None
 
     log_response = DetectionLogResponse(
         id=inserted_id,
@@ -208,7 +233,7 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         timestamp=now,
         matched_user=matched_user_name,
         image_url=resolved_img_url,
-        snapshot_base64=payload.snapshot_base64 or None,
+        snapshot_base64=raw_b64 or None,
     )
 
     IN_MEMORY_DETECTIONS.insert(0, log_response.model_dump())
@@ -216,27 +241,41 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         IN_MEMORY_DETECTIONS.pop()
 
     # Automatically update parking slots in real-time (ONLY FOR CARS)
-    if parking_status_collection is not None and vehicle_type == "car":
-        zone_name = payload.zone or "VMES Parking (Car Only)"
-        zone_doc = parking_status_collection.find_one({"zone": zone_name})
-        if zone_doc:
-            occupied = zone_doc.get("occupied_slots", 0)
-            total = zone_doc.get("total_slots", 19)
-            if resolved_gate_type == "ENTRY":
-                occupied = min(total, occupied + 1)
-            elif resolved_gate_type == "EXIT":
-                occupied = max(0, occupied - 1)
+    if vehicle_type == "car":
+        z_req = (payload.zone or "").upper()
+        search_zone = "Zone A"
+        if "ZONE C" in z_req or "C-" in z_req:
+            search_zone = "Zone C"
+        
+        if parking_status_collection is not None:
+            zone_doc = parking_status_collection.find_one({"zone": {"$regex": search_zone, "$options": "i"}})
+            if zone_doc:
+                occupied = zone_doc.get("occupied_slots", 0)
+                total = zone_doc.get("total_slots", 10)
+                if resolved_gate_type == "ENTRY":
+                    occupied = min(total, occupied + 1)
+                elif resolved_gate_type == "EXIT":
+                    occupied = max(0, occupied - 1)
 
-            parking_status_collection.update_one(
-                {"zone": zone_name},
-                {
-                    "$set": {
-                        "occupied_slots": occupied,
-                        "available_slots": max(0, total - occupied),
-                        "last_updated": now
+                avail = max(0, total - occupied)
+                parking_status_collection.update_one(
+                    {"_id": zone_doc["_id"]},
+                    {
+                        "$set": {
+                            "occupied_slots": occupied,
+                            "available_slots": avail,
+                            "occupied": occupied,
+                            "available": avail,
+                            "last_updated": now
+                        }
                     }
-                }
-            )
+                )
+
+        try:
+            from main import update_in_memory_parking_status
+            update_in_memory_parking_status(search_zone, resolved_gate_type)
+        except Exception as e:
+            print(f"[Parking Status Update Error] {e}")
 
     # Automatically mark active saved spot as Exited on CCTV EXIT gate scan
     from database import saved_spots_collection
@@ -282,11 +321,12 @@ async def get_all_detections(days: int = 30):
     """
     from datetime import timedelta
     if detection_logs_collection is not None:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        projection = {"snapshot_base64": 0}
-        docs = list(detection_logs_collection.find({"timestamp": {"$gte": cutoff}}, projection).sort("timestamp", -1).limit(200))
-        if not docs:
-            docs = list(detection_logs_collection.find({}, projection).sort("timestamp", -1).limit(200))
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+            projection = {"snapshot_base64": 0}
+            docs = list(detection_logs_collection.find({"timestamp": {"$gte": cutoff}}, projection).sort("timestamp", -1).limit(200))
+            if not docs:
+                docs = list(detection_logs_collection.find({}, projection).sort("timestamp", -1).limit(200))
 
             if docs:
                 result = []
@@ -306,9 +346,8 @@ async def get_all_detections(days: int = 30):
                         snapshot_base64=None,
                     ))
                 return result
-    except Exception as e:
-        print(f"[DETECTION FETCH WARNING] MongoDB read notice: {e}")
->>>>>>> e5c525f (feat: update building zones config, fix occupancy stats to 18 car spots, and improve AI detection logging)
+        except Exception as e:
+            print(f"[DETECTION FETCH WARNING] MongoDB read notice: {e}")
 
     return IN_MEMORY_DETECTIONS
 
@@ -325,15 +364,32 @@ async def get_detection_snapshot(detection_id: str):
 
     doc = detection_logs_collection.find_one(
         {"_id": ObjectId(detection_id)},
-        {"snapshot_base64": 1, "image_url": 1, "_id": 0},
+        {"snapshot_base64": 1, "image_url": 1, "license_plate": 1, "gate_type": 1, "_id": 0},
     )
 
     if not doc:
         raise HTTPException(status_code=404, detail="Detection not found")
 
+    b64 = doc.get("snapshot_base64")
+    url = doc.get("image_url")
+
+    # If snapshot_base64 exists and is not formatted with data URI scheme
+    if b64 and not b64.startswith("data:"):
+        b64 = f"data:image/jpeg;base64,{b64}"
+
+    # Auto restore to disk if file doesn't exist yet
+    if b64 and (not url or not url.startswith("/snapshots/")):
+        restored_url = save_base64_snapshot_to_disk(b64, doc.get("license_plate", "veh"), doc.get("gate_type", "entry"))
+        if restored_url:
+            url = restored_url
+            try:
+                detection_logs_collection.update_one({"_id": ObjectId(detection_id)}, {"$set": {"image_url": restored_url}})
+            except Exception:
+                pass
+
     return {
-        "image_url": doc.get("snapshot_base64") or doc.get("image_url"),
-        "snapshot_base64": doc.get("snapshot_base64"),
+        "image_url": b64 or url,
+        "snapshot_base64": b64 or None,
     }
 
 

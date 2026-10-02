@@ -16,12 +16,14 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { formatDisplayPlate } from '../utils/provinceHelper';
 import ProvincePickerModal from './ProvincePickerModal';
+import LicensePlateScannerModal from './LicensePlateScannerModal';
 
 export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) {
   const [vehicleType, setVehicleType] = useState('motorcycle'); // 'motorcycle' | 'car'
   const [plateNumber, setPlateNumber] = useState('');
   const [province, setProvince] = useState('');
   const [showProvinceModal, setShowProvinceModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
   const [brand, setBrand] = useState('');
   const [modelName, setModelName] = useState('');
   const [color, setColor] = useState('');
@@ -218,7 +220,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
           >
             <View>
               <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>Edit Vehicle Information</Text>
-              <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Update your vehicle details for smart gate access</Text>
+              <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Update your vehicle details</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={{ padding: 8, borderRadius: 20, backgroundColor: '#f1f5f9' }}>
               <Ionicons name="close" size={20} color="#64748b" />
@@ -290,24 +292,50 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 }}>
                   License Plate Number <Text style={{ color: '#ef4444' }}>*</Text>
                 </Text>
-                <TextInput
-                  value={plateNumber}
-                  onChangeText={setPlateNumber}
-                  placeholder="e.g. 1กข 1234 or 3กฮ 5678"
-                  placeholderTextColor="#94a3b8"
-                  autoCapitalize="characters"
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderWidth: 1,
-                    borderColor: /[a-zA-Z]/.test(plateNumber) ? '#ef4444' : '#cbd5e1',
-                    borderRadius: 14,
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
-                    color: '#0f172a',
-                    fontSize: 14,
-                    fontWeight: '700'
-                  }}
-                />
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <TextInput
+                    value={plateNumber}
+                    onChangeText={setPlateNumber}
+                    placeholder="e.g. 1กข 1234 or 3กฮ 5678"
+                    placeholderTextColor="#94a3b8"
+                    autoCapitalize="characters"
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#ffffff',
+                      borderWidth: 1,
+                      borderColor: /[a-zA-Z]/.test(plateNumber) ? '#ef4444' : '#cbd5e1',
+                      borderRadius: 14,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      color: '#0f172a',
+                      fontSize: 14,
+                      fontWeight: '700'
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!vehicleType) setVehicleType('car');
+                      setShowScannerModal(true);
+                    }}
+                    activeOpacity={0.8}
+                    style={{
+                      backgroundColor: '#2563eb',
+                      paddingHorizontal: 14,
+                      paddingVertical: 14,
+                      borderRadius: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      shadowColor: '#2563eb',
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 2
+                    }}
+                  >
+                    <Ionicons name="camera" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#ffffff' }}>Scan license plate</Text>
+                  </TouchableOpacity>
+                </View>
                 {/[a-zA-Z]/.test(plateNumber) && (
                   <Text style={{ fontSize: 11, color: '#ef4444', fontWeight: '700', marginTop: 4 }}>
                     ⚠️ License plate letters must be in Thai characters (e.g. 1กข 1234)
@@ -426,14 +454,14 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                 {/* Photo 1: Front Photo */}
                 <View style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 14 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
                       <Ionicons name="camera" size={16} color="#2563eb" style={{ marginRight: 6 }} />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
-                        1. Front Photo (Vehicle Front & License Plate) <Text style={{ color: '#ef4444' }}>*</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', flex: 1 }} numberOfLines={1}>
+                        1. Front Photo (Front & Plate) <Text style={{ color: '#ef4444' }}>*</Text>
                       </Text>
                     </View>
                     {frontPhoto && (
-                      <TouchableOpacity onPress={() => setFrontPhoto(null)}>
+                      <TouchableOpacity onPress={() => setFrontPhoto(null)} style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#fef2f2', borderRadius: 6, borderWidth: 1, borderColor: '#fecaca' }}>
                         <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '700' }}>Remove</Text>
                       </TouchableOpacity>
                     )}
@@ -451,6 +479,13 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                   {frontPhoto ? (
                     <View style={{ height: 130, borderRadius: 12, overflow: 'hidden', backgroundColor: '#0f172a', position: 'relative' }}>
                       <Image source={{ uri: frontPhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      <TouchableOpacity 
+                        onPress={() => setFrontPhoto(null)}
+                        style={{ position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(239, 68, 68, 0.85)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }}
+                      >
+                        <Ionicons name="trash-outline" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Remove</Text>
+                      </TouchableOpacity>
                       <View style={{ position: 'absolute', bottom: 6, right: 6, backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }}>
                         <Ionicons name="checkmark-circle" size={12} color="#ffffff" style={{ marginRight: 4 }} />
                         <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Front Photo Set</Text>
@@ -482,14 +517,14 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                 {/* Photo 2: Side Photo */}
                 <View style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 14 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
                       <Ionicons name="car-outline" size={16} color="#2563eb" style={{ marginRight: 6 }} />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
-                        2. Side Photo (Vehicle Side View) <Text style={{ color: '#ef4444' }}>*</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', flex: 1 }} numberOfLines={1}>
+                        2. Side Photo (Side View) <Text style={{ color: '#ef4444' }}>*</Text>
                       </Text>
                     </View>
                     {sidePhoto && (
-                      <TouchableOpacity onPress={() => setSidePhoto(null)}>
+                      <TouchableOpacity onPress={() => setSidePhoto(null)} style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#fef2f2', borderRadius: 6, borderWidth: 1, borderColor: '#fecaca' }}>
                         <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '700' }}>Remove</Text>
                       </TouchableOpacity>
                     )}
@@ -498,6 +533,13 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                   {sidePhoto ? (
                     <View style={{ height: 130, borderRadius: 12, overflow: 'hidden', backgroundColor: '#0f172a', position: 'relative' }}>
                       <Image source={{ uri: sidePhoto }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      <TouchableOpacity 
+                        onPress={() => setSidePhoto(null)}
+                        style={{ position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(239, 68, 68, 0.85)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }}
+                      >
+                        <Ionicons name="trash-outline" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Remove</Text>
+                      </TouchableOpacity>
                       <View style={{ position: 'absolute', bottom: 6, right: 6, backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }}>
                         <Ionicons name="checkmark-circle" size={12} color="#ffffff" style={{ marginRight: 4 }} />
                         <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Side Photo Set</Text>
@@ -568,6 +610,17 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* License Plate Scanner Modal */}
+        <LicensePlateScannerModal
+          visible={showScannerModal}
+          onClose={() => setShowScannerModal(false)}
+          vehicleType={vehicleType}
+          onScanSuccess={(scannedPlate, scannedProvince) => {
+            setPlateNumber(scannedPlate);
+            setProvince(scannedProvince);
+          }}
+        />
 
         {/* Province Picker Modal */}
         <ProvincePickerModal

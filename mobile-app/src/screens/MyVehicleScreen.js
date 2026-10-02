@@ -219,38 +219,39 @@ export default function MyVehicleScreen({
               <Text className="text-slate-600 text-xs font-semibold">
                 License Plate Number:
               </Text>
+            </View>
+            <View className="flex-row gap-2 items-center">
+              <TextInput
+                value={newPlate}
+                onChangeText={setNewPlate}
+                placeholder="e.g. 1กข 1234"
+                placeholderTextColor="#94a3b8"
+                autoCapitalize="characters"
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f8fafc',
+                  borderWidth: 1,
+                  borderColor: '#e2e8f0',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  color: '#0f172a',
+                  fontSize: 13,
+                  fontWeight: '600'
+                }}
+              />
               <TouchableOpacity
                 onPress={() => {
-                  if (!vehicleType) {
-                    alert('Please select vehicle type first.');
-                    return;
-                  }
+                  if (!vehicleType) setVehicleType('car');
                   setShowScannerModal(true);
                 }}
-                className="flex-row items-center bg-blue-50 border border-blue-200 py-1 px-2.5 rounded-lg active:bg-blue-100"
+                activeOpacity={0.8}
+                className="bg-blue-600 px-3.5 py-3 rounded-xl flex-row items-center justify-center shadow-sm"
               >
-                <Ionicons name="camera-outline" size={13} color="#2563eb" style={{ marginRight: 4 }} />
-                <Text className="text-blue-600 font-bold text-[11px]">Scan with Camera</Text>
+                <Ionicons name="camera" size={16} color="#ffffff" style={{ marginRight: 4 }} />
+                <Text className="text-white font-bold text-xs">Scan license plate</Text>
               </TouchableOpacity>
             </View>
-            <TextInput
-              value={newPlate}
-              onChangeText={setNewPlate}
-              placeholder="e.g. 1AB 8924"
-              placeholderTextColor="#94a3b8"
-              autoCapitalize="characters"
-              style={{
-                backgroundColor: '#f8fafc',
-                borderWidth: 1,
-                borderColor: '#e2e8f0',
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                color: '#0f172a',
-                fontSize: 13,
-                fontWeight: '600'
-              }}
-            />
           </View>
 
           {/* Province Input */}
@@ -330,12 +331,12 @@ export default function MyVehicleScreen({
           {/* Mandatory Vehicle Photo (Required for Admin Verification) */}
           <View className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
             <View className="flex-row items-center justify-between mb-1.5">
-              <View className="flex-row items-center">
+              <View className="flex-row items-center flex-1 mr-2">
                 <Ionicons name="camera" size={16} color="#2563eb" style={{ marginRight: 6 }} />
-                <Text className="text-slate-900 text-xs font-bold">Vehicle Photo (Admin Verification)</Text>
+                <Text className="text-slate-900 text-xs font-bold flex-1" numberOfLines={1}>Vehicle Photo (Admin Verification)</Text>
               </View>
               {vehiclePhoto && (
-                <TouchableOpacity onPress={() => setVehiclePhoto(null)}>
+                <TouchableOpacity onPress={() => setVehiclePhoto(null)} className="bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
                   <Text className="text-red-500 text-[11px] font-bold">Remove</Text>
                 </TouchableOpacity>
               )}

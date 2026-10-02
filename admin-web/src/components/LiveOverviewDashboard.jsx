@@ -41,7 +41,7 @@ export default function LiveOverviewDashboard({
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
 
   useEffect(() => {
-    fetchAPI(`/admin/term-summary?term=${selectedTerm}`)
+    fetchAPI(`/admin/dashboard`)
       .then(res => res && res.ok ? res.json() : null)
       .then(data => {
         if (data) {
@@ -68,37 +68,53 @@ export default function LiveOverviewDashboard({
       9: '09:00', 10: '10:00', 11: '11:00', 12: '12:00', 13: '13:00', 14: '14:00', 15: '15:00', 16: '16:00', 17: '17:00', 18: '18:00'
     };
 
-    let running = 0;
-    const slotMap = {};
-    const sortedLogs = [...logs].sort((a, b) => new Date(a.rawDate || a.timestamp || 0) - new Date(b.rawDate || b.timestamp || 0));
-
-    sortedLogs.forEach(l => {
-      const gt = String(l.gate_type || l.gate || '').toUpperCase();
-      if (gt.includes('EXIT') || gt.includes('GATE 2')) {
-        running = Math.max(0, running - 1);
-      } else {
-        running += 1;
-      }
+    // Group logs by date (strictly within 09:00 - 18:00 operating window)
+    const daysMap = {};
+    logs.forEach(l => {
       const d = l.rawDate ? new Date(l.rawDate) : (l.timestamp ? new Date(l.timestamp) : null);
       if (d && !isNaN(d.getTime())) {
         const h = d.getHours();
-        const sKey = h >= 18 ? '18:00' : (h < 9 ? '09:00' : hourToSlot[h]);
-        if (sKey) {
-          slotMap[sKey] = running;
-        }
+        const m = d.getMinutes();
+        if (h < 9 || h > 18 || (h === 18 && m > 0)) return;
+
+        const dateKey = d.toISOString().split('T')[0];
+        if (!daysMap[dateKey]) daysMap[dateKey] = [];
+        daysMap[dateKey].push({ date: d, log: l });
       }
     });
 
-    let lastVal = 0;
-    return targetSlots.map(t => {
-      let raw = slotMap[t];
-      if (raw === undefined || raw === null) {
-        raw = lastVal;
-      } else {
-        lastVal = raw;
-      }
+    const dayKeys = Object.keys(daysMap);
+    const totalDays = dayKeys.length || 1;
+    const slotSums = {};
 
-      const avgSlots = Math.min(buildingCapacity, Math.max(0, raw));
+    if (dayKeys.length > 0) {
+      dayKeys.forEach(dk => {
+        const dayLogs = daysMap[dk].sort((a, b) => a.date - b.date);
+        let dailyOcc = 0;
+        const daySlotMap = {};
+        dayLogs.forEach(({ date, log }) => {
+          const gt = String(log.gate_type || log.gate || '').toUpperCase();
+          if (gt.includes('EXIT') || gt.includes('GATE 2')) {
+            dailyOcc = Math.max(0, dailyOcc - 1);
+          } else {
+            dailyOcc += 1;
+          }
+          const h = date.getHours();
+          const sKey = h >= 18 ? '18:00' : (h < 9 ? '09:00' : hourToSlot[h]);
+          if (sKey) daySlotMap[sKey] = dailyOcc;
+        });
+
+        let lastVal = 0;
+        targetSlots.forEach(t => {
+          if (daySlotMap[t] !== undefined) lastVal = daySlotMap[t];
+          slotSums[t] = (slotSums[t] || 0) + lastVal;
+        });
+      });
+    }
+
+    return targetSlots.map(t => {
+      const avgVal = (slotSums[t] || 0) / totalDays;
+      const avgSlots = parseFloat(Math.min(buildingCapacity, Math.max(0, avgVal)).toFixed(1));
       const ratePct = parseFloat(((avgSlots / buildingCapacity) * 100).toFixed(1));
 
       return {
@@ -111,9 +127,19 @@ export default function LiveOverviewDashboard({
   }, [logs]);
 
   const currentTermData = useMemo(() => {
-    const activeHourly = (liveTermSummary?.hourlyOccupancy && liveTermSummary.hourlyOccupancy.length > 0)
+    const rawHourly = (liveTermSummary?.hourlyOccupancy && liveTermSummary.hourlyOccupancy.length > 0)
       ? liveTermSummary.hourlyOccupancy
       : (computedHourlyFromLogs || []);
+
+    const activeHourly = rawHourly.map(h => {
+      const slots = Math.min(18, Math.max(0, h.avgSlots || 0));
+      return {
+        ...h,
+        avgSlots: parseFloat(slots.toFixed(1)),
+        capacity: 18,
+        ratePct: parseFloat(((slots / 18) * 100).toFixed(1))
+      };
+    });
 
     const rates = activeHourly.map(h => h.ratePct || 0);
     const avgOccRate = rates.length > 0 ? (rates.reduce((a, b) => a + b, 0) / rates.length).toFixed(1) : '0.0';
@@ -191,48 +217,52 @@ export default function LiveOverviewDashboard({
   }, [selectedTerm, liveTermSummary, computedHourlyFromLogs, logs]);
 
   const termTrendData = useMemo(() => {
+    let trendList = [];
     if (liveTermSummary?.monthlyTrend && liveTermSummary.monthlyTrend.length > 0) {
-      return liveTermSummary.monthlyTrend;
+      trendList = liveTermSummary.monthlyTrend;
+    } else if (logs && logs.length > 0) {
+      const monthsMap = {};
+      const monthOrder = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+
+      logs.forEach(log => {
+        const dt = log.rawDate ? new Date(log.rawDate) : (log.timestamp ? new Date(log.timestamp) : null);
+        if (dt && !isNaN(dt)) {
+          const mKey = dt.toLocaleString('en-US', { month: 'short' });
+          if (!monthsMap[mKey]) {
+            monthsMap[mKey] = { month: mKey, traffic: 0, violations: 0 };
+          }
+          monthsMap[mKey].traffic += 1;
+          if (log.violation) {
+            monthsMap[mKey].violations += 1;
+          }
+        }
+      });
+
+      trendList = Object.values(monthsMap).sort((a, b) => monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month));
     }
 
-    if (!logs || logs.length === 0) return [];
-    
-    const monthsMap = {};
-    const monthOrder = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
-    
-    logs.forEach(log => {
-      const dt = log.rawDate ? new Date(log.rawDate) : (log.timestamp ? new Date(log.timestamp) : null);
-      if (dt && !isNaN(dt)) {
-        const mKey = dt.toLocaleString('en-US', { month: 'short' });
-        if (!monthsMap[mKey]) {
-          monthsMap[mKey] = { month: mKey, traffic: 0, violations: 0 };
-        }
-        monthsMap[mKey].traffic += 1;
-        if (log.violation) {
-          monthsMap[mKey].violations += 1;
-        }
-      }
-    });
+    if (!trendList || trendList.length === 0) return [];
 
-    const trendList = Object.values(monthsMap).sort((a, b) => monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month));
-    const totalScans = currentTermData.totalScans || trendList.reduce((s, m) => s + m.traffic, 0) || 1;
-    const totalViolations = currentTermData.violationsCount || trendList.reduce((s, m) => s + m.violations, 0) || 1;
+    const totalScans = currentTermData.totalScans || trendList.reduce((s, m) => s + (m.traffic || 0), 0) || 1;
+    const totalViolations = currentTermData.violationsCount || trendList.reduce((s, m) => s + (m.violations || 0), 0) || 1;
 
-    const maxTraffic = Math.max(...trendList.map(m => m.traffic), 1);
-    const maxViolations = Math.max(...trendList.map(m => m.violations), 1);
+    const maxTraffic = Math.max(...trendList.map(m => m.traffic || 0), 1);
+    const maxViolations = Math.max(...trendList.map(m => m.violations || 0), 1);
 
     return trendList.map((m) => {
-      const trafficPct = parseFloat(((m.traffic / totalScans) * 100).toFixed(1));
-      const violationPct = parseFloat(((m.violations / totalViolations) * 100).toFixed(1));
-      const trafficHeightPct = Math.max(16, Math.round((m.traffic / maxTraffic) * 100));
-      const violationHeightPct = Math.max(16, Math.round((m.violations / maxViolations) * 100));
+      const traffic = m.traffic || 0;
+      const violations = m.violations || 0;
+      const trafficPct = parseFloat(((traffic / totalScans) * 100).toFixed(1));
+      const violationPct = parseFloat(((violations / totalViolations) * 100).toFixed(1));
+      const trafficHeightPct = Math.max(16, Math.round((traffic / maxTraffic) * 100));
+      const violationHeightPct = Math.max(16, Math.round((violations / maxViolations) * 100));
 
       return {
         month: m.month,
-        traffic: m.traffic,
+        traffic,
         trafficPct,
         trafficHeightPct,
-        violations: m.violations,
+        violations,
         violationPct,
         violationHeightPct
       };
@@ -540,7 +570,7 @@ export default function LiveOverviewDashboard({
               {avgSafetyScore} <span style={{ fontSize: 14, color: '#64748b', fontWeight: 600 }}>/ 100</span>
             </div>
             <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
-              {(vehicles || []).length > 0 ? (vehicles || []).length : 1} Registered Vehicles
+              {(vehicles || []).length} Registered Vehicles
             </div>
           </div>
         </div>
@@ -625,7 +655,7 @@ export default function LiveOverviewDashboard({
                   <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, height: '100%', justifyContent: 'flex-end' }}>
                     {/* Double Bar Cylinder Container */}
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: '84%', width: '100%', justifyContent: 'center' }}>
-                      
+
                       {/* Bar 1: Gate Traffic (Blue) */}
                       <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                         {isTrafficHovered && (

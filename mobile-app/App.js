@@ -14,7 +14,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthRequest, makeRedirectUri, ResponseType, exchangeCodeAsync, Prompt } from 'expo-auth-session';
-import { loginWithMicrosoft, saveSpotToMongoDB, clearSpotInMongoDB, registerVehicleToMongoDB, deleteVehicleFromMongoDB, getUserVehiclesFromMongoDB, getUserNotifications } from './src/services/api';
+import { loginWithMicrosoft, saveSpotToMongoDB, getSpotFromMongoDB, clearSpotInMongoDB, registerVehicleToMongoDB, deleteVehicleFromMongoDB, getUserVehiclesFromMongoDB, getUserNotifications } from './src/services/api';
 import { registerForPushNotificationsAsync, sendLocalPhonePushNotification } from './src/services/notificationService';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -45,6 +45,7 @@ function MainApp() {
 
   // Navigation & User Role State
   const [currentUser, setCurrentUser] = useState(null); // null (Guest/Login), student, admin
+  const [hasSkippedOnboarding, setHasSkippedOnboarding] = useState(false);
   const [activeTab, setActiveTab] = useState('monitor'); // 'monitor' (Home), 'analytics', 'my-vehicle', 'account'
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -60,10 +61,7 @@ function MainApp() {
     clientId: '779a1a49-5a7f-4142-acd3-b8f72152fc5e',
     responseType: ResponseType.Code,
     scopes: ['openid', 'profile', 'email', 'offline_access'],
-    prompt: Prompt.Login,
-    extraParams: {
-      prompt: 'login'
-    },
+    usePKCE: false,
     redirectUri: makeRedirectUri({
       scheme: 'myapp'
     }),
@@ -82,12 +80,17 @@ function MainApp() {
     if (response?.type === 'success') {
       const { code } = response.params;
 
-      exchangeCodeAsync({
+      const exchangeOptions = {
         clientId: '779a1a49-5a7f-4142-acd3-b8f72152fc5e',
         code: code,
         redirectUri: makeRedirectUri({ scheme: 'myapp' }),
-        extraParams: request?.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
-      }, discovery)
+      };
+
+      if (request?.codeVerifier) {
+        exchangeOptions.extraParams = { code_verifier: request.codeVerifier };
+      }
+
+      exchangeCodeAsync(exchangeOptions, discovery)
         .then(tokenResult => {
           loginWithMicrosoft({
             accessToken: tokenResult.accessToken,
@@ -97,28 +100,24 @@ function MainApp() {
               const emailPrefixDigits = data.user.email ? data.user.email.split('@')[0].replace(/\D/g, '') : '';
               const formattedUser = {
                 ...data.user,
-                studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : '65070042'),
+                studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : null),
                 vehicles: data.user.vehicles || [],
                 safetyScore: data.user.driving_score ?? 100
               };
               fetchUserVehiclesAndLogin(formattedUser);
-            } else {
-              showToast('❌ User data not found in system');
             }
           }).catch(err => {
-            console.warn('[Auth] Backend Verification Error:', err);
-            showToast('❌ Login verification failed');
+            console.warn('[Auth] Backend Verification Warning:', err);
           });
         })
         .catch(err => {
-          console.warn('[Auth] Exchange Code Error:', err);
-          showToast('❌ Microsoft authentication error');
+          console.warn('[Auth] Exchange Code Notice:', err);
         });
     }
   }, [response]);
 
   // Global registry of all registered license plates to enforce 1 plate per 1 account policy
-  const [allRegisteredAccounts, setAllRegisteredAccounts] = useState(DEMO_ACCOUNTS);
+  const [allRegisteredAccounts, setAllRegisteredAccounts] = useState({});
 
   // Parking Location & Today's Connected Trip Access History (Resets Daily)
   const [parkedSpot, setParkedSpot] = useState(null);
@@ -147,9 +146,10 @@ function MainApp() {
 
   useEffect(() => {
     if (currentUser?.email) {
+      // 1. Load user registered vehicles
       getUserVehiclesFromMongoDB(currentUser.email).then((dbVehicles) => {
-        if (dbVehicles !== null) {
-          const formattedVehicles = (dbVehicles || []).map(v => ({ plate: v.plate, model: v.model }));
+        if (dbVehicles && dbVehicles.length > 0) {
+          const formattedVehicles = dbVehicles.map(v => ({ plate: v.plate, model: v.model }));
           setCurrentUser((prev) => prev ? { ...prev, vehicles: formattedVehicles } : prev);
           setAllRegisteredAccounts((prevAccs) => ({
             ...prevAccs,
@@ -160,6 +160,13 @@ function MainApp() {
           }));
         }
       });
+
+      // 2. Restore saved parking spot if not exited yet
+      getSpotFromMongoDB(currentUser.email).then((spotRes) => {
+        if (spotRes && spotRes.has_spot && spotRes.spot) {
+          setParkedSpot(spotRes.spot);
+        }
+      }).catch(err => console.warn('Failed to restore saved spot:', err));
     }
   }, [currentUser?.email]);
 
@@ -276,18 +283,27 @@ function MainApp() {
   // Auth Handlers
 
   const fetchUserVehiclesAndLogin = async (userObj) => {
+    const isGuest = userObj.role === 'guest';
+    const initialVehicles = isGuest
+      ? []
+      : ((userObj.vehicles && userObj.vehicles.length > 0)
+        ? userObj.vehicles
+        : (allRegisteredAccounts[userObj.email]?.vehicles || []));
+
+    const userWithVehicles = {
+      ...userObj,
+      vehicles: initialVehicles
+    };
+
+    setCurrentUser(userWithVehicles);
+    setActiveTab('monitor');
+
+    // Sync real vehicles from MongoDB Atlas
     try {
       const dbVehicles = await getUserVehiclesFromMongoDB(userObj.email);
-      const formattedVehicles = (dbVehicles && dbVehicles.length > 0)
-        ? dbVehicles.map(v => ({ plate: v.plate, model: v.model }))
-        : (allRegisteredAccounts[userObj.email]?.vehicles || userObj.vehicles || []);
-
-      const userWithVehicles = {
-        ...userObj,
-        vehicles: formattedVehicles
-      };
-
-      if (formattedVehicles.length > 0) {
+      if (dbVehicles && Array.isArray(dbVehicles)) {
+        const formattedVehicles = dbVehicles.map(v => ({ plate: v.plate, model: v.model }));
+        setCurrentUser((prev) => prev ? { ...prev, vehicles: formattedVehicles } : prev);
         setAllRegisteredAccounts((prevAccs) => ({
           ...prevAccs,
           [userObj.email]: {
@@ -296,21 +312,14 @@ function MainApp() {
           }
         }));
       }
-
-      setCurrentUser(userWithVehicles);
-      setActiveTab('monitor');
-      showToast(`🔑 Signed in as ${userObj.name}`);
     } catch (err) {
-      console.warn('Error fetching vehicles on login:', err);
-      setCurrentUser(userObj);
-      setActiveTab('monitor');
-      showToast(`🔑 Signed in as ${userObj.name}`);
+      console.warn('Background vehicle sync notice:', err);
     }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    showToast('🔒 Signed out successfully');
+    setHasSkippedOnboarding(false);
   };
 
   const handleMicrosoftLogin = async () => {
@@ -327,7 +336,6 @@ function MainApp() {
       }
     } catch (err) {
       console.warn('Microsoft Auth Prompt Error:', err);
-      showToast('⚠️ Could not open Microsoft sign in web flow');
     }
   };
 
@@ -346,22 +354,23 @@ function MainApp() {
 
   const handleSelectAccount = async (accountEmail) => {
     const cleanEmail = (accountEmail || '').trim().toLowerCase();
-    let preset = DEMO_ACCOUNTS[cleanEmail];
+    const demoAcc = DEMO_ACCOUNTS[cleanEmail];
 
-    if (!preset) {
-      const isStudentPattern = /^u\d{7}$/.test(cleanEmail.split('@')[0]);
-      const role = isStudentPattern ? 'student' : 'staff';
-      preset = {
-        role: role,
-        name: isStudentPattern ? `Student ${cleanEmail.split('@')[0]}` : `Staff (${cleanEmail.split('@')[0]})`,
-        studentId: isStudentPattern ? cleanEmail.split('@')[0].replace(/\D/g, '') : null,
-        staffId: isStudentPattern ? null : 'STF-1024',
-        email: cleanEmail,
-        vehicles: [],
-        safetyScore: 100
-      };
-    }
-    await fetchUserVehiclesAndLogin(preset);
+    const isStudentPattern = cleanEmail.includes('student') || cleanEmail.startsWith('u') || /^u?\d+/.test(cleanEmail.split('@')[0]);
+    const role = demoAcc?.role || (isStudentPattern ? 'student' : 'staff');
+    const emailPrefixDigits = cleanEmail.split('@')[0].replace(/\D/g, '');
+    const presetVehicles = (demoAcc?.vehicles && demoAcc.vehicles.length > 0) ? demoAcc.vehicles : [];
+
+    const realUser = {
+      role: role,
+      name: demoAcc?.name || (isStudentPattern ? `Student ${emailPrefixDigits || cleanEmail.split('@')[0]}` : `Staff (${cleanEmail.split('@')[0]})`),
+      studentId: demoAcc?.studentId || (isStudentPattern ? (emailPrefixDigits || null) : null),
+      staffId: demoAcc?.staffId || (isStudentPattern ? null : 'STF-1024'),
+      email: cleanEmail,
+      vehicles: presetVehicles,
+      safetyScore: demoAcc?.safetyScore || 100
+    };
+    await fetchUserVehiclesAndLogin(realUser);
   };
 
   const handleEditVehicle = (oldPlate, newFullPlate, newFullModel, photos = null) => {
@@ -409,9 +418,10 @@ function MainApp() {
   };
 
   const handleAddVehicle = (fullPlate, fullModel, vehiclePhoto = null) => {
-    // Check student 1-vehicle quota limit
-    if (currentUser?.role === 'student' && currentUser?.vehicles && currentUser.vehicles.length >= 1) {
-      alert('⚠️ Registration Limit Reached:\nStudents are allowed to register 1 vehicle per account only.');
+    // Check 1-vehicle quota limit per account (non-admin)
+    const role = (currentUser?.role || 'student').toLowerCase();
+    if (role !== 'admin' && currentUser?.vehicles && currentUser.vehicles.length >= 1) {
+      alert('⚠️ Registration Limit Reached:\nStudents and users are allowed to register 1 vehicle per account only.');
       return false;
     }
 
@@ -547,12 +557,13 @@ function MainApp() {
           insets={insets}
           screenWidth={screenWidth}
         />
-      ) : (!currentUser?.vehicles || currentUser.vehicles.length === 0) && currentUser?.role !== 'guest' ? (
+      ) : (!currentUser?.vehicles || currentUser.vehicles.length === 0) && currentUser?.role !== 'guest' && !hasSkippedOnboarding ? (
         /* 1.5 Mandatory Vehicle Registration Onboarding Screen */
         <VehicleRegistrationOnboardingScreen
           currentUser={currentUser}
           onRegisterVehicle={handleAddVehicle}
           onLogout={handleLogout}
+          onSkipToGuest={() => setHasSkippedOnboarding(true)}
         />
       ) : (
         /* 2. Main Dashboard Container */

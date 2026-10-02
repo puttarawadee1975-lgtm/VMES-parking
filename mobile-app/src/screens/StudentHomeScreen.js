@@ -8,13 +8,6 @@ import AnnouncementDetailModal from '../components/AnnouncementDetailModal';
 import AllAnnouncementsModal from '../components/AllAnnouncementsModal';
 import { getParkingStatus, getAnnouncements } from '../services/api';
 
-const INITIAL_PARKING_ZONES = [
-  { id: 'Zone A', zone: 'Zone A', building: 'VMES Building', floor: 'Floor G', available_slots: 10, availableSlots: 10, total_slots: 10, totalSlots: 10 },
-  { id: 'Zone B', zone: 'Zone B', building: 'VMES Building', floor: 'Floor G', available_slots: 2, availableSlots: 2, total_slots: 2, totalSlots: 2 },
-  { id: 'Zone C', zone: 'Zone C', building: 'VMES Building', floor: 'Floor G', available_slots: 8, availableSlots: 8, total_slots: 8, totalSlots: 8 },
-  { id: 'Zone D', zone: 'Zone D', building: 'VMES Building', floor: 'Floor G', available_slots: 1, availableSlots: 1, total_slots: 1, totalSlots: 1 },
-];
-
 export default function StudentHomeScreen({
   currentUser,
   parkedSpot,
@@ -29,21 +22,20 @@ export default function StudentHomeScreen({
   const [showAllAnnouncementsModal, setShowAllAnnouncementsModal] = useState(false);
 
   const isGuest = currentUser?.role === 'guest';
-  const [parkingZones, setParkingZones] = useState(INITIAL_PARKING_ZONES);
+  const [parkingZones, setParkingZones] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchParkingData = async () => {
-    setRefreshing(true);
+  const fetchParkingData = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
     try {
       const data = await getParkingStatus();
-
-      if (data && Array.isArray(data) && data.length > 0) {
+      if (data && Array.isArray(data)) {
         setParkingZones(data);
       }
     } finally {
-      setRefreshing(false);
+      if (isManual) setRefreshing(false);
     }
   };
 
@@ -105,8 +97,8 @@ export default function StudentHomeScreen({
   useEffect(() => {
     fetchParkingData();
     fetchAnnouncements();
-    // Refresh every 30 seconds automatically
-    const interval = setInterval(fetchParkingData, 30000);
+    // Refresh every 5 seconds automatically for live real-time status
+    const interval = setInterval(fetchParkingData, 5000);
 
     return () => clearInterval(interval);
   }, []);
@@ -132,23 +124,31 @@ export default function StudentHomeScreen({
           </View>
         ) : (
           (() => {
+            const activeZones = (parkingZones && parkingZones.length > 0)
+              ? parkingZones
+              : [
+                  { zone: 'Zone A', total_slots: 10, available_slots: 10 },
+                  { zone: 'Zone C', total_slots: 8, available_slots: 8 }
+                ];
+
             const getAvail = (z) => (z.available_slots !== undefined ? z.available_slots : (z.availableSlots !== undefined ? z.availableSlots : 0));
             const getTotal = (z) => (z.total_slots !== undefined ? z.total_slots : (z.totalSlots !== undefined ? z.totalSlots : 0));
 
             // Filter ONLY Car Zones (Zone A & Zone C) for Car Parking Spots KPI (18 total car spots)
-            const carZones = parkingZones.filter(z => {
+            const carZones = activeZones.filter(z => {
               const zName = (z.zone || z.id || z.name || '').toUpperCase();
               return zName.includes('ZONE A') || zName.includes('ZONE C') || zName.includes('A-') || zName.includes('C-');
             });
 
             const totalAvailable = carZones.reduce((sum, zone) => sum + getAvail(zone), 0);
             const totalSlots = carZones.reduce((sum, zone) => sum + getTotal(zone), 0);
+            const isFull = totalSlots > 0 && totalAvailable === 0;
 
             return (
               <View style={{ minHeight: 196 }} className="bg-white border border-slate-200 py-6 px-4 rounded-3xl relative shadow-sm items-center justify-center">
                 {/* Refresh Icon (Top Right of Card) */}
                 <TouchableOpacity
-                  onPress={fetchParkingData}
+                  onPress={() => fetchParkingData(true)}
                   disabled={refreshing}
                   activeOpacity={0.7}
                   className="absolute top-4 right-4 bg-slate-50 p-2.5 rounded-full border border-slate-100 shadow-xs"
@@ -161,23 +161,17 @@ export default function StudentHomeScreen({
                   VMES Building (Car Parking)
                 </Text>
 
-                {/* Huge Centered Number / Status OR Loading Spinner */}
-                {refreshing ? (
-                  <View style={{ height: 76, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color="#10b981" />
-                  </View>
-                ) : (
-                  <Text
-                    style={{ fontSize: 72, lineHeight: 76 }}
-                    className={`font-black tracking-tighter ${totalAvailable > 0 ? 'text-emerald-500' : 'text-red-500'}`}
-                  >
-                    {totalAvailable > 0 ? totalAvailable : 'FULL'}
-                  </Text>
-                )}
+                {/* Huge Centered Number / Status */}
+                <Text
+                  style={{ fontSize: 72, lineHeight: 76 }}
+                  className={`font-black tracking-tighter ${!isFull ? 'text-emerald-500' : 'text-red-500'}`}
+                >
+                  {!isFull ? totalAvailable : 'FULL'}
+                </Text>
 
                 {/* Subtext */}
-                <Text className={`text-xs font-bold uppercase tracking-widest mt-2 ${totalAvailable > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {totalAvailable > 0 ? 'Available Car Spots' : 'No Car Spots Available'}
+                <Text className={`text-xs font-bold uppercase tracking-widest mt-2 ${!isFull ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {!isFull ? 'Available Car Spots' : 'No Car Spots Available'}
                 </Text>
 
                 {totalSlots > 0 && (

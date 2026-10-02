@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { THAI_PROVINCES } from '../data/provincesData';
-import { getImageUrl } from '../api';
+import { getImageUrl, fetchAPI } from '../api';
 
 const CAR_COLORS = [
   { name: 'White', label: 'White', hex: '#ffffff' },
@@ -347,12 +347,12 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
 
     const q = search.toLowerCase().trim();
     const matchSearch = !q || (
-      (v.plate || '').toLowerCase().includes(q) ||
-      (v.owner || '').toLowerCase().includes(q) ||
-      (v.id || '').toLowerCase().includes(q) ||
-      (v.vehicle || '').toLowerCase().includes(q) ||
-      (v.brand || '').toLowerCase().includes(q) ||
-      (v.model || '').toLowerCase().includes(q)
+      String(v.plate || v.license_plate || '').toLowerCase().includes(q) ||
+      String(v.owner || '').toLowerCase().includes(q) ||
+      String(v.id || v.studentId || '').toLowerCase().includes(q) ||
+      String(v.vehicle || '').toLowerCase().includes(q) ||
+      String(v.brand || '').toLowerCase().includes(q) ||
+      String(v.model || '').toLowerCase().includes(q)
     );
 
     return matchType && matchSearch;
@@ -420,7 +420,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
       const fullModelStr = `${newBrand} ${newModel}`.trim();
       if (editingVehicle) {
         // Edit existing vehicle
-        await fetch('https://smart-campus-parking-deploy.onrender.com/admin/update-vehicle', {
+        await fetchAPI('/admin/update-vehicle', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -439,7 +439,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
         });
       } else {
         // Register new vehicle
-        await fetch('https://smart-campus-parking-deploy.onrender.com/parking/register-vehicle', {
+        await fetchAPI('/parking/register-vehicle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -475,7 +475,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
     try {
       const plate = revokeConfirmVehicle.plate;
       const ownerEmail = revokeConfirmVehicle.ownerEmail || '65070042@student.university.ac.th';
-      await fetch(`https://smart-campus-parking-deploy.onrender.com/parking/delete-vehicle?user_email=${encodeURIComponent(ownerEmail)}&plate=${encodeURIComponent(plate)}`, {
+      await fetchAPI(`/parking/delete-vehicle?user_email=${encodeURIComponent(ownerEmail)}&plate=${encodeURIComponent(plate)}`, {
         method: 'DELETE'
       });
       setRevokeConfirmVehicle(null);
@@ -575,7 +575,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
             </thead>
             <tbody>
               {filtered.map((item, i) => {
-                const isCar = item.vehicle_type === 'car' || item.vehicle?.toLowerCase().includes('car');
+                const isCar = item.vehicle_type === 'car' || (item.vehicle || '').toLowerCase().includes('car');
                 const vTypeLabel = isCar ? 'Car' : 'Motorcycle';
                 let detailsStr = item.brand || item.model 
                   ? `${item.brand || ''} ${item.model || ''} ${item.color ? `(${item.color})` : ''}`.trim() 
@@ -584,11 +584,11 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
 
                 return (
                   <tr key={i}>
-                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.studentId || item.id}</td>
                     <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.owner}</td>
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>{item.role}</td>
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>{vTypeLabel}</td>
-                    <td style={{ color: '#0f172a', fontWeight: 700 }}>{item.plate} {item.province && !item.plate.includes(item.province) ? item.province : ''}</td>
+                    <td style={{ color: '#0f172a', fontWeight: 700 }}>{item.plate || item.license_plate} {item.province && !(item.plate || item.license_plate || '').includes(item.province) ? item.province : ''}</td>
                     <td style={{ color: '#0f172a', fontWeight: 500 }}>{detailsStr}</td>
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>
                       <button

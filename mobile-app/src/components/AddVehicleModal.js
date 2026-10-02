@@ -151,38 +151,51 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>
                     License Plate <Text style={{ color: '#ef4444' }}>*</Text>
                   </Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <TextInput
+                    value={newPlate}
+                    onChangeText={setNewPlate}
+                    placeholder="e.g. 1กข 1234, 3กฮ 5678"
+                    placeholderTextColor="#94a3b8"
+                    autoCapitalize="characters"
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#ffffff',
+                      borderWidth: 1,
+                      borderColor: '#cbd5e1',
+                      borderRadius: 14,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      color: '#0f172a',
+                      fontSize: 14,
+                      fontWeight: '700'
+                    }}
+                  />
                   <TouchableOpacity
                     onPress={() => {
-                      if (!vehicleType) {
-                        alert('Please select vehicle type first.');
-                        return;
-                      }
+                      if (!vehicleType) setVehicleType('car');
                       setShowScannerModal(true);
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', borderContent: '#bfdbfe', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
+                    activeOpacity={0.8}
+                    style={{
+                      backgroundColor: '#2563eb',
+                      paddingHorizontal: 14,
+                      paddingVertical: 14,
+                      borderRadius: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      shadowColor: '#2563eb',
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 2
+                    }}
                   >
-                    <Ionicons name="camera-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Scan with Camera</Text>
+                    <Ionicons name="camera" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#ffffff' }}>Scan license plate</Text>
                   </TouchableOpacity>
                 </View>
-                <TextInput
-                  value={newPlate}
-                  onChangeText={setNewPlate}
-                  placeholder="e.g. 1กข 1234, 3กฮ 5678"
-                  placeholderTextColor="#94a3b8"
-                  autoCapitalize="characters"
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderWidth: 1,
-                    borderColor: '#cbd5e1',
-                    borderRadius: 14,
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
-                    color: '#0f172a',
-                    fontSize: 14,
-                    fontWeight: '700'
-                  }}
-                />
               </View>
 
               {/* 3. Province */}

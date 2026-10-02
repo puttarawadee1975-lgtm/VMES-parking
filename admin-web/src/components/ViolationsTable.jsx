@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getImageUrl } from '../api';
 
 export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
   const [dateFilter, setDateFilter] = useState(initialSearchQuery ? 'all' : 'today');
@@ -175,7 +176,7 @@ export default function ViolationsTable({ logs, initialSearchQuery = '' }) {
                   !cleanUrl.endsWith('base64')
                 );
                 const snapshotUrl = hasPhoto
-                  ? ((cleanUrl.startsWith('http') || cleanUrl.startsWith('data:')) ? cleanUrl : `http://${window.location.hostname}:8000${cleanUrl.startsWith('/') ? '' : '/'}${cleanUrl}`)
+                  ? ((cleanUrl.startsWith('http') || cleanUrl.startsWith('data:')) ? cleanUrl : getImageUrl(cleanUrl))
                   : null;
                 return (
                   <tr key={i}>

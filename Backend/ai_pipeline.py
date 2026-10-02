@@ -186,16 +186,16 @@ def save_event_snapshot(frame, plate: str, gate_type: str, cam_id: str) -> tuple
     Save exactly one JPEG snapshot of the current camera frame when an ENTRY or EXIT
     event is confirmed by the existing plate-stability mechanism.
 
-    Returns (relative_url, base64_uri) e.g. ("/snapshots/<filename>", "data:image/jpeg;base64,...")
-    for inclusion in the detection payload and storage in MongoDB Atlas.
+    Returns (image_url, base64_uri) e.g. ("https://bucket.s3.amazonaws.com/snapshots/<filename>" or "/snapshots/<filename>")
+    for inclusion in the detection payload and storage in database.
     """
     try:
+        from storage import save_snapshot
         # Sanitize plate to safe ASCII/Thai filename characters
         safe_plate = re.sub(r"[^a-zA-Z0-9ก-ฮ]", "", plate) or "unknown"
         direction = gate_type.lower()
         unix_ts = int(time.time())
         filename = f"{direction}_cam{cam_id}_{unix_ts}_{safe_plate}.jpg"
-        filepath = os.path.join(SNAPSHOTS_DIR, filename)
 
         encode_ok, buffer = cv2.imencode(
             ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85]
@@ -205,14 +205,13 @@ def save_event_snapshot(frame, plate: str, gate_type: str, cam_id: str) -> tuple
             return None, None
 
         img_bytes = buffer.tobytes()
-        with open(filepath, "wb") as f:
-            f.write(img_bytes)
+        image_url = save_snapshot(img_bytes, filename)
 
         b64_encoded = base64.b64encode(img_bytes).decode('utf-8')
         b64_uri = f"data:image/jpeg;base64,{b64_encoded}"
 
-        print(f"[SNAPSHOT] Saved {filename} and generated Base64 Data URI")
-        return f"/snapshots/{filename}", b64_uri
+        print(f"[SNAPSHOT] Saved {filename} -> {image_url}")
+        return image_url, b64_uri
     except Exception as e:
         print(f"[SNAPSHOT ERROR] Could not save snapshot for plate {plate}: {e}. Detection will continue without photo.")
         return None, None

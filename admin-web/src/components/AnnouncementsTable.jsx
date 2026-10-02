@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fetchAPI } from '../api';
 
 export default function AnnouncementsTable() {
   const [announcements, setAnnouncements] = useState([]);
@@ -8,8 +9,6 @@ export default function AnnouncementsTable() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [priority, setPriority] = useState('normal'); // 'normal' | 'high'
-  const [targetAudience, setTargetAudience] = useState('all'); // 'all' | 'individual' | 'staff'
-  const [targetUser, setTargetUser] = useState(''); // email/student_id for individual
   const getDefaultExpireDate = () => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
@@ -49,8 +48,8 @@ export default function AnnouncementsTable() {
 
   const fetchAnnouncements = async () => {
     try {
-      const res = await fetch('https://smart-campus-parking-deploy.onrender.com/admin/announcements');
-      if (res.ok) {
+      const res = await fetchAPI('/admin/announcements');
+      if (res && res.ok) {
         const data = await res.json();
         setAnnouncements(sortAnnouncements(data));
       }
@@ -68,8 +67,6 @@ export default function AnnouncementsTable() {
     setTitle('');
     setContent('');
     setPriority('normal');
-    setTargetAudience('');
-    setTargetUser('');
     setExpireDate(getDefaultExpireDate());
     setShowModal(true);
   };
@@ -79,15 +76,13 @@ export default function AnnouncementsTable() {
     setTitle(item.title);
     setContent(item.content);
     setPriority(item.priority || 'normal');
-    setTargetAudience(item.target_audience || 'all');
-    setTargetUser(item.target_user || '');
     setExpireDate(item.expire_date || getDefaultExpireDate());
     setShowModal(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || !targetAudience || !expireDate) return;
+    if (!title.trim() || !content.trim() || !expireDate) return;
 
     setSubmitting(true);
     try {
@@ -95,21 +90,21 @@ export default function AnnouncementsTable() {
         title: title.trim(),
         content: content.trim(),
         priority: priority,
-        target_audience: targetAudience,
-        target_user: targetAudience.startsWith('individual') ? targetUser.trim() : '',
+        target_audience: 'all',
+        target_user: '',
         expire_date: expireDate
       };
 
       if (editingItem) {
         // Edit existing announcement
-        await fetch(`https://smart-campus-parking-deploy.onrender.com/admin/announcements/${editingItem.id}`, {
+        await fetchAPI(`/admin/announcements/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
       } else {
         // Post new announcement
-        await fetch('https://smart-campus-parking-deploy.onrender.com/admin/announcements', {
+        await fetchAPI('/admin/announcements', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -119,8 +114,6 @@ export default function AnnouncementsTable() {
       setTitle('');
       setContent('');
       setPriority('normal');
-      setTargetAudience('all');
-      setTargetUser('');
       setExpireDate('');
       setEditingItem(null);
       fetchAnnouncements();
@@ -135,7 +128,7 @@ export default function AnnouncementsTable() {
     if (!deleteConfirmItem) return;
     setDeleting(true);
     try {
-      await fetch(`https://smart-campus-parking-deploy.onrender.com/admin/announcements/${deleteConfirmItem.id}`, {
+      await fetchAPI(`/admin/announcements/${deleteConfirmItem.id}`, {
         method: 'DELETE'
       });
       setDeleteConfirmItem(null);
@@ -172,7 +165,6 @@ export default function AnnouncementsTable() {
                 <th>Notice ID</th>
                 <th>Title & Topic</th>
                 <th>Announcement Content</th>
-                <th>Target Audience</th>
                 <th>Date Posted</th>
                 <th>Auto-Expire Date</th>
                 <th>Priority</th>
@@ -185,17 +177,6 @@ export default function AnnouncementsTable() {
                   <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
                   <td style={{ fontWeight: 700, color: '#0f172a', width: '20%' }}>{item.title}</td>
                   <td style={{ color: '#0f172a', lineHeight: 1.5, maxWidth: 320 }}>{item.content}</td>
-                  <td style={{ color: '#0f172a', fontWeight: 600, fontSize: 12 }}>
-                    {item.target_audience === 'all' 
-                      ? 'All Campus Users'
-                      : item.target_audience === 'all_students'
-                      ? 'All Students'
-                      : item.target_audience === 'individual_staff' || item.target_audience === 'staff'
-                      ? `Specific Staff: ${item.target_user || ''}`
-                      : item.target_audience === 'individual_student' || item.target_audience === 'individual'
-                      ? `Specific Student: ${item.target_user || ''}`
-                      : 'All Campus Users'}
-                  </td>
                   <td style={{ color: '#0f172a', fontSize: 12, fontWeight: 500 }}>{item.date}</td>
                   <td style={{ color: '#0f172a', fontWeight: 500, fontSize: 12 }}>
                     {item.expire_date ? item.expire_date : '-'}
@@ -257,22 +238,6 @@ export default function AnnouncementsTable() {
                   onChange={e => setContent(e.target.value)}
                   style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 500, fontFamily: 'inherit', resize: 'vertical' }}
                 />
-              </div>
-
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
-                  Target Audience / Recipient <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                <select 
-                  required
-                  value={targetAudience}
-                  onChange={e => setTargetAudience(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: targetAudience ? '#0f172a' : '#94a3b8', fontSize: 13, fontWeight: 600 }}
-                >
-                  <option value="" disabled hidden>-- Select Target Audience --</option>
-                  <option value="all">All Campus Users (Including Staff)</option>
-                  <option value="all_students">All Students</option>
-                </select>
               </div>
 
               <div style={{ marginBottom: 12 }}>

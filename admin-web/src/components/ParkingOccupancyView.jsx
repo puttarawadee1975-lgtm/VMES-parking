@@ -212,7 +212,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
           role: l.role || (isGuest ? 'Guest' : 'Student'),
           plate: plate,
           province: (plate === '-' || !plate || plate === 'Unregistered') ? '-' : (l.province || '-'),
-          zone: l.zone && l.zone !== '-' ? l.zone.split('(')[0].trim() : 'Zone A',
+          zone: l.zone && l.zone !== '-' ? l.zone.split('(')[0].trim() : (hasSavedSpot ? 'Zone A' : '-'),
           floor: hasSavedSpot ? l.floor : '-',
           pillar: hasSavedSpot ? (l.pillar || l.spot) : '-',
           entryTime: l.time ? `${l.time} (${l.gate || 'Gate 1 Entry'})` : '08:24 AM (Gate 1 Entry)',
@@ -440,7 +440,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     return activeVehiclesList.filter(s => {
       const vType = (s.vehicleType || s.vehicle_type || '').toLowerCase();
       const zStr = (s.zone || '').toUpperCase();
-      return vType !== 'motorcycle' && !zStr.includes('ZONE B');
+      return vType !== 'motorcycle' && !zStr.includes('ZONE B') && !zStr.includes('ZONE D');
     }).length;
   }, [activeVehiclesList]);
 
@@ -450,7 +450,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     return activeVehiclesList.filter(s => {
       const vType = (s.vehicleType || s.vehicle_type || '').toLowerCase();
       const zStr = (s.zone || '').toUpperCase();
-      return vType === 'motorcycle' || zStr.includes('ZONE B');
+      return vType === 'motorcycle' || zStr.includes('ZONE B') || zStr.includes('ZONE D');
     }).length;
   }, [activeVehiclesList]);
 

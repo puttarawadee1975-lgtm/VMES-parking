@@ -388,38 +388,51 @@ export default function VehicleRegistrationOnboardingScreen({
                 <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569' }}>
                   License Plate Number <Text style={{ color: '#ef4444' }}>*</Text>
                 </Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                <TextInput
+                  value={plateNumber}
+                  onChangeText={setPlateNumber}
+                  placeholder="e.g. 1กข 1234 or 3กฮ 5678"
+                  placeholderTextColor="#94a3b8"
+                  autoCapitalize="characters"
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#f8fafc',
+                    borderWidth: 1,
+                    borderColor: /[a-zA-Z]/.test(plateNumber) ? '#ef4444' : '#cbd5e1',
+                    borderRadius: 14,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    fontSize: 14,
+                    fontWeight: '700',
+                    color: '#0f172a'
+                  }}
+                />
                 <TouchableOpacity
                   onPress={() => {
-                    if (!vehicleType) {
-                      Alert.alert('Selection Required', 'Please select your vehicle type (Motorcycle or Car) first.');
-                      return;
-                    }
+                    if (!vehicleType) setVehicleType('car');
                     setShowScannerModal(true);
                   }}
-                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: '#2563eb',
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    borderRadius: 14,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: '#2563eb',
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
+                    elevation: 2
+                  }}
                 >
-                  <Ionicons name="camera-outline" size={14} color="#2563eb" style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563eb' }}>Scan Plate with Camera</Text>
+                  <Ionicons name="camera" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#ffffff' }}>Scan license plate</Text>
                 </TouchableOpacity>
               </View>
-              <TextInput
-                value={plateNumber}
-                onChangeText={setPlateNumber}
-                placeholder="e.g. 1กข 1234 or 3กฮ 5678"
-                placeholderTextColor="#94a3b8"
-                autoCapitalize="characters"
-                style={{
-                  backgroundColor: '#f8fafc',
-                  borderWidth: 1,
-                  borderColor: /[a-zA-Z]/.test(plateNumber) ? '#ef4444' : '#cbd5e1',
-                  borderRadius: 14,
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  fontSize: 14,
-                  fontWeight: '700',
-                  color: '#0f172a'
-                }}
-              />
               {/[a-zA-Z]/.test(plateNumber) && (
                 <Text style={{ fontSize: 11, color: '#ef4444', fontWeight: '700', marginTop: 4 }}>
                   ⚠️ License plate letters must be in Thai characters (e.g. 1กข 1234)
@@ -552,13 +565,13 @@ export default function VehicleRegistrationOnboardingScreen({
               {/* Photo 1: Front Photo */}
               <View style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 14 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
-                      1. Front Photo (Vehicle Front & License Plate) <Text style={{ color: '#ef4444' }}>*</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', flex: 1 }} numberOfLines={1}>
+                      1. Front Photo (Front & Plate) <Text style={{ color: '#ef4444' }}>*</Text>
                     </Text>
                   </View>
                   {frontPhoto && (
-                    <TouchableOpacity onPress={() => setFrontPhoto(null)}>
+                    <TouchableOpacity onPress={() => setFrontPhoto(null)} style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#fef2f2', borderRadius: 6, borderWidth: 1, borderColor: '#fecaca' }}>
                       <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '700' }}>Remove</Text>
                     </TouchableOpacity>
                   )}
@@ -656,11 +669,16 @@ export default function VehicleRegistrationOnboardingScreen({
               {/* Photo 2: Side Photo */}
               <View style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 14 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
-                      2. Side Photo (Vehicle Side View) <Text style={{ color: '#ef4444' }}>*</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', flex: 1 }} numberOfLines={1}>
+                      2. Side Photo (Side View) <Text style={{ color: '#ef4444' }}>*</Text>
                     </Text>
                   </View>
+                  {sidePhoto && (
+                    <TouchableOpacity onPress={() => setSidePhoto(null)} style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#fef2f2', borderRadius: 6, borderWidth: 1, borderColor: '#fecaca' }}>
+                      <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '700' }}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {sidePhoto ? (
@@ -764,6 +782,26 @@ export default function VehicleRegistrationOnboardingScreen({
             >
               <Text style={{ color: '#ffffff', fontSize: 15, fontWeight: '700' }}>
                 {isSubmitting ? 'Registering Vehicle...' : 'Confirm'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Skip / Register Later Button */}
+            <TouchableOpacity
+              onPress={onSkipToGuest}
+              activeOpacity={0.8}
+              style={{
+                backgroundColor: '#f1f5f9',
+                borderWidth: 1,
+                borderColor: '#cbd5e1',
+                borderRadius: 14,
+                paddingVertical: 12,
+                marginTop: 10,
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Text style={{ color: '#475569', fontSize: 13, fontWeight: '700' }}>
+                🚀 เข้าใช้งานแอปพลิเคชันก่อน (ลงทะเบียนภายหลัง)
               </Text>
             </TouchableOpacity>
           </View>

@@ -14,12 +14,19 @@ import AdminLoginScreen from './components/AdminLoginScreen';
 import { fetchAPI, getImageUrl } from './api';
 
 export default function App() {
-  const [adminUser, setAdminUser] = useState(null);
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('vmes_admin_user') || localStorage.getItem('vmes_admin_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) { }
+    return null;
+  });
 
   const handleLoginSuccess = (userObj) => {
     try {
       sessionStorage.setItem('vmes_admin_user', JSON.stringify(userObj));
-    } catch (e) {}
+      localStorage.setItem('vmes_admin_user', JSON.stringify(userObj));
+    } catch (e) { }
     setAdminUser(userObj);
   };
 
@@ -32,7 +39,7 @@ export default function App() {
           localStorage.removeItem(key);
         }
       });
-    } catch (e) {}
+    } catch (e) { }
     setAdminUser(null);
   };
 
@@ -170,30 +177,31 @@ export default function App() {
     ]);
     try {
       // 1. Fetch Detections
-      const resDet = await fetchAPI('/detections', { signal });
+      const resDet = await fetchAPI('/admin/gate-history', { signal });
       if (signal?.aborted) return;
       if (resDet?.ok) {
         const dataDet = await resDet.json();
         if (signal.aborted) return;
-        if (Array.isArray(dataDet)) {
-          const transformedLogs = await Promise.all(dataDet.map(async item => {
+        const logsList = Array.isArray(dataDet) ? dataDet : (dataDet?.history || []);
+        if (Array.isArray(logsList) && logsList.length > 0) {
+          const transformedLogs = await Promise.all(logsList.map(async item => {
             const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
             const timeStr = dateObj.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const isV = item.violation || false;
             const vType = isV ? (item.violation_type || 'No Helmet').replace(' (-10 pts)', '') : '-';
             const hText = isV ? (item.violation_type || 'No Helmet') : '-';
             let gateName = 'Gate 1 (Entry Gate)';
-            if (item.gate_type) {
-              const gt = String(item.gate_type).toLowerCase();
+            if (item.gate_type || item.gate) {
+              const gt = String(item.gate_type || item.gate || '').toLowerCase();
               if (gt.includes('exit') || gt.includes('gate 2') || gt.includes('gate2')) {
                 gateName = 'Gate 2 (Exit Gate)';
               } else if (gt.includes('entry') || gt.includes('gate 1') || gt.includes('gate1')) {
                 gateName = 'Gate 1 (Entry Gate)';
               } else {
-                gateName = item.gate_type;
+                gateName = item.gate_type || item.gate;
               }
             }
-            let rawP = (item.license_plate || 'Unregistered').trim();
+            let rawP = (item.license_plate || item.plate || 'Unregistered').trim();
             let rawProv = (item.province || 'กรุงเทพมหานคร').trim();
             const parts = rawP.split(/\s+/);
             if (parts.length >= 3) {
@@ -210,15 +218,15 @@ export default function App() {
               plate: rawP,
               province: rawProv,
               vehicle: `${item.vehicle_type === 'car' ? 'Car' : 'Motorcycle'}`,
-              owner: item.matched_user || 'Guest / Unregistered',
+              owner: item.matched_user || item.owner || 'Guest / Unregistered',
               helmet: hText,
               violationType: vType,
               isViolation: isV,
               penaltyApplied: item.penalty_applied,
               gate: gateName,
-              zone: item.zone || 'Zone A',
+              zone: item.zone || ((item.matched_user && item.matched_user !== 'Guest Driver') ? 'Zone A' : '-'),
               // Load each stored snapshot once and reuse it from the in-memory cache.
-              imageUrl: await getDetectionSnapshot(item.id, signal),
+              imageUrl: item.image_url ? getImageUrl(item.image_url) : await getDetectionSnapshot(item.id, signal),
             };
           }));
           setLogs(transformedLogs);
@@ -259,44 +267,32 @@ export default function App() {
   // Fetch real data from Backend FastAPI + MongoDB
   const fetchBackendData = useCallback(async (signal) => {
     if (signal?.aborted) return;
-    try {
-      // 0. Fetch Enforcement System Status
-      const resEnforce = await fetchAPI('/admin/enforcement-status', { signal });
-      if (signal?.aborted) return;
+    // 1. Fetch Vehicles from Backend (Independent and High Priority)
+    fetchAPI('/admin/all-vehicles', { signal }).then(async resVeh => {
+      if (resVeh?.ok) {
+        const backendVehicles = await resVeh.json();
+        const list = Array.isArray(backendVehicles) ? backendVehicles : (backendVehicles?.vehicles || []);
+        if (Array.isArray(list)) {
+          setVehicles(list);
+        }
+      }
+    }).catch(() => {});
+
+    // 2. Fetch Enforcement System Status
+    fetchAPI('/admin/enforcement-status', { signal }).then(async resEnforce => {
       if (resEnforce?.ok) {
         const dataEnforce = await resEnforce.json();
         if (typeof dataEnforce.enforcement_active === 'boolean') {
           setEnforcementActive(dataEnforce.enforcement_active);
         }
       }
-    } catch (e) {}
+    }).catch(() => {});
 
-    // Visible history owns detection polling independently of this batch.
-    if (!historyPollingActive.current) await fetchDetections(signal);
-
-    if (signal?.aborted) return;
-    try {
-      // 2. Fetch Analytics
-      const resAnalytics = await fetchAPI('/admin/analytics', { signal });
-      if (signal?.aborted) return;
-      if (resAnalytics?.ok) {
-        const analytics = await resAnalytics.json();
-        setTotalScans(analytics.total_scans || 0);
-        setViolationsCount(analytics.violations_count || 0);
-      }
-    } catch (e) {
-      if (signal?.aborted) return;
-      console.log('Backend connection notice (analytics):', e.message);
-    }
-    if (signal?.aborted) return;
-    try {
-      // 3. Fetch Parking Status
-      const resPark = await fetchAPI('/parking/status', { signal });
-      if (signal?.aborted) return;
+    // 3. Fetch Parking Status
+    fetchAPI('/parking/status', { signal }).then(async resPark => {
       if (resPark?.ok) {
         const zones = await resPark.json();
         if (Array.isArray(zones) && zones.length > 0) {
-          // Filter ONLY Car Zones (Zone A & Zone C) for Car Available Spot KPI
           const carZones = zones.filter(z => {
             const zName = (z.zone || z.name || '').toUpperCase();
             return zName.includes('ZONE A') || zName.includes('ZONE C');
@@ -312,25 +308,11 @@ export default function App() {
           setParkingOccupancy({ available, occupied, total, rate });
         }
       }
-    } catch (e) {
-      if (signal?.aborted) return;
-      console.log('Backend connection notice (parking):', e.message);
-    }
+    }).catch(() => {});
 
-    if (signal?.aborted) return;
-    try {
-      // 4. Fetch Vehicles from Backend (Exact MongoDB Registered Vehicles)
-      const resVeh = await fetchAPI('/admin/all-vehicles', { signal });
-      if (signal?.aborted) return;
-      if (resVeh?.ok) {
-        const backendVehicles = await resVeh.json();
-        if (Array.isArray(backendVehicles)) {
-          setVehicles(backendVehicles);
-        }
-      }
-    } catch (e) {
-      if (signal?.aborted) return;
-      console.log('Backend connection notice (vehicles):', e.message);
+    // 4. Fetch Detections
+    if (!historyPollingActive.current) {
+      await fetchDetections(signal);
     }
   }, [fetchDetections]);
 
@@ -365,11 +347,12 @@ export default function App() {
       signal.throwIfAborted();
       if (!response?.ok) throw new Error('Unable to refresh vehicles. Scan was not submitted.');
       const freshVehicles = await response.json();
+      const freshList = Array.isArray(freshVehicles) ? freshVehicles : (freshVehicles?.vehicles || []);
       signal.throwIfAborted();
-      if (!Array.isArray(freshVehicles) || freshVehicles.length === 0) {
+      if (!Array.isArray(freshList) || freshList.length === 0) {
         throw new Error('No vehicles available. Scan was not submitted.');
       }
-      setVehicles(freshVehicles);
+      setVehicles(freshList);
       const nextIdx = (currentIndex + 1) % freshVehicles.length;
       const item = freshVehicles[nextIdx];
       setCurrentIndex(nextIdx);
@@ -385,7 +368,7 @@ export default function App() {
 
       signal.throwIfAborted();
       submissionStarted = true;
-      const result = await fetch('https://smart-campus-parking-deploy.onrender.com/detections', {
+      const result = await fetchAPI('/detections', {
         method: 'POST',
         signal,
         headers: { 'Content-Type': 'application/json' },
@@ -393,7 +376,7 @@ export default function App() {
       });
 
       signal.throwIfAborted();
-      if (!result.ok) throw new Error('Scan submission failed.');
+      if (!result || !result.ok) throw new Error('Scan submission failed.');
       showMessage(`${gateType} scan submitted successfully.`);
       if (activeTab !== 'live-camera') fetchBackendData();
     } catch (e) {
@@ -418,7 +401,7 @@ export default function App() {
     const reason = customReason || defaultReason;
 
     try {
-      await fetch('https://smart-campus-parking-deploy.onrender.com/admin/adjust-score', {
+      await fetchAPI('/admin/adjust-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -518,7 +501,7 @@ export default function App() {
                 Parking Access Mode: {cameraEnforcementState === 'ready'
                   ? (enforcementActive ? 'ON' : 'PAUSED')
                   : cameraEnforcementState === 'unavailable' ? 'Unavailable — retrying'
-                  : cameraEnforcementState === 'updating' ? 'Updating…' : 'Checking…'}
+                    : cameraEnforcementState === 'updating' ? 'Updating…' : 'Checking…'}
               </span>
               <button
                 className="btn btn-secondary btn-sm"
