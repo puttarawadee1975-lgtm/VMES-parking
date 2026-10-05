@@ -5,7 +5,8 @@ import {
   TouchableOpacity,
   Modal,
   SafeAreaView,
-  ScrollView
+  ScrollView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -37,21 +38,38 @@ export default function NotificationsModal({
             const isWarning = item.scoreDeducted > 0 || 
                               item.type === 'vmes_parking_warning' || 
                               item.type === 'helmet_violation' ||
+                              (item.category && item.category.toLowerCase().includes('safety')) ||
                               (item.type && (item.type.includes('warning') || item.type.includes('penalty') || item.type.includes('violation')));
 
-            notiList.push({
-              id: item.id || `NOTI-${Math.random()}`,
-              title: item.title,
-              type: isWarning ? 'warning' : 'announcement',
-              rawType: item.type,
-              category: item.category || (isWarning ? 'Safety Alert' : 'Campus Notice'),
-              message: item.message,
-              date: item.timestamp ? new Date(item.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Today',
-              location: item.zone || item.location || 'VMES Building',
-              plate: item.plate || 'Campus Pass',
-              scoreDeducted: item.scoreDeducted !== undefined ? item.scoreDeducted : (item.type && (item.type.includes('penalty') || item.type.includes('violation')) ? 10 : 0),
-              unread: !item.read
-            });
+            if (isWarning) {
+              notiList.push({
+                id: item.id || `NOTI-${Math.random()}`,
+                title: item.title,
+                type: 'warning',
+                rawType: item.type,
+                category: 'Safety Alert',
+                message: item.message,
+                date: item.timestamp ? new Date(item.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : (item.date || 'Today'),
+                location: item.zone || item.location || 'VMES Building',
+                plate: item.plate || 'Campus Pass',
+                scoreDeducted: item.scoreDeducted !== undefined ? item.scoreDeducted : (item.type && (item.type.includes('penalty') || item.type.includes('violation')) ? 10 : 0),
+                unread: !item.read
+              });
+            } else if (item.type === 'announcement' || item.category === 'Campus Notice' || item.category === 'Announcement') {
+              notiList.push({
+                id: item.id || `NOTI-${Math.random()}`,
+                title: item.title,
+                type: 'announcement',
+                rawType: item.type,
+                category: 'Campus Notice',
+                message: item.message,
+                date: item.timestamp ? new Date(item.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : (item.date || 'Today'),
+                location: item.location || 'Campus Announcement',
+                plate: 'Official Notice',
+                scoreDeducted: 0,
+                unread: !item.read
+              });
+            }
           });
         }
 
@@ -67,9 +85,9 @@ export default function NotificationsModal({
               const targetStr = (ann.target_user || '').toLowerCase().trim();
               const userEmail = (currentUser?.email || '').toLowerCase();
               const userName = (currentUser?.name || '').toLowerCase();
-              const studentId = (currentUser?.studentId || '').toLowerCase();
+              const userId = (currentUser?.userId || currentUser?.user_id || '').toLowerCase();
               
-              if (targetStr && !userEmail.includes(targetStr) && !userName.includes(targetStr) && !studentId.includes(targetStr)) {
+              if (targetStr && !userEmail.includes(targetStr) && !userName.includes(targetStr) && !userId.includes(targetStr)) {
                 isTarget = false;
               }
             }
@@ -103,25 +121,16 @@ export default function NotificationsModal({
   const notifications = dynamicNotis;
 
   const filteredNotis = notifications.filter(n => {
+    const isSafety = n.type === 'warning' || n.category === 'Safety Alert' || n.rawType === 'helmet_violation';
+    const isAnnouncement = n.type === 'announcement' || n.category === 'Campus Notice' || n.category === 'Admin Announcement';
+
+    if (!isSafety && !isAnnouncement) return false;
+
     if (selectedFilter === 'SAFETY') {
-      return (
-        n.category === 'Safety Alert' ||
-        n.rawType === 'helmet_violation' ||
-        (n.title && n.title.toLowerCase().includes('helmet'))
-      );
-    }
-    if (selectedFilter === 'PARKING') {
-      return (
-        n.category === 'Parking Alert' ||
-        (n.title && (n.title.toLowerCase().includes('vmes') || n.title.toLowerCase().includes('parking')))
-      );
+      return isSafety;
     }
     if (selectedFilter === 'ADMIN') {
-      return (
-        n.type === 'announcement' ||
-        n.category === 'Campus Notice' ||
-        n.category === 'Admin Announcement'
-      );
+      return isAnnouncement;
     }
     return true;
   });
@@ -161,7 +170,7 @@ export default function NotificationsModal({
       <Modal
         visible={Boolean(visible)}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : undefined}
         onRequestClose={onClose}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
@@ -188,8 +197,7 @@ export default function NotificationsModal({
               {[
                 { key: 'ALL', label: 'All' },
                 { key: 'SAFETY', label: 'Safety Alerts' },
-                { key: 'PARKING', label: 'Parking Alerts' },
-                { key: 'ADMIN', label: 'Announcements' },
+                { key: 'ADMIN', label: 'Announcement' },
               ].map(tab => {
                 const isActive = selectedFilter === tab.key;
                 return (

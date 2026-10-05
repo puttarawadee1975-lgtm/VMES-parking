@@ -53,8 +53,7 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
       if (cameraRef.current && Platform.OS !== 'web') {
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.85,
-          base64: true,
-          skipProcessing: true
+          base64: true
         });
         if (photo) {
           base64Photo = photo.base64;
@@ -85,6 +84,10 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
       } catch (ocrErr) {
         console.warn('Backend OCR call failed:', ocrErr);
       }
+    } else {
+      // Demo / Web / Simulator fallback plate
+      detectedPlate = '3กฮ 5678';
+      detectedProvince = 'กรุงเทพมหานคร';
     }
 
     // If OCR returned a valid plate from the photo
@@ -114,7 +117,7 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
     <Modal
       visible={Boolean(visible)}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle={Platform.OS === 'ios' ? 'fullScreen' : undefined}
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }}>
@@ -204,7 +207,7 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
             <View style={{ position: 'absolute', bottom: 30, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: 20, flexDirection: 'row', alignItems: 'center' }}>
               <ActivityIndicator size="small" color="#3b82f6" style={{ marginRight: 8 }} />
               <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700' }}>
-                Detecting License Plate with AI...
+                Detecting License Plate...
               </Text>
             </View>
           )}

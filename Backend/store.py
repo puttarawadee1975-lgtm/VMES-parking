@@ -12,12 +12,14 @@ enforcement_status = {
     "enabled": True
 }
 
-# Registered Vehicles Directory
+# Registered Vehicles Directory (Linked via user_id PK/FK)
 registered_vehicles = [
     {
         "id": 1,
+        "user_id": "GUEST",
         "plate": "ก-1687",
         "license_plate": "ก-1687",
+        "province": "Bangkok",
         "vehicle_type": "car",
         "brand": "Toyota",
         "model": "Toyota Yaris",
@@ -25,7 +27,6 @@ registered_vehicles = [
         "owner": "Guest Driver",
         "user_email": "guest@student.ac.th",
         "role": "Guest",
-        "studentId": "GUEST",
         "score": 50,
         "status": "Active",
         "registered_at": "2026-09-18T07:11:35.797Z",
@@ -33,8 +34,10 @@ registered_vehicles = [
     },
     {
         "id": 2,
+        "user_id": "6612345",
         "plate": "1กข 1234",
         "license_plate": "1กข 1234",
+        "province": "Bangkok",
         "vehicle_type": "car",
         "brand": "Honda",
         "model": "Honda City",
@@ -42,7 +45,6 @@ registered_vehicles = [
         "owner": "John Smith",
         "user_email": "john@student.ac.th",
         "role": "Student",
-        "studentId": "6612345",
         "score": 51,
         "status": "Active",
         "registered_at": "2026-09-20T09:30:00Z",
@@ -50,8 +52,10 @@ registered_vehicles = [
     },
     {
         "id": 3,
+        "user_id": "65070042",
         "plate": "3กฮ 5678",
         "license_plate": "3กฮ 5678",
+        "province": "Bangkok",
         "vehicle_type": "motorcycle",
         "brand": "Yamaha",
         "model": "Yamaha NMAX 155",
@@ -59,7 +63,6 @@ registered_vehicles = [
         "owner": "Somchai Jaidee",
         "user_email": "somchai@student.university.ac.th",
         "role": "Student",
-        "studentId": "65070042",
         "score": 100,
         "status": "Active",
         "registered_at": "2026-09-21T11:15:00Z",
@@ -67,8 +70,10 @@ registered_vehicles = [
     },
     {
         "id": 4,
+        "user_id": "1",
         "plate": "2ขค 9999",
         "license_plate": "2ขค 9999",
+        "province": "Bangkok",
         "vehicle_type": "motorcycle",
         "brand": "Honda",
         "model": "Honda Wave 110i",
@@ -76,7 +81,6 @@ registered_vehicles = [
         "owner": "Somsri Rakdeeying",
         "user_email": "somsri@university.ac.th",
         "role": "Staff",
-        "studentId": "STAFF-012",
         "score": 95,
         "status": "Active",
         "registered_at": "2026-09-22T14:20:00Z",
@@ -84,8 +88,10 @@ registered_vehicles = [
     },
     {
         "id": 5,
+        "user_id": "2",
         "plate": "ขก 888",
         "license_plate": "ขก 888",
+        "province": "Bangkok",
         "vehicle_type": "car",
         "brand": "Mazda",
         "model": "Mazda 3",
@@ -93,10 +99,27 @@ registered_vehicles = [
         "owner": "Prof. Anan Suksan",
         "user_email": "anan@university.ac.th",
         "role": "Faculty",
-        "studentId": "PROF-005",
         "score": 90,
         "status": "Active",
         "registered_at": "2026-09-23T08:45:00Z",
+        "vehicle_photo": None
+    },
+    {
+        "id": 6,
+        "user_id": "6814509",
+        "plate": "3กค 5678",
+        "license_plate": "3กค 5678",
+        "province": "Bangkok",
+        "vehicle_type": "car",
+        "brand": "Honda",
+        "model": "Honda Civic RS (Black)",
+        "color": "Black",
+        "owner": "Pattarawadee A.",
+        "user_email": "u6814509@au.edu",
+        "role": "Student",
+        "score": 100,
+        "status": "Active",
+        "registered_at": "2026-09-25T10:00:00Z",
         "vehicle_photo": None
     }
 ]
@@ -113,21 +136,18 @@ score_logs_list = [
     }
 ]
 
-# Notifications List
+# Notifications List (Only Helmet Safety Alerts and Announcements)
 user_notifications = [
     {
         "id": "NOTIF-001",
-        "title": "Welcome to SafeRide Smart Campus Parking",
-        "message": "Your vehicle registration and parking pass are active.",
-        "date": "2026-09-26",
+        "title": "Safety Alert: Helmet Violation Warning",
+        "message": "Riding without a helmet was detected at Gate 1 Entrance. -10 Driving Score points deducted.",
+        "type": "helmet_violation",
+        "category": "Safety Alert",
+        "scoreDeducted": 10,
+        "location": "Gate 1 (Main Entrance)",
+        "timestamp": "2026-10-04T08:30:00.000Z",
         "read": False
-    },
-    {
-        "id": "NOTIF-002",
-        "title": "Parking Spot Saved",
-        "message": "Spot A-01 (Zone A) saved successfully.",
-        "date": "2026-09-26",
-        "read": True
     }
 ]
 

@@ -56,7 +56,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
     <Modal
       visible={Boolean(visible)}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : undefined}
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>

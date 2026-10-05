@@ -8,7 +8,8 @@ import {
   useWindowDimensions,
   Animated,
   Text,
-  Modal
+  Modal,
+  Platform
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,16 +93,60 @@ function MainApp() {
 
       exchangeCodeAsync(exchangeOptions, discovery)
         .then(tokenResult => {
+          let userEmail = '';
+          let userName = '';
+          if (tokenResult.idToken) {
+            try {
+              const parts = tokenResult.idToken.split('.');
+              if (parts.length >= 2) {
+                const base64Url = parts[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(
+                  atob(base64)
+                    .split('')
+                    .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                    .join('')
+                );
+                const parsed = JSON.parse(jsonPayload);
+                userEmail = parsed.preferred_username || parsed.email || parsed.upn || '';
+                userName = parsed.name || (parsed.given_name ? `${parsed.given_name} ${parsed.family_name || ''}`.trim() : '');
+              }
+            } catch (e) {
+              console.log('JWT Decode Exception:', e);
+            }
+          }
+
           loginWithMicrosoft({
             accessToken: tokenResult.accessToken,
             idToken: tokenResult.idToken,
+            email: userEmail,
+            name: userName
           }).then(data => {
             if (data && data.user) {
-              const emailPrefixDigits = data.user.email ? data.user.email.split('@')[0].replace(/\D/g, '') : '';
+              const cleanEmail = (data.user.email || userEmail || '').toLowerCase();
+              const demoAcc = DEMO_ACCOUNTS[cleanEmail];
+
+              const isStudentPattern = cleanEmail.includes('student') || cleanEmail.startsWith('u') || /^u?\d+/.test(cleanEmail.split('@')[0]);
+              const detectedRole = demoAcc?.role || (isStudentPattern ? 'student' : (cleanEmail.includes('staff') || cleanEmail.includes('faculty') ? 'staff' : (data.user.role || 'student')));
+              const emailDigits = cleanEmail.split('@')[0].replace(/\D/g, '');
+
+              const emailUsername = cleanEmail.split('@')[0] || 'User';
+              const fallbackName = emailUsername.includes('.') || emailUsername.includes('_')
+                ? emailUsername.split(/[._]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+                : (demoAcc?.name || 'University Member');
+
+              const realName = (userName && userName.trim()) ||
+                               (data?.user?.name && data.user.name.trim()) ||
+                               demoAcc?.name ||
+                               fallbackName;
+
               const formattedUser = {
                 ...data.user,
-                studentId: emailPrefixDigits || (data.user.studentId ? String(data.user.studentId).replace(/\D/g, '') : null),
-                vehicles: data.user.vehicles || [],
+                email: cleanEmail || data.user.email,
+                name: realName,
+                role: detectedRole,
+                userId: demoAcc?.userId || emailDigits || data.user.userId || data.user.user_id || '65070042',
+                vehicles: (demoAcc?.vehicles && demoAcc.vehicles.length > 0) ? demoAcc.vehicles : (data.user.vehicles || []),
                 safetyScore: data.user.driving_score ?? 100
               };
               fetchUserVehiclesAndLogin(formattedUser);
@@ -344,7 +389,7 @@ function MainApp() {
     const guest = {
       role: 'guest',
       name: 'Guest User',
-      studentId: 'GUEST',
+      userId: 'GUEST',
       email: guestEmail,
       vehicles: [],
       safetyScore: null
@@ -361,11 +406,18 @@ function MainApp() {
     const emailPrefixDigits = cleanEmail.split('@')[0].replace(/\D/g, '');
     const presetVehicles = (demoAcc?.vehicles && demoAcc.vehicles.length > 0) ? demoAcc.vehicles : [];
 
+    const emailUsername = cleanEmail.split('@')[0] || 'User';
+    const isDigitsOnly = /^\d+$/.test(emailUsername) || /^u\d+$/i.test(emailUsername);
+    const formattedName = demoAcc?.name || (
+      emailUsername.includes('.') || emailUsername.includes('_')
+        ? emailUsername.split(/[._]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+        : (isDigitsOnly ? 'Student User' : emailUsername)
+    );
+
     const realUser = {
       role: role,
-      name: demoAcc?.name || (isStudentPattern ? `Student ${emailPrefixDigits || cleanEmail.split('@')[0]}` : `Staff (${cleanEmail.split('@')[0]})`),
-      studentId: demoAcc?.studentId || (isStudentPattern ? (emailPrefixDigits || null) : null),
-      staffId: demoAcc?.staffId || (isStudentPattern ? null : 'STF-1024'),
+      name: formattedName,
+      userId: demoAcc?.userId || (isStudentPattern ? (emailPrefixDigits || null) : null),
       email: cleanEmail,
       vehicles: presetVehicles,
       safetyScore: demoAcc?.safetyScore || 100
@@ -502,14 +554,8 @@ function MainApp() {
   };
 
   const handleSaveParkedSpot = (spotData) => {
-    const isUpdate = !!parkedSpot;
     setParkedSpot(spotData);
     saveSpotToMongoDB(spotData, currentUser?.email || '65070042@student.university.ac.th');
-    if (isUpdate) {
-      showToast(`🔄 Updated parking location: ${spotData.zone} ${spotData.floor} (${spotData.pillar})`);
-    } else {
-      showToast(`📍 Saved parking location: ${spotData.zone} ${spotData.floor} (${spotData.pillar})`);
-    }
   };
 
   const handleExitBuilding = () => {
@@ -607,7 +653,13 @@ function MainApp() {
               <MyVehicleScreen
                 currentUser={currentUser}
                 onOpenMicrosoftModal={handleMicrosoftLogin}
-                onOpenAddVehicleModal={() => setShowAddVehicleModal(true)}
+                onOpenAddVehicleModal={() => {
+                  if (currentUser?.vehicles && currentUser.vehicles.length >= 1) {
+                    alert('⚠️ Registration Limit Reached:\n\nStudents and users are allowed to register 1 vehicle per account only.\n\nTo change your vehicle information, please click "Edit" on your registered vehicle.');
+                    return;
+                  }
+                  setShowAddVehicleModal(true);
+                }}
                 onAddVehicle={handleAddVehicle}
                 onEditVehicle={handleEditVehicle}
                 onDeleteVehicle={handleDeleteVehicle}
@@ -624,6 +676,7 @@ function MainApp() {
                 currentUser={currentUser}
                 parkedSpot={parkedSpot}
                 onOpenQRScanner={() => setShowQRModal(true)}
+                onExitBuilding={handleExitBuilding}
                 onLogout={handleLogout}
                 websocketUrl={websocketUrl}
                 setWebsocketUrl={setWebsocketUrl}
@@ -667,7 +720,7 @@ function MainApp() {
       <Modal
         visible={showQRModal}
         animationType="slide"
-        presentationStyle="fullScreen"
+        presentationStyle={Platform.OS === 'ios' ? 'fullScreen' : undefined}
         onRequestClose={() => setShowQRModal(false)}
       >
         <QRScanScreen

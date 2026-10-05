@@ -2,18 +2,28 @@
 export const DEMO_ACCOUNTS = {
   'u6814509@au.edu': {
     role: 'student',
-    name: 'Student U6814509',
-    studentId: '6814509',
+    name: 'Pattarawadee A.',
+    userId: '6814509',
     email: 'u6814509@au.edu',
     vehicles: [
       { plate: '3KH 5678 Bangkok', model: '🚗 Honda Civic RS (Black)' }
     ],
     safetyScore: 100
   },
+  'u6642032@au.edu': {
+    role: 'student',
+    name: 'Pattarawadee A.',
+    userId: '6642032',
+    email: 'u6642032@au.edu',
+    vehicles: [
+      { plate: '4MN 9012 Bangkok', model: '🚗 Toyota Yaris Cross (Gray)' }
+    ],
+    safetyScore: 100
+  },
   '65070042@student.university.ac.th': {
     role: 'student',
     name: 'Cherie A.',
-    studentId: '65070042',
+    userId: '65070042',
     email: '65070042@student.university.ac.th',
     vehicles: [
       { plate: '1AB 8924 Bangkok', model: '🛵 Honda PCX 160 (White)' }
@@ -23,7 +33,7 @@ export const DEMO_ACCOUNTS = {
   'thanawat.p@student.university.ac.th': {
     role: 'student',
     name: 'Thanawat Pongpanich',
-    studentId: '64010589',
+    userId: '64010589',
     email: 'thanawat.p@student.university.ac.th',
     vehicles: [
       { plate: '2EF 5519 Chiang Mai', model: '🛵 Yamaha NMAX (Gray)' }
@@ -34,13 +44,23 @@ export const DEMO_ACCOUNTS = {
 
   'faculty.staff@au.edu': {
     role: 'staff',
-    name: 'Dr. Somchai',
-    staffId: 'STF-1024',
+    name: 'Somsri Rakdeeying',
+    userId: '1',
     email: 'faculty.staff@au.edu',
     vehicles: [
-      { plate: '1KK 1234 Bangkok', model: '🚗 Toyota Camry (White)' }
+      { plate: '2KH 9999 Bangkok', model: '🛵 Honda Wave 110i (Blue)' }
     ],
-    safetyScore: 100
+    safetyScore: 95
+  },
+  'faculty@au.edu': {
+    role: 'faculty',
+    name: 'Prof. Anan Suksan',
+    userId: '2',
+    email: 'faculty@au.edu',
+    vehicles: [
+      { plate: 'KK 888 Bangkok', model: '🚗 Mazda 3 (White)' }
+    ],
+    safetyScore: 90
   }
 };
 
@@ -158,6 +178,7 @@ export function getNavMapAsset(spotCode) {
   const cleanCode = spotCode.replace(/^(Spot|Pillar)\s+/i, '').trim();
   return NAV_MAP_ASSETS[cleanCode] || NAV_MAP_ASSETS['A-01'];
 }
+export const getNavMapImage = getNavMapAsset;
 
 // Permanent Fixed 21 Parking Spots across 4 Zones (VMES Building, Floor G)
 export const PRESET_ZONES = [

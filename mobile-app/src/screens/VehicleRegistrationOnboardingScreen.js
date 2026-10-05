@@ -216,7 +216,7 @@ export default function VehicleRegistrationOnboardingScreen({
               Vehicle Registration Required
             </Text>
             <Text style={{ fontSize: 13, color: '#94a3b8', lineHeight: 20 }}>
-              Please register your vehicle to access campus parking services, gate recognition, and live spot availability.
+              Please register your vehicle to access campus parking services, Save parking spot, and live spot availability.
             </Text>
 
             <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#334155', flexDirection: 'row', alignItems: 'center' }}>
@@ -785,25 +785,6 @@ export default function VehicleRegistrationOnboardingScreen({
               </Text>
             </TouchableOpacity>
 
-            {/* Skip / Register Later Button */}
-            <TouchableOpacity
-              onPress={onSkipToGuest}
-              activeOpacity={0.8}
-              style={{
-                backgroundColor: '#f1f5f9',
-                borderWidth: 1,
-                borderColor: '#cbd5e1',
-                borderRadius: 14,
-                paddingVertical: 12,
-                marginTop: 10,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Text style={{ color: '#475569', fontSize: 13, fontWeight: '700' }}>
-                🚀 เข้าใช้งานแอปพลิเคชันก่อน (ลงทะเบียนภายหลัง)
-              </Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

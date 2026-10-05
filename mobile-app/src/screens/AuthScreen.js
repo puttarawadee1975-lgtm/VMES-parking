@@ -64,7 +64,6 @@ export default function AuthScreen({
           <Text className="text-slate-800 font-bold text-sm ml-3 text-center">Sign in with Microsoft</Text>
         </TouchableOpacity>
 
-
         {/* Divider */}
         <View className="flex-row items-center my-1.5">
           <View className="flex-1 h-[1px] bg-slate-200" />
@@ -80,101 +79,6 @@ export default function AuthScreen({
           <Text className="text-white font-bold text-sm">Continue as Guest</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Account Selector / Custom Email Modal */}
-      <Modal
-        visible={showAccountModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAccountModal(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center p-4">
-          <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-lg font-bold text-slate-900">⚡ เลือกทางลัดบัญชีเข้าใช้งาน</Text>
-              <TouchableOpacity onPress={() => setShowAccountModal(false)}>
-                <Ionicons name="close-circle" size={26} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-xs text-slate-500 mb-3 font-medium">
-              เลือกบัญชี Demo หรือพิมพ์ Email มหาวิทยาลัยเพื่อทดสอบเข้าใช้งาน:
-            </Text>
-
-            {/* Account Option 1 */}
-            <TouchableOpacity
-              onPress={() => {
-                if (onSelectAccount) onSelectAccount('65070042@student.university.ac.th');
-                setShowAccountModal(false);
-              }}
-              className="bg-slate-50 border border-slate-200 p-3 rounded-2xl mb-2 flex-row items-center"
-            >
-              <View className="w-9 h-9 rounded-full bg-amber-100 justify-center items-center mr-3">
-                <Ionicons name="person" size={18} color="#d97706" />
-              </View>
-              <View className="flex-1">
-                <Text className="font-bold text-sm text-slate-800">Student (Cherie A.)</Text>
-                <Text className="text-xs text-slate-500">65070042@student.university.ac.th</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Account Option 2 */}
-            <TouchableOpacity
-              onPress={() => {
-                if (onSelectAccount) onSelectAccount('u6814509@au.edu');
-                setShowAccountModal(false);
-              }}
-              className="bg-slate-50 border border-slate-200 p-3 rounded-2xl mb-2 flex-row items-center"
-            >
-              <View className="w-9 h-9 rounded-full bg-blue-100 justify-center items-center mr-3">
-                <Ionicons name="school" size={18} color="#2563eb" />
-              </View>
-              <View className="flex-1">
-                <Text className="font-bold text-sm text-slate-800">Student (U6814509)</Text>
-                <Text className="text-xs text-slate-500">u6814509@au.edu</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Account Option 3 */}
-            <TouchableOpacity
-              onPress={() => {
-                if (onSelectAccount) onSelectAccount('faculty.staff@au.edu');
-                setShowAccountModal(false);
-              }}
-              className="bg-slate-50 border border-slate-200 p-3 rounded-2xl mb-3 flex-row items-center"
-            >
-              <View className="w-9 h-9 rounded-full bg-indigo-100 justify-center items-center mr-3">
-                <Ionicons name="briefcase" size={18} color="#4f46e5" />
-              </View>
-              <View className="flex-1">
-                <Text className="font-bold text-sm text-slate-800">Staff (Dr. Somchai)</Text>
-                <Text className="text-xs text-slate-500">faculty.staff@au.edu</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Custom Email Input */}
-            <View className="border-t border-slate-100 pt-3">
-              <Text className="text-xs font-bold text-slate-700 mb-1.5">กรอก Email อื่นๆ:</Text>
-              <View className="flex-row space-x-2">
-                <TextInput
-                  value={customEmail}
-                  onChangeText={setCustomEmail}
-                  placeholder="e.g. user@au.edu"
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800"
-                />
-                <TouchableOpacity
-                  onPress={handleCustomEmailSubmit}
-                  className="bg-blue-600 px-4 py-2.5 rounded-xl justify-center items-center"
-                >
-                  <Text className="text-white font-bold text-xs">เข้าสู่ระบบ</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

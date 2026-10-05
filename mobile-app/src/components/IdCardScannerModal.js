@@ -84,7 +84,7 @@ export default function IdCardScannerModal({ visible, onClose, onCaptureSuccess,
     <Modal
       visible={Boolean(visible)}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle={Platform.OS === 'ios' ? 'fullScreen' : undefined}
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }}>

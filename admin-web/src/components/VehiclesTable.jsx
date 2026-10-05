@@ -349,7 +349,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
     const matchSearch = !q || (
       String(v.plate || v.license_plate || '').toLowerCase().includes(q) ||
       String(v.owner || '').toLowerCase().includes(q) ||
-      String(v.id || v.studentId || '').toLowerCase().includes(q) ||
+      String(v.user_id || v.userId || v.id || '').toLowerCase().includes(q) ||
       String(v.vehicle || '').toLowerCase().includes(q) ||
       String(v.brand || '').toLowerCase().includes(q) ||
       String(v.model || '').toLowerCase().includes(q)
@@ -584,7 +584,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
 
                 return (
                   <tr key={i}>
-                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.studentId || item.id}</td>
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.user_id || item.userId || item.id}</td>
                     <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.owner}</td>
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>{item.role}</td>
                     <td style={{ color: '#0f172a', fontWeight: 600 }}>{vTypeLabel}</td>

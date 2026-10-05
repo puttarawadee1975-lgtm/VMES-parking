@@ -12,6 +12,7 @@ router = APIRouter(tags=["Mobile App"])
 @router.post("/api/parking/save-spot")
 def save_parking_spot(payload: dict):
     user_email = payload.get("user_email") or payload.get("email") or "65070042@student.university.ac.th"
+    user_id = payload.get("user_id") or payload.get("userId") or (user_email.split('@')[0] if user_email else "GUEST")
     spot_id = payload.get("spot_id") or "VMES-G-ZONEA-A01"
     zone = payload.get("zone") or "Zone A"
     pillar = payload.get("pillar") or payload.get("spot") or "Spot A-01"
@@ -19,6 +20,7 @@ def save_parking_spot(payload: dict):
     building = payload.get("building") or "VMES Building"
 
     spot_record = {
+        "user_id": user_id,
         "user_email": user_email,
         "spot_id": spot_id,
         "building": building,
@@ -92,26 +94,82 @@ def clear_parking_spot(user_email: str = "65070042@student.university.ac.th"):
 
 @router.post("/auth/microsoft")
 def auth_microsoft(payload: dict):
-    email = payload.get("email") or "65070042@student.university.ac.th"
-    name = payload.get("name") or "Student User"
+    email = payload.get("email") or payload.get("user_email") or ""
+    name = payload.get("name") or payload.get("user_name") or ""
+    id_token = payload.get("id_token") or payload.get("idToken") or ""
+
+    if not email and id_token and "." in id_token:
+        try:
+            import base64
+            import json
+            parts = id_token.split(".")
+            if len(parts) >= 2:
+                padded = parts[1] + "=" * (-len(parts[1]) % 4)
+                decoded_bytes = base64.urlsafe_b64decode(padded)
+                parsed_name = parsed.get("name") or (f"{parsed.get('given_name', '')} {parsed.get('family_name', '')}".strip())
+                name = name or parsed_name or (email.split("@")[0] if email else "")
+        except Exception as e:
+            print(f"[Auth Microsoft JWT Decode Warning] {e}")
+
+    email = email or "65070042@student.university.ac.th"
+    clean_email = email.lower().strip()
+    if not name or name == clean_email.split("@")[0]:
+        email_prefix = clean_email.split("@")[0]
+        if "." in email_prefix or "_" in email_prefix:
+            name = " ".join(p.capitalize() for p in email_prefix.replace("_", ".").split("."))
+        else:
+            name = name or "University Member"
+
+    is_student_pattern = "student" in clean_email or clean_email.startswith("u") or any(c.isdigit() for c in clean_email.split("@")[0])
+    role = "student" if is_student_pattern else ("staff" if ("staff" in clean_email or "faculty" in clean_email) else "student")
+
+    for v in store.registered_vehicles:
+        if v.get("user_email") and v.get("user_email").lower() == clean_email:
+            role = v.get("role", role)
+            break
+
+    student_id = "".join(filter(str.isdigit, clean_email.split("@")[0])) or "65070042"
+
     return {
         "status": "success",
         "access_token": "mock-jwt-token-safe-ride-2026",
         "user": {
-            "email": email,
+            "email": clean_email,
             "name": name,
-            "role": "Student",
-            "studentId": "65070042",
+            "role": role,
+            "user_id": student_id,
+            "userId": student_id,
             "driving_score": 100
         }
     }
 
 @router.get("/parking/user-vehicles")
-def get_user_vehicles(user_email: str = ""):
-    if not user_email:
+def get_user_vehicles(user_email: str = "", user_id: str = ""):
+    if not user_email and not user_id:
         return store.registered_vehicles
-    user_list = [v for v in store.registered_vehicles if v.get("user_email") == user_email]
-    return user_list if user_list else store.registered_vehicles[:2]
+    user_list = [v for v in store.registered_vehicles if (user_id and v.get("user_id") == user_id) or (user_email and v.get("user_email") == user_email)]
+    if user_list:
+        return user_list[:1]
+    # Return single default vehicle for u6814509@au.edu if not found
+    if "u6814509" in user_email or "au.edu" in user_email:
+        return [{
+            "id": 10,
+            "user_id": "6814509",
+            "userId": "6814509",
+            "plate": "3กค 5678",
+            "license_plate": "3กค 5678",
+            "province": "Bangkok",
+            "vehicle_type": "car",
+            "brand": "Honda",
+            "model": "Honda Civic RS (Black)",
+            "color": "Black",
+            "owner": "Pattarawadee A.",
+            "user_email": user_email,
+            "role": "Student",
+            "score": 100,
+            "status": "Active"
+        }]
+    return []
 
 @router.post("/parking/register-vehicle")
 def register_vehicle(payload: dict):
@@ -142,9 +200,19 @@ def register_vehicle(payload: dict):
     model = payload.get("model") or f"{brand} Vehicle".strip()
     color = payload.get("color") or ""
     owner = payload.get("owner") or "Registered Driver"
+    user_role = (payload.get("role") or "Student").title()
+    provided_user_id = payload.get("user_id") or payload.get("userId")
+    
+    if user_role in ["Staff", "Faculty"]:
+        staff_faculty_count = sum(1 for v in store.registered_vehicles if str(v.get("role")).title() in ["Staff", "Faculty"])
+        user_id = provided_user_id or str(staff_faculty_count + 1)
+    else:
+        email_digits = "".join(filter(str.isdigit, email.split("@")[0])) if email else ""
+        user_id = provided_user_id or (email_digits if email_digits else f"6607{new_id:04d}")
     
     new_vehicle = {
         "id": new_id,
+        "user_id": user_id,
         "plate": plate,
         "license_plate": plate,
         "vehicle_type": v_type,
@@ -153,8 +221,7 @@ def register_vehicle(payload: dict):
         "color": color,
         "owner": owner,
         "user_email": email,
-        "role": payload.get("role") or "Student",
-        "studentId": f"6607{new_id:04d}",
+        "role": user_role,
         "score": 100,
         "status": "Active",
         "registered_at": "2026-09-25T23:00:00.000Z",

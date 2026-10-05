@@ -202,13 +202,13 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       if (!seenPlatesAndDates.has(key)) {
         seenPlatesAndDates.add(key);
         const isExit = (l.gate || '').toUpperCase().includes('EXIT') || (l.gate_type || '').toUpperCase().includes('EXIT') || l.status === 'Completed';
-        const isGuest = l.role === 'Guest' || l.studentId === 'GUEST' || (l.owner && l.owner.toLowerCase().includes('guest')) || !l.owner;
+        const isGuest = l.role === 'Guest' || l.user_id === 'GUEST' || l.userId === 'GUEST' || (l.owner && l.owner.toLowerCase().includes('guest')) || !l.owner;
         const hasSavedSpot = Boolean(l.isSpotSaved || (l.floor && l.floor !== '-' && (l.pillar || l.spot) && (l.pillar || l.spot) !== '-'));
 
         list.push({
           id: l.id || `LOG-${index + 100}`,
           owner: l.owner || (isGuest ? 'Guest Driver' : 'Registered Driver'),
-          studentId: l.studentId || (isGuest ? 'GUEST' : (l.ownerEmail ? l.ownerEmail.split('@')[0].toUpperCase() : 'STUDENT')),
+          userId: l.userId || l.user_id || (isGuest ? 'GUEST' : (l.ownerEmail ? l.ownerEmail.split('@')[0].toUpperCase() : 'USER')),
           role: l.role || (isGuest ? 'Guest' : 'Student'),
           plate: plate,
           province: (plate === '-' || !plate || plate === 'Unregistered') ? '-' : (l.province || '-'),
@@ -235,7 +235,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q || (
         spot.owner?.toLowerCase().includes(q) ||
-        spot.studentId?.toLowerCase().includes(q) ||
+        (spot.userId || spot.user_id)?.toLowerCase().includes(q) ||
         spot.plate?.toLowerCase().includes(q) ||
         spot.zone?.toLowerCase().includes(q) ||
         spot.pillar?.toLowerCase().includes(q) ||
@@ -294,9 +294,9 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       duration: 'Live',
       spot: (l.pillar && l.pillar !== '-') ? l.pillar : ((l.spot && l.spot !== '-') ? l.spot : '-'),
       zone: l.zone && l.zone !== '-' ? l.zone.split('(')[0].trim() : 'Zone A',
-      studentId: l.studentId || ((l.role === 'Guest' || !l.owner) ? 'GUEST' : (l.ownerEmail ? l.ownerEmail.split('@')[0].toUpperCase() : 'STUDENT')),
+      userId: l.userId || l.user_id || ((l.role === 'Guest' || !l.owner) ? 'GUEST' : (l.ownerEmail ? l.ownerEmail.split('@')[0].toUpperCase() : 'USER')),
       owner: l.owner || ((l.role === 'Guest' || !l.owner) ? 'Guest Driver' : 'Registered Driver'),
-      role: l.role || ((l.studentId === 'GUEST' || !l.owner) ? 'Guest' : 'Student'),
+      role: l.role || ((l.user_id === 'GUEST' || l.userId === 'GUEST' || !l.owner) ? 'Guest' : 'Student'),
       plate: l.plate || l.license_plate || '-',
       province: l.province || 'กรุงเทพมหานคร',
       vehicleName: l.vehicle || l.vehicleName || 'Vehicle',
@@ -306,7 +306,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q || (
         item.owner?.toLowerCase().includes(q) ||
-        item.studentId?.toLowerCase().includes(q) ||
+        (item.userId || item.user_id)?.toLowerCase().includes(q) ||
         item.plate?.toLowerCase().includes(q) ||
         item.spot?.toLowerCase().includes(q) ||
         item.zone?.toLowerCase().includes(q) ||
@@ -733,7 +733,7 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
                             {recordDate}
                           </td>
                           <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: 13 }}>
-                            {spot.studentId}
+                            {spot.userId || spot.user_id}
                           </td>
                           <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: 14 }}>
                             {spot.owner}

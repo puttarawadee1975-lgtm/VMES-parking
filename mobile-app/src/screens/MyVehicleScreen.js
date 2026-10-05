@@ -52,7 +52,7 @@ export default function MyVehicleScreen({
 
   const isGuest = currentUser?.role === 'guest';
   const isStudent = currentUser?.role === 'student';
-  const isStaff = currentUser?.role === 'staff';
+  const isStaff = currentUser?.role === 'staff' || currentUser?.role === 'faculty';
 
   const handlePickVehiclePhoto = async (useCamera = false) => {
     try {
@@ -438,17 +438,17 @@ export default function MyVehicleScreen({
       <View className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
         <View className="bg-slate-900 p-5 sm:p-6">
           <View className="flex-row justify-between items-start">
-            <View>
+            <View className="flex-1 mr-3 min-w-0">
               <Text className="text-blue-400 text-[10px] font-bold uppercase tracking-wider">VMES Parking Pass</Text>
 
-              <Text className="text-white text-lg sm:text-xl font-black mt-1">
+              <Text className="text-white text-lg sm:text-xl font-black mt-1" numberOfLines={1}>
                 {currentUser?.name}
               </Text>
-              <Text className="text-slate-400 text-xs mt-0.5">
-                {isStaff ? `Staff ID: ${currentUser?.staffId || (currentUser?.email ? currentUser.email.split('@')[0] : 'STF-1024')}` : isStudent ? `Student ID: ${(currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')).replace(/\D/g, '')}` : 'Temporary Visitor Pass'}
+              <Text className="text-slate-400 text-xs mt-0.5" numberOfLines={1}>
+                {`User ID: ${currentUser?.userId || currentUser?.user_id || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')}`}
               </Text>
             </View>
-            <View className={`px-2.5 py-1 rounded-full border ${isStaff
+            <View className={`px-2.5 py-1 rounded-full border flex-shrink-0 ${isStaff
                 ? 'bg-purple-900/60 border-purple-500/50'
                 : isStudent
                   ? 'bg-blue-900/60 border-blue-500/50'
@@ -456,7 +456,7 @@ export default function MyVehicleScreen({
               }`}>
               <Text className={`text-[10px] font-black uppercase ${isStaff ? 'text-purple-300' : isStudent ? 'text-blue-300' : 'text-amber-300'
                 }`}>
-                {currentUser?.role === 'staff' ? 'Faculty / Staff' : (currentUser?.role || 'Guest')}
+                {(currentUser?.role === 'staff' || currentUser?.role === 'faculty') ? 'Faculty / Staff' : (currentUser?.role || 'Guest')}
               </Text>
             </View>
           </View>
@@ -464,11 +464,10 @@ export default function MyVehicleScreen({
 
         <View className="p-4 sm:p-5 flex-row justify-between items-center bg-white border-t border-slate-100">
           <View className="flex-1 pr-2">
-            <Text className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Account Email & ID</Text>
-            <Text className="text-slate-700 text-xs font-semibold mt-0.5" numberOfLines={1}>{currentUser?.email}</Text>
+            <Text className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Account ID</Text>
             {currentUser?.role !== 'guest' && (
               <Text className="text-slate-700 text-xs font-semibold mt-0.5" numberOfLines={1}>
-                {isStaff ? 'Staff ID' : 'Student ID'}: {isStaff ? (currentUser?.staffId || (currentUser?.email ? currentUser.email.split('@')[0] : 'STF-1024')) : (currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')).replace(/\D/g, '')}
+                User ID: {currentUser?.userId || currentUser?.user_id || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042')}
               </Text>
             )}
           </View>
@@ -509,8 +508,8 @@ export default function MyVehicleScreen({
       <View className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm">
         <View className="flex-row justify-between items-center mb-4">
           <View>
-            <Text className="text-slate-900 font-bold text-sm">Registered Vehicle</Text>
-            <Text className="text-slate-400 text-[10px]">1 account per license plate</Text>
+            <Text className="text-slate-900 font-bold text-sm">Registered Vehicle ({currentUser?.vehicles?.length || 0}/1)</Text>
+            <Text className="text-slate-400 text-[10px]">Policy: Maximum 1 registered vehicle per account</Text>
           </View>
         </View>
 

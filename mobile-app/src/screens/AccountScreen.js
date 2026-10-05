@@ -12,6 +12,7 @@ export default function AccountScreen({
   currentUser,
   parkedSpot,
   onOpenQRScanner,
+  onExitBuilding,
   onLogout,
   websocketUrl = 'ws://168.120.248.53:8000/ws/detections',
   setWebsocketUrl = () => { },
@@ -37,7 +38,7 @@ export default function AccountScreen({
   const [showDrivingScoreModal, setShowDrivingScoreModal] = useState(false);
 
   const isGuest = !currentUser || currentUser?.role === 'guest';
-  const isStaff = currentUser?.role === 'staff';
+  const isStaff = currentUser?.role === 'staff' || currentUser?.role === 'faculty';
   const isStudent = currentUser?.role === 'student';
 
   const roleLabel = isStaff ? 'Faculty / Staff' : isStudent ? 'Student' : 'Guest';
@@ -45,9 +46,8 @@ export default function AccountScreen({
     .replace(/\s*\([^)]*(Faculty|Staff|Student)[^)]*\)/gi, '')
     .trim();
   const avatarInitial = cleanName ? cleanName.charAt(0).toUpperCase() : 'U';
-  const rawId = currentUser?.studentId || (currentUser?.email ? currentUser.email.split('@')[0] : '');
-  const digitsOnlyId = rawId ? rawId.replace(/\D/g, '') : null;
-  const displayId = isStaff ? (currentUser?.staffId || (currentUser?.email ? currentUser.email.split('@')[0] : 'STF-1024')) : (digitsOnlyId || (isStudent ? '65070042' : null));
+  const rawId = currentUser?.userId || currentUser?.user_id || (currentUser?.email ? currentUser.email.split('@')[0] : '');
+  const displayId = rawId || (currentUser?.email ? currentUser.email.split('@')[0] : '65070042');
 
   return (
     <View className="flex-col gap-4">
@@ -98,12 +98,6 @@ export default function AccountScreen({
                   </Text>
                 </View>
               </View>
-
-              {currentUser?.email ? (
-                <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={1}>
-                  {currentUser.email}
-                </Text>
-              ) : null}
 
               {displayId && isStudent ? (
                 <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={1}>
@@ -253,6 +247,10 @@ export default function AccountScreen({
           onClose={() => setShowDetailsModal(false)}
           parkedSpot={parkedSpot}
           onOpenQRScanner={onOpenQRScanner}
+          onExitBuilding={() => {
+            setShowDetailsModal(false);
+            if (onExitBuilding) onExitBuilding();
+          }}
         />
       </View>
 

@@ -131,13 +131,13 @@ async def ingest_detection_event(payload: DetectionLogCreate):
 
     penalty_applied = False
     role_str = "Guest"
-    student_id_str = "GUEST"
+    user_id_str = "GUEST"
 
     if user_doc:
         matched_user = user_doc
         matched_user_name = f"{user_doc.get('name')} ({user_doc.get('email')})"
         role_str = (user_doc.get("role") or "Student").capitalize()
-        student_id_str = user_doc.get("student_id") or user_doc.get("studentId") or (user_doc.get("email", "").split("@")[0].upper() if "@" in user_doc.get("email", "") else "STUDENT")
+        user_id_str = user_doc.get("user_id") or user_doc.get("userId") or (user_doc.get("email", "").split("@")[0].upper() if "@" in user_doc.get("email", "") else "USER")
 
         # Check if Master Enforcement system is ACTIVE
         from database import system_settings_collection
@@ -178,11 +178,11 @@ async def ingest_detection_event(payload: DetectionLogCreate):
     elif registered_vehicle:
         matched_user_name = registered_vehicle.get("user_email") or "Registered Vehicle"
         role_str = (registered_vehicle.get("role") or "Student").capitalize()
-        student_id_str = registered_vehicle.get("student_id") or (registered_vehicle.get("user_email", "").split("@")[0].upper() if "@" in registered_vehicle.get("user_email", "") else "STUDENT")
+        user_id_str = registered_vehicle.get("user_id") or registered_vehicle.get("userId") or (registered_vehicle.get("user_email", "").split("@")[0].upper() if "@" in registered_vehicle.get("user_email", "") else "STUDENT")
     else:
         matched_user_name = "Guest Driver"
         role_str = "Guest"
-        student_id_str = "GUEST"
+        user_id_str = "GUEST"
 
     # Event snapshot handling: Save base64 to disk if provided
     raw_b64 = payload.snapshot_base64 or (payload.image_url if payload.image_url and payload.image_url.startswith("data:") else None)
@@ -208,7 +208,8 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         "matched_email": matched_user.get("email") if matched_user else None,
         "matched_user": matched_user_name,
         "role": role_str,
-        "studentId": student_id_str,
+        "user_id": user_id_str,
+        "userId": user_id_str,
         # Event snapshot captured by ai_pipeline.py or web camera
         "image_url": final_img_url,
         "snapshot_base64": raw_b64,
@@ -510,9 +511,9 @@ def get_ocr_reader():
     global _CACHED_EASYOCR_READER
     if _CACHED_EASYOCR_READER is None:
         import easyocr
-        import os
-        use_gpu = os.uname().sysname == "Darwin" and os.uname().machine == "arm64"
-        print("[API OCR] Initializing global warm EasyOCR model (One-time load for fast mobile scans)...")
+        import torch
+        use_gpu = torch.cuda.is_available()
+        print(f"[API OCR] Initializing global warm EasyOCR model (gpu={use_gpu})...")
         _CACHED_EASYOCR_READER = easyocr.Reader(['th', 'en'], gpu=use_gpu)
     return _CACHED_EASYOCR_READER
 

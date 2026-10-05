@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 # Vehicle Schema
 class Vehicle(BaseModel):
+    user_id: Optional[str] = Field(None, description="FK linking to User ID")
     plate: str = Field(..., description="License plate number, e.g., '1กข 1234'")
     model: Optional[str] = None
     type: Optional[str] = None
@@ -17,9 +18,11 @@ class Vehicle(BaseModel):
 
 # User Schemas
 class UserBase(BaseModel):
+    user_id: Optional[str] = Field(None, description="Primary Unique User ID")
     email: EmailStr
     role: str = "student"
     name: str
+    student_id: Optional[str] = None
     driving_score: int = Field(default=100, ge=0, le=100)
     vehicles: List[dict] = Field(default_factory=list)
 
@@ -80,6 +83,8 @@ class ParkingStatusResponse(BaseModel):
 
 # Saved Spot Schemas
 class SavedSpotCreate(BaseModel):
+    user_id: Optional[str] = Field(None, description="FK linking to User ID")
+    user_email: Optional[str] = None
     zone: str = Field(..., description="e.g. Zone A")
     building: str = Field(default="VMES Building", description="e.g. VMES Building")
     floor: str = Field(default="Floor G", description="e.g. Floor G")
@@ -90,11 +95,11 @@ class SavedSpotCreate(BaseModel):
     savedTime: Optional[str] = None
 
 class SavedSpotResponse(SavedSpotCreate):
-    user_email: Optional[str] = None
     timestamp: Optional[datetime] = None
 
 
 class SpotReservationCreate(BaseModel):
+    user_id: Optional[str] = Field(None, description="FK linking to User ID")
     zone: str = Field(..., description="e.g. Zone A")
     building: str = Field(default="VMES Building", description="e.g. VMES Building")
     floor: str = Field(default="Floor G", description="e.g. Floor G")
@@ -117,6 +122,7 @@ class TokenResponse(BaseModel):
 
 # Registered Vehicle MongoDB Schema
 class VehicleRegisterCreate(BaseModel):
+    user_id: Optional[str] = Field(None, description="FK linking to User ID")
     plate: str
     model: str
     user_email: Optional[str] = None

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, SafeAreaView, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, SafeAreaView, ScrollView, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { getNavMapImage } from '../data/mockData';
@@ -21,38 +21,51 @@ export default function ParkingDetailsModal({
     if (Array.isArray(parkedSpot.images) && parkedSpot.images.length > 0) {
       return parkedSpot.images;
     }
-    if (Array.isArray(parkedSpot.imageUrls) && parkedSpot.imageUrls.length > 0) {
-      return parkedSpot.imageUrls;
-    }
+
+    // Check if imageUrl contains valid http/https URLs or base64 images
     if (typeof parkedSpot.imageUrl === 'string' && parkedSpot.imageUrl.trim()) {
       const splitUrls = parkedSpot.imageUrl.split(',').map(url => url.trim()).filter(Boolean);
-      if (splitUrls.length > 0) return splitUrls;
+      const validHttpUrls = splitUrls.filter(u => u.startsWith('http://') || u.startsWith('https://') || u.startsWith('data:image'));
+      if (validHttpUrls.length > 0) {
+        return validHttpUrls;
+      }
     }
-    const p = parkedSpot.pillar || '';
-    const z = parkedSpot.zone || '';
-    const navImg = getNavMapImage(p);
-    if (p.includes('C-08') || p.includes('C-8')) {
+
+    if (Array.isArray(parkedSpot.imageUrls) && parkedSpot.imageUrls.length > 0) {
+      const validHttpUrls = parkedSpot.imageUrls.filter(u => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('data:image')));
+      if (validHttpUrls.length > 0) {
+        return validHttpUrls;
+      }
+    }
+
+    // Fallback to local bundled assets based on zone/pillar
+    const p = String(parkedSpot.pillar || parkedSpot.spot || '').toUpperCase();
+    const z = String(parkedSpot.zone || '').toUpperCase();
+    const cleanPillar = p.replace(/^(SPOT|PILLAR)\s+/i, '').trim();
+    const navImg = typeof getNavMapImage === 'function' ? getNavMapImage(cleanPillar) : null;
+
+    if (cleanPillar.includes('C-08') || cleanPillar.includes('C-8')) {
       return [
         require('../../assets/zone_c_c08_building.jpg'),
         require('../../assets/zone_c_c08_spot.jpg'),
         navImg
       ];
     }
-    if (z === 'Zone C' || z.includes('Zone C') || p.includes('C-')) {
+    if (z.includes('ZONE C') || cleanPillar.startsWith('C-') || cleanPillar.startsWith('C')) {
       return [
         require('../../assets/zone_c_building.jpg'),
         require('../../assets/zone_c_spot.jpg'),
         navImg
       ];
     }
-    if (z === 'Zone B' || z.includes('Zone B') || p.includes('B-')) {
+    if (z.includes('ZONE B') || cleanPillar.startsWith('B-') || cleanPillar.startsWith('B')) {
       return [
         require('../../assets/zone_b_building.jpg'),
         require('../../assets/zone_b_spot.jpg'),
         navImg
       ];
     }
-    if (z === 'Zone D' || p.includes('D-01')) {
+    if (z.includes('ZONE D') || cleanPillar.startsWith('D-') || cleanPillar.startsWith('D')) {
       return [
         require('../../assets/zone_d_building.jpg'),
         require('../../assets/zone_d_spot.jpg'),
@@ -92,7 +105,7 @@ export default function ParkingDetailsModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : undefined}
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
@@ -111,7 +124,7 @@ export default function ParkingDetailsModal({
               <Ionicons name="alert-circle" size={24} color="#d97706" style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#92400e', fontWeight: '800', fontSize: 13 }}>No Saved Parking Location</Text>
-                <Text style={{ color: '#b45309', fontSize: 11, marginTop: 2 }}>You haven't scanned a QR code to save your parking spot yet.</Text>
+                <Text style={{ color: '#b45309', fontSize: 11, marginTop: 2 }}>Scan QR code to save your parking spot</Text>
               </View>
             </View>
           )}

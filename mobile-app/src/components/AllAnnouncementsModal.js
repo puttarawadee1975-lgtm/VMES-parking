@@ -5,7 +5,8 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-  SafeAreaView
+  SafeAreaView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AnnouncementDetailModal from './AnnouncementDetailModal';
@@ -25,13 +26,6 @@ export default function AllAnnouncementsModal({
       setSelectedDetailItem(null);
     }
   }, [visible, initialAnnouncement]);
-
-  if (!visible) return null;
-
-  const handleCloseModal = () => {
-    setSelectedDetailItem(null);
-    onClose();
-  };
 
   const sortedAnnouncements = React.useMemo(() => {
     return [...announcements].sort((a, b) => {
@@ -60,11 +54,18 @@ export default function AllAnnouncementsModal({
     });
   }, [announcements]);
 
+  if (!visible) return null;
+
+  const handleCloseModal = () => {
+    setSelectedDetailItem(null);
+    onClose();
+  };
+
   return (
     <Modal
       visible={Boolean(visible)}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : undefined}
       onRequestClose={handleCloseModal}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
@@ -204,7 +205,7 @@ export default function AllAnnouncementsModal({
           </View>
         </ScrollView>
 
-        {/* Announcement Detail Modal - exact same component used by NotificationsModal */}
+        {/* Announcement Detail Pop-up Modal */}
         <AnnouncementDetailModal
           visible={Boolean(selectedDetailItem)}
           onClose={() => setSelectedDetailItem(null)}

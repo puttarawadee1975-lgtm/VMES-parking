@@ -7,7 +7,8 @@ import {
   ScrollView,
   Animated,
   StatusBar,
-  Image
+  Image,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -43,7 +44,7 @@ export default function ParkingQRModal({
       }
       const p = scannedSpot.pillar || '';
       const z = scannedSpot.zone || '';
-      const navImg = getNavMapImage(p);
+      const navImg = typeof getNavMapImage === 'function' ? getNavMapImage(p) : null;
       if (p.includes('C-08') || p.includes('C-8')) {
         return [
           require('../../assets/zone_c_c08_building.jpg'),
@@ -166,7 +167,7 @@ export default function ParkingQRModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle={Platform.OS === 'ios' ? 'fullScreen' : undefined}
       onRequestClose={handleClose}
     >
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />

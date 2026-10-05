@@ -129,7 +129,7 @@ export const loginWithMicrosoft = async ({ accessToken, idToken, email, name }) 
       access_token: 'mock-jwt-token',
       user: {
         email: email || '65070042@student.university.ac.th',
-        name: name || 'Student User',
+        name: name || (email ? email.split('@')[0] : 'User'),
         role: 'Student',
         driving_score: 100
       }

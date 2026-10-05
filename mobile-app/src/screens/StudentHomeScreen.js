@@ -50,9 +50,9 @@ export default function StudentHomeScreen({
           const targetStr = (ann.target_user || '').toLowerCase().trim();
           const userEmail = (currentUser?.email || '').toLowerCase();
           const userName = (currentUser?.name || '').toLowerCase();
-          const studentId = (currentUser?.studentId || '').toLowerCase();
+          const userId = (currentUser?.userId || currentUser?.user_id || '').toLowerCase();
 
-          if (targetStr && !userEmail.includes(targetStr) && !userName.includes(targetStr) && !studentId.includes(targetStr)) {
+          if (targetStr && !userEmail.includes(targetStr) && !userName.includes(targetStr) && !userId.includes(targetStr)) {
             return false;
           }
         }

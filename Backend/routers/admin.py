@@ -85,7 +85,7 @@ def get_gate_history():
                 "matched_email": None,
                 "matched_user": "Guest Driver",
                 "role": "Guest",
-                "studentId": "GUEST",
+                "user_id": "GUEST",
                 "image_url": "/snapshots/entry_cam01_1789715495_ก1687.jpg"
             }
         ]
@@ -127,9 +127,19 @@ def admin_register_vehicle(payload: dict):
     model = payload.get("model") or f"{brand} Vehicle".strip()
     color = payload.get("color") or ""
     owner = payload.get("owner") or "Registered Driver"
+    user_role = (payload.get("role") or "Student").title()
+    provided_user_id = payload.get("user_id") or payload.get("userId")
     
+    if user_role in ["Staff", "Faculty"]:
+        staff_faculty_count = sum(1 for v in store.registered_vehicles if str(v.get("role")).title() in ["Staff", "Faculty"])
+        user_id = provided_user_id or str(staff_faculty_count + 1)
+    else:
+        email_digits = "".join(filter(str.isdigit, email.split("@")[0])) if email else ""
+        user_id = provided_user_id or (email_digits if email_digits else f"6607{new_id:04d}")
+
     new_vehicle = {
         "id": new_id,
+        "user_id": user_id,
         "plate": plate,
         "license_plate": plate,
         "vehicle_type": v_type,
@@ -138,8 +148,7 @@ def admin_register_vehicle(payload: dict):
         "color": color,
         "owner": owner,
         "user_email": email,
-        "role": payload.get("role") or "Student",
-        "studentId": f"6607{new_id:04d}",
+        "role": user_role,
         "score": 100,
         "status": "Active",
         "registered_at": "2026-09-25T23:00:00.000Z",

@@ -6,7 +6,8 @@ import {
   Modal,
   SafeAreaView,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { getGateDetectionsHistory } from '../services/api';
@@ -262,7 +263,7 @@ export default function GateHistoryModal({
     <Modal
       visible={Boolean(visible)}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : undefined}
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>

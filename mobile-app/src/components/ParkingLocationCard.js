@@ -1,6 +1,27 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+function getSpotThumbnail(parkedSpot) {
+  if (!parkedSpot) return null;
+  const p = String(parkedSpot.pillar || parkedSpot.spot || '').toUpperCase();
+  const z = String(parkedSpot.zone || '').toUpperCase();
+  const cleanPillar = p.replace(/^(SPOT|PILLAR)\s+/i, '').trim();
+
+  if (cleanPillar.includes('C-08') || cleanPillar.includes('C-8')) {
+    return require('../../assets/zone_c_c08_spot.jpg');
+  }
+  if (z.includes('ZONE C') || cleanPillar.startsWith('C-') || cleanPillar.startsWith('C')) {
+    return require('../../assets/zone_c_spot.jpg');
+  }
+  if (z.includes('ZONE B') || cleanPillar.startsWith('B-') || cleanPillar.startsWith('B')) {
+    return require('../../assets/zone_b_spot.jpg');
+  }
+  if (z.includes('ZONE D') || cleanPillar.startsWith('D-') || cleanPillar.startsWith('D')) {
+    return require('../../assets/zone_d_spot.jpg');
+  }
+  return require('../../assets/zone_a_spot.jpg');
+}
 
 export default function ParkingLocationCard({
   parkedSpot,
@@ -12,6 +33,7 @@ export default function ParkingLocationCard({
     const zoneStr = parkedSpot.zone ? `${parkedSpot.zone} • ${parkedSpot.floor || 'Floor G'}` : (parkedSpot.floor || 'Floor G');
     const rawSpot = parkedSpot.pillar || 'A-01';
     const cleanSpot = rawSpot.replace(/^Spot\s+/i, '').replace(/^Pillar\s+/i, '').trim();
+    const thumbImg = getSpotThumbnail(parkedSpot);
 
     return (
       <TouchableOpacity 
@@ -20,12 +42,21 @@ export default function ParkingLocationCard({
         className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm mb-4 flex-row items-center justify-between"
       >
         <View className="flex-row items-center flex-1">
-          <View className="w-12 h-12 rounded-2xl bg-emerald-100 items-center justify-center mr-3.5 border border-emerald-300">
-            <Ionicons name="location" size={24} color="#059669" />
-          </View>
+          {thumbImg ? (
+            <View style={{ width: 48, height: 48, borderRadius: 16, overflow: 'hidden', marginRight: 14, borderWidth: 1, borderColor: '#cbd5e1', backgroundColor: '#f1f5f9' }}>
+              <Image
+                source={thumbImg}
+                style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+              />
+            </View>
+          ) : (
+            <View className="w-12 h-12 rounded-2xl bg-emerald-100 items-center justify-center mr-3.5 border border-emerald-300">
+              <Ionicons name="location" size={24} color="#059669" />
+            </View>
+          )}
           <View className="flex-1">
             <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">
-              Find My Parking ({zoneStr})
+              Find My Parking
             </Text>
             <Text className="text-slate-900 font-extrabold text-base" numberOfLines={1}>
               {(!parkedSpot.building || parkedSpot.building.startsWith('Zone')) ? 'VMES Building' : parkedSpot.building}

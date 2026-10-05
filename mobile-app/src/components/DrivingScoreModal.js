@@ -7,7 +7,8 @@ import {
   ScrollView,
   SafeAreaView,
   ActivityIndicator,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getGateDetectionsHistory } from '../services/api';
@@ -59,8 +60,8 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
   if (!visible) return null;
 
   const score = currentUser?.safetyScore ?? currentUser?.driving_score ?? 100;
-  const isGood = score >= 80 && score < 100;
-  const isWarning = score < 80;
+  const isGood = score >= 51 && score < 100;
+  const isWarning = score <= 50;
 
   let scoreColor = '#10b981'; // emerald-500
   let scoreBg = '#ecfdf5'; // emerald-50
@@ -94,7 +95,7 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
     <Modal
       visible={Boolean(visible)}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : undefined}
       onRequestClose={onClose}
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
@@ -157,11 +158,8 @@ export default function DrivingScoreModal({ visible, onClose, currentUser }) {
                 </Text>
               </View>
 
-              <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f172a', marginBottom: 4 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f172a' }}>
                 Status: {statusText}
-              </Text>
-              <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 20 }}>
-                {statusDesc}
               </Text>
             </View>
 
