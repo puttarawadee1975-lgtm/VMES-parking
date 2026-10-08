@@ -3,7 +3,7 @@ Admin Web Router - Endpoints dedicated for Admin Web Dashboard and Officer Manag
 """
 
 from fastapi import APIRouter, HTTPException
-from database import is_db_connected
+from database import is_db_connected, registered_vehicles_collection
 import store
 
 router = APIRouter(tags=["Admin Web"])
@@ -96,32 +96,90 @@ def get_gate_history():
 @router.get("/admin/driving-score")
 @router.get("/admin/users")
 def get_all_registered_vehicles():
-    return store.registered_vehicles
+    if not is_db_connected() or registered_vehicles_collection is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "user_id": 1,
+        "plate": 1,
+        "license_plate": 1,
+        "province": 1,
+        "vehicle_type": 1,
+        "brand": 1,
+        "model": 1,
+        "color": 1,
+        "owner": 1,
+        "user_email": 1,
+        "role": 1,
+        "score": 1,
+        "status": 1,
+        "registered_at": 1,
+    }
+
+    vehicles = list(registered_vehicles_collection.find({}, projection))
+
+    for vehicle in vehicles:
+        plate = vehicle.get("plate") or vehicle.get("license_plate") or ""
+        vehicle["plate"] = plate
+        vehicle["license_plate"] = plate
+        vehicle.setdefault("vehicle_type", "car")
+        vehicle.setdefault("brand", "")
+        vehicle.setdefault("model", "")
+        vehicle.setdefault("color", "")
+        vehicle.setdefault("owner", "Registered Driver")
+        vehicle.setdefault("score", 100)
+        vehicle.setdefault("status", "Active")
+
+        if "user_id" not in vehicle:
+            email = vehicle.get("user_email", "")
+            email_digits = "".join(filter(str.isdigit, email.split("@")[0]))
+            vehicle["user_id"] = email_digits
+
+        vehicle["userId"] = vehicle.get("user_id", "")
+
+    return vehicles
 
 @router.post("/admin/vehicle-register")
 def admin_register_vehicle(payload: dict):
+    from datetime import datetime, timezone
+    import uuid
+
+    if not is_db_connected() or registered_vehicles_collection is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
     email = payload.get("user_email") or payload.get("email") or ""
     role = (payload.get("role") or "Student").lower()
     plate = payload.get("plate") or payload.get("license_plate") or "Unregistered"
+    norm_plate = plate.strip().upper()
 
     if email and role != "admin":
-        existing_user_vehicles = [v for v in store.registered_vehicles if v.get("user_email") == email]
-        if len(existing_user_vehicles) >= 1:
+        if registered_vehicles_collection.find_one(
+            {"user_email": email},
+            {"_id": 1}
+        ):
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Registration Limit Reached: 1 vehicle is allowed per account."
             )
 
-    norm_plate = plate.strip().upper()
-    for v in store.registered_vehicles:
-        existing_plate = (v.get("plate") or v.get("license_plate") or "").strip().upper()
+    for vehicle in registered_vehicles_collection.find(
+        {},
+        {"plate": 1, "license_plate": 1}
+    ):
+        existing_plate = (
+            vehicle.get("plate")
+            or vehicle.get("license_plate")
+            or ""
+        ).strip().upper()
+
         if existing_plate and existing_plate == norm_plate:
             raise HTTPException(
                 status_code=400,
                 detail=f"License plate '{plate}' is already registered in the system."
             )
 
-    new_id = len(store.registered_vehicles) + 1
     v_type = payload.get("vehicle_type") or "car"
     brand = payload.get("brand") or ""
     model = payload.get("model") or f"{brand} Vehicle".strip()
@@ -129,17 +187,20 @@ def admin_register_vehicle(payload: dict):
     owner = payload.get("owner") or "Registered Driver"
     user_role = (payload.get("role") or "Student").title()
     provided_user_id = payload.get("user_id") or payload.get("userId")
-    
+
     if user_role in ["Staff", "Faculty"]:
-        staff_faculty_count = sum(1 for v in store.registered_vehicles if str(v.get("role")).title() in ["Staff", "Faculty"])
-        user_id = provided_user_id or str(staff_faculty_count + 1)
+        user_id = provided_user_id or uuid.uuid4().hex[:8]
     else:
-        email_digits = "".join(filter(str.isdigit, email.split("@")[0])) if email else ""
-        user_id = provided_user_id or (email_digits if email_digits else f"6607{new_id:04d}")
+        email_digits = "".join(
+            filter(str.isdigit, email.split("@")[0])
+        ) if email else ""
+        user_id = provided_user_id or (
+            email_digits if email_digits else uuid.uuid4().hex[:8]
+        )
 
     new_vehicle = {
-        "id": new_id,
-        "user_id": user_id,
+        "id": uuid.uuid4().hex,
+        "user_id": str(user_id),
         "plate": plate,
         "license_plate": plate,
         "vehicle_type": v_type,
@@ -151,16 +212,10 @@ def admin_register_vehicle(payload: dict):
         "role": user_role,
         "score": 100,
         "status": "Active",
-        "registered_at": "2026-09-25T23:00:00.000Z",
-        "vehicle_photo": payload.get("vehicle_photo") or None
+        "registered_at": datetime.now(timezone.utc).isoformat(),
     }
-    store.registered_vehicles.append(new_vehicle)
 
-    if is_db_connected():
-        try:
-            print(f"[Database Sync] Vehicle registered by Admin: {plate} ({owner})")
-        except Exception as e:
-            print(f"[Database Warning] Could not sync new vehicle to DB: {e}")
+    registered_vehicles_collection.insert_one(dict(new_vehicle))
 
     return {
         "status": "success",
@@ -170,32 +225,98 @@ def admin_register_vehicle(payload: dict):
 
 @router.put("/admin/update-vehicle")
 def update_vehicle(payload: dict):
+    if not is_db_connected() or registered_vehicles_collection is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
     target_plate = payload.get("old_plate") or payload.get("plate")
-    updated_obj = None
-    for v in store.registered_vehicles:
-        if v.get("plate") == target_plate or v.get("license_plate") == target_plate:
-            if "plate" in payload:
-                v["plate"] = payload["plate"]
-                v["license_plate"] = payload["plate"]
-            if "vehicle_type" in payload: v["vehicle_type"] = payload["vehicle_type"]
-            if "brand" in payload: v["brand"] = payload["brand"]
-            if "model" in payload: v["model"] = payload["model"]
-            if "color" in payload: v["color"] = payload["color"]
-            if "owner" in payload: v["owner"] = payload["owner"]
-            if "user_email" in payload: v["user_email"] = payload["user_email"]
-            if "role" in payload: v["role"] = payload["role"]
-            updated_obj = v
-            break
+    if not target_plate:
+        raise HTTPException(status_code=400, detail="Vehicle plate is required")
 
-    if updated_obj:
-        if is_db_connected():
-            try:
-                print(f"[Database Sync] Vehicle updated: {target_plate}")
-            except Exception as e:
-                print(f"[Database Warning] Could not sync vehicle update to DB: {e}")
-        return {"status": "success", "message": "Vehicle updated successfully", "vehicle": updated_obj}
+    existing = registered_vehicles_collection.find_one(
+        {
+            "$or": [
+                {"plate": target_plate},
+                {"license_plate": target_plate},
+            ]
+        },
+        {"_id": 1, "plate": 1, "license_plate": 1}
+    )
 
-    return {"status": "error", "message": "Vehicle not found"}
+    if not existing:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    updates = {}
+
+    if "plate" in payload:
+        new_plate = payload["plate"]
+        norm_new_plate = new_plate.strip().upper()
+
+        duplicate = registered_vehicles_collection.find_one(
+            {
+                "_id": {"$ne": existing["_id"]},
+                "$or": [
+                    {"plate": {"$regex": f"^{norm_new_plate}$", "$options": "i"}},
+                    {"license_plate": {"$regex": f"^{norm_new_plate}$", "$options": "i"}},
+                ],
+            },
+            {"_id": 1}
+        )
+
+        if duplicate:
+            raise HTTPException(
+                status_code=400,
+                detail=f"License plate '{new_plate}' is already registered in the system."
+            )
+
+        updates["plate"] = new_plate
+        updates["license_plate"] = new_plate
+
+    for field in [
+        "vehicle_type",
+        "brand",
+        "model",
+        "color",
+        "owner",
+        "user_email",
+        "role",
+    ]:
+        if field in payload:
+            updates[field] = payload[field]
+
+    if not updates:
+        raise HTTPException(status_code=400, detail="No vehicle fields supplied for update")
+
+    registered_vehicles_collection.update_one(
+        {"_id": existing["_id"]},
+        {"$set": updates}
+    )
+
+    updated = registered_vehicles_collection.find_one(
+        {"_id": existing["_id"]},
+        {
+            "_id": 0,
+            "id": 1,
+            "user_id": 1,
+            "plate": 1,
+            "license_plate": 1,
+            "vehicle_type": 1,
+            "brand": 1,
+            "model": 1,
+            "color": 1,
+            "owner": 1,
+            "user_email": 1,
+            "role": 1,
+            "score": 1,
+            "status": 1,
+            "registered_at": 1,
+        }
+    )
+
+    return {
+        "status": "success",
+        "message": "Vehicle updated successfully",
+        "vehicle": updated,
+    }
 
 @router.get("/officer/detections")
 def get_officer_detections(violation_only: bool = False):
@@ -211,29 +332,76 @@ def get_score_logs():
 
 @router.post("/admin/adjust-score")
 def adjust_score(payload: dict):
+    if not is_db_connected() or registered_vehicles_collection is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
     email = payload.get("user_email") or ""
-    change = payload.get("points_changed") or 0
     owner_name = payload.get("owner") or ""
+    change = payload.get("points_changed", 0)
 
-    updated_vehicle = None
-    for v in store.registered_vehicles:
-        if (email and v.get("user_email") == email) or (owner_name and (v.get("owner") == owner_name or v.get("plate") == owner_name)):
-            cur = v.get("score", 100)
-            v["score"] = max(0, min(100, cur + change))
-            updated_vehicle = v
-            break
+    if not isinstance(change, (int, float)):
+        raise HTTPException(status_code=400, detail="points_changed must be numeric")
 
-    if not updated_vehicle and store.registered_vehicles and change != 0:
-        store.registered_vehicles[0]["score"] = max(0, min(100, store.registered_vehicles[0].get("score", 100) + change))
-        updated_vehicle = store.registered_vehicles[0]
+    if not email and not owner_name:
+        raise HTTPException(
+            status_code=400,
+            detail="user_email, owner, or plate is required"
+        )
 
-    if is_db_connected():
-        try:
-            print(f"[Database Sync] Score adjusted for {email or owner_name}: {change} pts")
-        except Exception as e:
-            print(f"[Database Warning] Could not sync score to DB: {e}")
+    query_parts = []
 
-    return {"status": "success", "message": "Score updated successfully", "vehicle": updated_vehicle}
+    if email:
+        query_parts.append({"user_email": email})
+
+    if owner_name:
+        query_parts.extend([
+            {"owner": owner_name},
+            {"plate": owner_name},
+            {"license_plate": owner_name},
+        ])
+
+    query = query_parts[0] if len(query_parts) == 1 else {"$or": query_parts}
+
+    vehicle = registered_vehicles_collection.find_one(
+        query,
+        {
+            "_id": 1,
+            "score": 1,
+        }
+    )
+
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    current_score = vehicle.get("score", 100)
+    new_score = max(0, min(100, current_score + change))
+
+    registered_vehicles_collection.update_one(
+        {"_id": vehicle["_id"]},
+        {"$set": {"score": new_score}}
+    )
+
+    updated_vehicle = registered_vehicles_collection.find_one(
+        {"_id": vehicle["_id"]},
+        {
+            "_id": 0,
+            "id": 1,
+            "user_id": 1,
+            "plate": 1,
+            "license_plate": 1,
+            "owner": 1,
+            "user_email": 1,
+            "role": 1,
+            "score": 1,
+            "status": 1,
+        }
+    )
+
+    return {
+        "status": "success",
+        "message": "Score updated successfully",
+        "vehicle": updated_vehicle,
+    }
 
 @router.post("/admin/reset-semester-scores")
 def reset_semester_scores(payload: dict = {}):

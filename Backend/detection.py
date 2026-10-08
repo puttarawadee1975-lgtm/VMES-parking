@@ -5,26 +5,27 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, status
-try:
-    from database import detection_logs_collection, users_collection, parking_status_collection, registered_vehicles_collection
-except ImportError:
-    detection_logs_collection = None
-    users_collection = None
-    parking_status_collection = None
-    registered_vehicles_collection = None
+from bson import ObjectId
+from starlette.concurrency import run_in_threadpool
+from storage import SnapshotStorageError, save_base64_snapshot, resolve_snapshot_url
+from database import (
+    detection_logs_collection,
+    users_collection,
+    parking_status_collection,
+    registered_vehicles_collection,
+    saved_spots_collection,
+)
+from store import update_in_memory_parking_status
 
 from schemas import DetectionLogCreate, DetectionLogResponse
 
 router = APIRouter(prefix="/detections", tags=["AI Detections"])
 
-def save_base64_snapshot_to_disk(base64_str: str, license_plate: str, gate_type: str = "entry") -> Optional[str]:
-    """Decodes base64 Data URI and saves image snapshot via Storage Abstraction (Local / AWS S3)."""
+async def snapshot_url(reference):
     try:
-        from storage import save_base64_snapshot
-        return save_base64_snapshot(base64_str, license_plate, gate_type)
-    except Exception as e:
-        print(f"[SNAPSHOT SAVE ERROR] {e}")
-        return None
+        return await run_in_threadpool(resolve_snapshot_url, reference)
+    except SnapshotStorageError:
+        raise HTTPException(status_code=503, detail="Snapshot delivery unavailable") from None
 
 def ensure_utc(value) -> datetime:
     """Treat timezone-naive MongoDB datetimes or ISO strings as UTC for API serialization."""
@@ -81,6 +82,19 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         helmet_detected = payload.helmet_detected if payload.helmet_detected is not None else False
         is_violation = not helmet_detected  # No helmet = Violation
 
+    # Finish snapshot storage/delivery preparation before score or occupancy mutations.
+    raw_b64 = payload.snapshot_base64 if payload.snapshot_base64 is not None else (payload.image_url if payload.image_url and payload.image_url.startswith("data:") else None)
+    final_img_url = payload.image_url if payload.image_url and not payload.image_url.startswith("data:") else None
+    if raw_b64 is not None:
+        try:
+            final_img_url = await run_in_threadpool(save_base64_snapshot, raw_b64)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid snapshot image") from None
+        except SnapshotStorageError:
+            raise HTTPException(status_code=503, detail="Snapshot storage unavailable") from None
+    resolved_img_url = await snapshot_url(final_img_url)
+    response_b64 = None if final_img_url and final_img_url.startswith("s3://") else raw_b64
+
     # Look up if vehicle belongs to a registered user
     matched_user = None
     matched_user_name = "Guest / Unregistered"
@@ -119,7 +133,10 @@ async def ingest_detection_event(payload: DetectionLogCreate):
 
     # Support the group's registered_vehicles collection
     if user_doc is None and registered_vehicles_collection is not None:
-        for vehicle in registered_vehicles_collection.find({}):
+        for vehicle in registered_vehicles_collection.find(
+            {},
+            {"plate": 1, "user_email": 1}
+        ):
             stored_plate = vehicle.get("plate")
             if stored_plate and normalize_plate(stored_plate) == detected_plate:
                 registered_vehicle = vehicle
@@ -184,14 +201,6 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         role_str = "Guest"
         user_id_str = "GUEST"
 
-    # Event snapshot handling: Save base64 to disk if provided
-    raw_b64 = payload.snapshot_base64 or (payload.image_url if payload.image_url and payload.image_url.startswith("data:") else None)
-    disk_snapshot_url = None
-    if raw_b64:
-        disk_snapshot_url = save_base64_snapshot_to_disk(raw_b64, payload.license_plate, resolved_gate_type)
-
-    final_img_url = disk_snapshot_url or (payload.image_url if payload.image_url and not payload.image_url.startswith("data:") else None)
-
     # Insert into detection_logs collection
     log_doc = {
         "license_plate": payload.license_plate,
@@ -212,15 +221,15 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         "userId": user_id_str,
         # Event snapshot captured by ai_pipeline.py or web camera
         "image_url": final_img_url,
-        "snapshot_base64": raw_b64,
     }
+
+    if response_b64 is not None:
+        log_doc["snapshot_base64"] = response_b64
 
     inserted_id = "mock_id"
     if detection_logs_collection is not None:
         res = detection_logs_collection.insert_one(log_doc)
         inserted_id = str(res.inserted_id)
-
-    resolved_img_url = final_img_url or raw_b64 or None
 
     log_response = DetectionLogResponse(
         id=inserted_id,
@@ -234,10 +243,12 @@ async def ingest_detection_event(payload: DetectionLogCreate):
         timestamp=now,
         matched_user=matched_user_name,
         image_url=resolved_img_url,
-        snapshot_base64=raw_b64 or None,
+        snapshot_base64=response_b64 or None,
     )
 
-    IN_MEMORY_DETECTIONS.insert(0, log_response.model_dump())
+    cached_response = log_response.model_dump()
+    cached_response["image_url"] = final_img_url
+    IN_MEMORY_DETECTIONS.insert(0, cached_response)
     if len(IN_MEMORY_DETECTIONS) > 100:
         IN_MEMORY_DETECTIONS.pop()
 
@@ -273,13 +284,11 @@ async def ingest_detection_event(payload: DetectionLogCreate):
                 )
 
         try:
-            from main import update_in_memory_parking_status
             update_in_memory_parking_status(search_zone, resolved_gate_type)
         except Exception as e:
             print(f"[Parking Status Update Error] {e}")
 
     # Automatically mark active saved spot as Exited on CCTV EXIT gate scan
-    from database import saved_spots_collection
     if resolved_gate_type == "EXIT" and saved_spots_collection is not None:
         clean_lp = (payload.license_plate or "").replace("-", "").replace(" ", "").upper()
         if matched_user and matched_user.get("email"):
@@ -296,19 +305,7 @@ async def ingest_detection_event(payload: DetectionLogCreate):
                         {"$set": {"status": "Exited", "exit_timestamp": now, "exitTime": now.strftime("%I:%M %p")}}
                     )
 
-    # Trigger automatic notification creation on Vehicle ENTRY (Student Cars ONLY for VMES Parking Limit)
-    if payload.gate_type == "ENTRY" and matched_user and matched_user.get("email"):
-        try:
-            user_role = (matched_user.get("role") or "student").lower()
-            if user_role == "student" and vehicle_type == "car":
-                from routers.notifications import check_and_create_vmes_parking_notification
-                check_and_create_vmes_parking_notification(matched_user["email"], payload.zone or "VMES Building")
-
-            if is_violation:
-                from routers.notifications import trigger_helmet_violation_notification
-                trigger_helmet_violation_notification(matched_user["email"], payload.license_plate, payload.zone or "VMES Entry Gate")
-        except Exception as noti_err:
-            print(f"[DETECTION NOTI ERROR] {noti_err}")
+    # Automatic notification dispatch is unavailable: routers.notifications is not implemented.
 
     return log_response
 
@@ -343,14 +340,16 @@ async def get_all_detections(days: int = 30):
                         zone=doc.get("zone", "-"),
                         timestamp=ensure_utc(doc.get("timestamp", datetime.now(timezone.utc))),
                         matched_user=doc.get("matched_user") or doc.get("matched_email") or "Guest / Unregistered",
-                        image_url=doc.get("image_url") or doc.get("snapshot_url") or doc.get("photo") or None,
+                        image_url=await snapshot_url(doc.get("image_url") or doc.get("snapshot_url") or doc.get("photo")),
                         snapshot_base64=None,
                     ))
                 return result
-        except Exception as e:
-            print(f"[DETECTION FETCH WARNING] MongoDB read notice: {e}")
+        except HTTPException:
+            raise
+        except Exception:
+            print("[DETECTION FETCH WARNING] Detection database read failed.")
 
-    return IN_MEMORY_DETECTIONS
+    return [dict(item, image_url=await snapshot_url(item.get("image_url"))) for item in IN_MEMORY_DETECTIONS]
 
 
 
@@ -365,31 +364,22 @@ async def get_detection_snapshot(detection_id: str):
 
     doc = detection_logs_collection.find_one(
         {"_id": ObjectId(detection_id)},
-        {"snapshot_base64": 1, "image_url": 1, "license_plate": 1, "gate_type": 1, "_id": 0},
+        {"snapshot_base64": 1, "image_url": 1, "snapshot_url": 1, "photo": 1, "_id": 0},
     )
 
     if not doc:
         raise HTTPException(status_code=404, detail="Detection not found")
 
     b64 = doc.get("snapshot_base64")
-    url = doc.get("image_url")
+    url = doc.get("image_url") or doc.get("snapshot_url") or doc.get("photo")
 
     # If snapshot_base64 exists and is not formatted with data URI scheme
     if b64 and not b64.startswith("data:"):
         b64 = f"data:image/jpeg;base64,{b64}"
 
-    # Auto restore to disk if file doesn't exist yet
-    if b64 and (not url or not url.startswith("/snapshots/")):
-        restored_url = save_base64_snapshot_to_disk(b64, doc.get("license_plate", "veh"), doc.get("gate_type", "entry"))
-        if restored_url:
-            url = restored_url
-            try:
-                detection_logs_collection.update_one({"_id": ObjectId(detection_id)}, {"$set": {"image_url": restored_url}})
-            except Exception:
-                pass
-
+    # Legacy Base64 stays readable, but GET never restores files or changes records.
     return {
-        "image_url": b64 or url,
+        "image_url": b64 or await snapshot_url(url),
         "snapshot_base64": b64 or None,
     }
 
@@ -654,7 +644,10 @@ async def scan_plate_from_image(payload: OCRScanRequest):
         reg_prov = None
 
         if registered_vehicles_collection is not None:
-            for veh in registered_vehicles_collection.find({}):
+            for veh in registered_vehicles_collection.find(
+                {},
+                {"plate": 1, "province": 1}
+            ):
                 sp = (veh.get("plate") or "").replace("-", "").replace(" ", "").upper()
                 if sp and sp == norm_p and veh.get("province"):
                     reg_prov = veh.get("province")

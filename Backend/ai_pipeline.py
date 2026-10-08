@@ -23,11 +23,6 @@ _requested_gate = os.getenv("GATE_TYPE", "ENTRY").upper()
 CAMERA_ID = os.getenv("CAMERA_ID", "02" if _requested_gate == "EXIT" else "01")
 GATE_TYPE = os.getenv("GATE_TYPE", "EXIT" if CAMERA_ID == "02" else "ENTRY").upper()
 
-# Local snapshot storage directory — served statically by FastAPI at /snapshots
-_BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
-SNAPSHOTS_DIR = os.path.join(_BACKEND_DIR, "data", "snapshots")
-os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
-
 # Mac M1 Apple Silicon acceleration check
 DEVICE = "mps" if os.uname().sysname == "Darwin" and os.uname().machine == "arm64" else "cpu"
 print(f"[AI PIPELINE] Initializing on device: {DEVICE.upper()} (Apple Silicon M1 Acceleration)")
@@ -183,38 +178,16 @@ def extract_thai_plate(texts: list) -> str:
     return ""
 
 def save_event_snapshot(frame, plate: str, gate_type: str, cam_id: str) -> tuple[str | None, str | None]:
-    """
-    Save exactly one JPEG snapshot of the current camera frame when an ENTRY or EXIT
-    event is confirmed by the existing plate-stability mechanism.
-
-    Returns (image_url, base64_uri) e.g. ("https://bucket.s3.amazonaws.com/snapshots/<filename>" or "/snapshots/<filename>")
-    for inclusion in the detection payload and storage in database.
-    """
+    """Encode JPEG transport data only; FastAPI owns snapshot storage."""
     try:
-        from storage import save_snapshot
-        # Sanitize plate to safe ASCII/Thai filename characters
-        safe_plate = re.sub(r"[^a-zA-Z0-9ก-ฮ]", "", plate) or "unknown"
-        direction = gate_type.lower()
-        unix_ts = int(time.time())
-        filename = f"{direction}_cam{cam_id}_{unix_ts}_{safe_plate}.jpg"
-
-        encode_ok, buffer = cv2.imencode(
-            ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85]
-        )
+        encode_ok, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
         if not encode_ok:
-            print(f"[SNAPSHOT ERROR] JPEG encode failed for plate {plate}. Detection will continue without photo.")
+            print("[SNAPSHOT ERROR] JPEG encoding failed; continuing without photo.")
             return None, None
-
-        img_bytes = buffer.tobytes()
-        image_url = save_snapshot(img_bytes, filename)
-
-        b64_encoded = base64.b64encode(img_bytes).decode('utf-8')
-        b64_uri = f"data:image/jpeg;base64,{b64_encoded}"
-
-        print(f"[SNAPSHOT] Saved {filename} -> {image_url}")
-        return image_url, b64_uri
-    except Exception as e:
-        print(f"[SNAPSHOT ERROR] Could not save snapshot for plate {plate}: {e}. Detection will continue without photo.")
+        encoded = base64.b64encode(buffer.tobytes()).decode("ascii")
+        return None, f"data:image/jpeg;base64,{encoded}"
+    except Exception:
+        print("[SNAPSHOT ERROR] JPEG encoding failed; continuing without photo.")
         return None, None
 
 
@@ -233,7 +206,7 @@ def post_detection_to_backend(
         "gate_type": GATE_TYPE,
         "zone": zone,
         "camera_id": CAMERA_ID,
-        "image_url": image_url,
+        "image_url": None,
         "snapshot_base64": snapshot_base64,
     }
     accepted = False

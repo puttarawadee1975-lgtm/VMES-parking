@@ -5,8 +5,10 @@ from fastapi.staticfiles import StaticFiles
 
 try:
     from database import is_db_connected
-except ImportError:
-    def is_db_connected(): return False
+except Exception:
+    raise RuntimeError(
+        "Required database initialization failed. Check dependencies and MongoDB configuration."
+    ) from None
 
 app = FastAPI(
     title="SafeRide VMES Parking API",
@@ -33,40 +35,40 @@ try:
     from routers.mobile import router as mobile_router
     app.include_router(mobile_router)
     print("[Mobile App Router] Mounted successfully.")
-except Exception as e:
-    print(f"[Mobile App Warning] Could not mount mobile router: {e}")
+except Exception:
+    raise RuntimeError("Required mobile router failed to load or register.") from None
 
 # 2. Mount Admin Web Router
 try:
     from routers.admin import router as admin_router
     app.include_router(admin_router)
     print("[Admin Web Router] Mounted successfully.")
-except Exception as e:
-    print(f"[Admin Web Warning] Could not mount admin router: {e}")
+except Exception:
+    raise RuntimeError("Required admin router failed to load or register.") from None
 
 # 3. Mount CCTV Cameras Router
 try:
     from cameras import router as cameras_router
     app.include_router(cameras_router)
     print("[Cameras Router] Mounted successfully.")
-except Exception as e:
-    print(f"[Cameras Warning] Could not mount cameras router: {e}")
+except Exception:
+    raise RuntimeError("Required cameras router failed to load or register.") from None
 
 # 4. Mount AI Detection Router
 try:
     from detection import router as detection_router
     app.include_router(detection_router)
     print("[AI Detection Router] Mounted successfully.")
-except Exception as e:
-    print(f"[Detection Warning] Could not mount detection router: {e}")
+except Exception:
+    raise RuntimeError("Required detection router failed to load or register.") from None
 
 # 5. Mount QR Parking Spot Router
 try:
     from qr import router as qr_router
     app.include_router(qr_router)
     print("[QR Spots Router] Mounted successfully.")
-except Exception as e:
-    print(f"[QR Spots Warning] Could not mount QR router: {e}")
+except Exception:
+    raise RuntimeError("Required QR router failed to load or register.") from None
 
 @app.get("/")
 def home():

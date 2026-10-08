@@ -1,102 +1,155 @@
-import os
-import re
+"""Snapshot storage and read-only URL resolution; credentials belong to the SDK."""
 import base64
-import time
-from typing import Optional, Tuple
+import binascii
+import io
+import os
+from threading import Lock
+from urllib.parse import unquote, urlsplit
+from uuid import uuid4
+
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=False)
 
-_BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
-SNAPSHOTS_DIR = os.path.join(_BACKEND_DIR, "data", "snapshots")
-os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
-
-# Read AWS & Storage Configuration from environment
+SNAPSHOTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "snapshots")
 STORAGE_PROVIDER = os.getenv("STORAGE_PROVIDER", "local").strip().lower()
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
-AWS_REGION = os.getenv("AWS_REGION", "ap-southeast-1").strip()
+AWS_REGION = os.getenv("AWS_REGION", "").strip()
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "").strip()
-AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "").strip()
-
-# Lazy-loaded S3 client singleton
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_IMAGE_PIXELS = 20_000_000
 _s3_client = None
+_s3_lock = Lock()
+
+
+class SnapshotStorageError(RuntimeError):
+    """Safe public diagnostic with no SDK details or signed URLs."""
+
+
+def _s3_settings():
+    if not AWS_REGION or not AWS_S3_BUCKET:
+        raise SnapshotStorageError("S3 requires AWS_REGION and AWS_S3_BUCKET.")
+    try:
+        ttl = int(os.getenv("S3_PRESIGNED_URL_TTL_SECONDS", "900"))
+        if not 1 <= ttl <= 3600:
+            raise ValueError
+    except ValueError:
+        raise SnapshotStorageError("S3 presigned URL TTL must be 1 through 3600 seconds.") from None
+    return ttl
+
 
 def get_s3_client():
-    """Initializes and returns boto3 S3 client if configured, otherwise returns None."""
+    """Reuse an SDK client using the default chain, including the EC2 role."""
     global _s3_client
-    if _s3_client is not None:
-        return _s3_client
-    
-    if not (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_S3_BUCKET):
-        return None
-        
-    try:
-        import boto3
-        _s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-            region_name=AWS_REGION
-        )
-        print(f"[Storage] AWS S3 storage initialized for bucket: {AWS_S3_BUCKET}")
-        return _s3_client
-    except Exception as e:
-        print(f"[Storage Warning] Could not initialize boto3 S3 client: {e}")
-        return None
-
-def save_snapshot(img_bytes: bytes, filename: str, content_type: str = "image/jpeg") -> str:
-    """
-    Saves snapshot image bytes either to AWS S3 or Local Disk depending on STORAGE_PROVIDER config.
-    Returns public image URL (e.g. 'https://bucket.s3.region.amazonaws.com/snapshots/file.jpg' or '/snapshots/file.jpg')
-    """
-    # 1. Try AWS S3 if enabled and configured
-    if STORAGE_PROVIDER == "s3":
-        s3 = get_s3_client()
-        if s3 and AWS_S3_BUCKET:
+    _s3_settings()
+    with _s3_lock:
+        if _s3_client is None:
             try:
-                s3_key = f"snapshots/{filename}"
-                s3.put_object(
-                    Bucket=AWS_S3_BUCKET,
-                    Key=s3_key,
-                    Body=img_bytes,
-                    ContentType=content_type,
-                    # ACL="public-read" # Uncomment if bucket requires public ACL
+                import boto3
+                from botocore.config import Config
+                _s3_client = boto3.client(
+                    "s3", region_name=AWS_REGION,
+                    config=Config(
+                        signature_version="s3v4", connect_timeout=3, read_timeout=5,
+                        retries={"mode": "standard", "total_max_attempts": 2},
+                    ),
                 )
-                if AWS_S3_CUSTOM_DOMAIN:
-                    public_url = f"https://{AWS_S3_CUSTOM_DOMAIN}/{s3_key}"
-                else:
-                    public_url = f"https://{AWS_S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{s3_key}"
-                print(f"[Storage S3 Success] Uploaded {filename} to S3 -> {public_url}")
-                return public_url
-            except Exception as e:
-                print(f"[Storage S3 Error] Upload to S3 failed: {e}. Falling back to local disk storage.")
+            except Exception:
+                raise SnapshotStorageError("S3 client initialization failed.") from None
+    return _s3_client
 
-    # 2. Local Disk Fallback / Default
-    filepath = os.path.join(SNAPSHOTS_DIR, filename)
-    with open(filepath, "wb") as f:
-        f.write(img_bytes)
 
-    local_url = f"/snapshots/{filename}"
-    print(f"[Storage Local] Saved snapshot to local disk -> {local_url}")
-    return local_url
-
-def save_base64_snapshot(base64_str: str, license_plate: str, gate_type: str = "entry") -> Optional[str]:
-    """Decodes base64 Data URI string and saves snapshot via storage abstraction."""
-    if not base64_str or not isinstance(base64_str, str):
-        return None
+def save_snapshot(img_bytes: bytes, filename=None, content_type=None) -> str:
+    """Validate once and store under an opaque name; legacy name arguments are ignored."""
+    if not img_bytes or len(img_bytes) > MAX_IMAGE_BYTES:
+        raise ValueError("Snapshot must contain at most 10 MiB of image data.")
     try:
-        if base64_str.startswith("data:"):
-            _, encoded = base64_str.split(",", 1)
-        else:
-            encoded = base64_str
+        from PIL import Image
+    except ImportError:
+        raise SnapshotStorageError("Snapshot image validation dependency unavailable.") from None
+    try:
+        with Image.open(io.BytesIO(img_bytes)) as image:
+            image_format = image.format
+            if image_format not in ("JPEG", "PNG") or image.width * image.height > MAX_IMAGE_PIXELS:
+                raise ValueError
+            image.verify()
+        # Decode as well: JPEG verify() alone does not detect every truncated stream.
+        with Image.open(io.BytesIO(img_bytes)) as image:
+            image.load()
+    except Exception:
+        raise ValueError("Snapshot must be a valid JPEG or PNG of at most 20 million pixels.") from None
+    extension, mime = ("jpg", "image/jpeg") if image_format == "JPEG" else ("png", "image/png")
+    filename = f"{uuid4().hex}.{extension}"
+    if STORAGE_PROVIDER == "s3":
+        client = get_s3_client()
+        key = f"snapshots/{filename}"
+        try:
+            client.put_object(Bucket=AWS_S3_BUCKET, Key=key, Body=img_bytes, ContentType=mime)
+        except Exception:
+            raise SnapshotStorageError("Snapshot upload to S3 failed.") from None
+        return f"s3://{AWS_S3_BUCKET}/{key}"
+    if STORAGE_PROVIDER != "local":
+        raise SnapshotStorageError("STORAGE_PROVIDER must be local or s3.")
+    try:
+        os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
+        with open(os.path.join(SNAPSHOTS_DIR, filename), "wb") as output:
+            output.write(img_bytes)
+    except OSError:
+        raise SnapshotStorageError("Local snapshot storage failed.") from None
+    return f"/snapshots/{filename}"
 
-        img_bytes = base64.b64decode(encoded)
-        clean_lp = re.sub(r"[^a-zA-Z0-9ก-ฮ]", "", license_plate or "veh") or "veh"
-        unix_ts = int(time.time())
-        filename = f"{gate_type.lower()}_{unix_ts}_{clean_lp}.jpg"
 
-        return save_snapshot(img_bytes, filename)
-    except Exception as e:
-        print(f"[Storage Error] save_base64_snapshot failed: {e}")
-        return None
+def save_base64_snapshot(base64_str: str, license_plate=None, gate_type="entry") -> str:
+    """Decode transport data; plate and gate never form part of the object key."""
+    if not isinstance(base64_str, str) or len(base64_str) > 4 * ((MAX_IMAGE_BYTES + 2) // 3) + 128:
+        raise ValueError("Snapshot Base64 is invalid or too large.")
+    encoded = base64_str
+    if encoded.startswith("data:"):
+        header, separator, encoded = encoded.partition(",")
+        if not separator or header.lower() not in ("data:image/jpeg;base64", "data:image/png;base64"):
+            raise ValueError("Snapshot data URI must contain a Base64 JPEG or PNG.")
+    try:
+        img_bytes = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error):
+        raise ValueError("Snapshot Base64 is invalid.") from None
+    return save_snapshot(img_bytes)
+
+
+def resolve_snapshot_url(reference):
+    """Resolve configured S3 objects without uploading, restoring or changing records."""
+    if not reference or not isinstance(reference, str):
+        return reference
+    try:
+        parsed = urlsplit(reference)
+    except ValueError:
+        raise SnapshotStorageError("Invalid snapshot reference.") from None
+    key = None
+    if parsed.scheme == "s3":
+        if parsed.netloc != AWS_S3_BUCKET or parsed.query or parsed.fragment:
+            raise SnapshotStorageError("Snapshot reference is outside the configured S3 bucket.")
+        key = unquote(parsed.path.lstrip("/"))
+    elif parsed.scheme == "https" and AWS_S3_BUCKET and AWS_REGION:
+        virtual_hosts = {
+            f"{AWS_S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com",
+            f"{AWS_S3_BUCKET}.s3-{AWS_REGION}.amazonaws.com",
+            f"{AWS_S3_BUCKET}.s3.amazonaws.com",
+        }
+        if parsed.netloc in virtual_hosts:
+            key = unquote(parsed.path.lstrip("/"))
+        elif parsed.netloc in {f"s3.{AWS_REGION}.amazonaws.com", "s3.amazonaws.com"}:
+            bucket, separator, path = parsed.path.lstrip("/").partition("/")
+            if bucket == AWS_S3_BUCKET and separator:
+                key = unquote(path)
+    if key is None:
+        return reference  # Legacy local paths, data URIs and unrelated URLs remain unchanged.
+    if not key.startswith("snapshots/") or not key[len("snapshots/"):] or "\\" in key or any(
+        part in ("", ".", "..") for part in key.split("/")
+    ):
+        raise SnapshotStorageError("Snapshot reference is outside the snapshots prefix.")
+    ttl = _s3_settings()
+    try:
+        return get_s3_client().generate_presigned_url(
+            "get_object", Params={"Bucket": AWS_S3_BUCKET, "Key": key},
+            ExpiresIn=ttl, HttpMethod="GET",
+        )
+    except Exception:
+        raise SnapshotStorageError("Snapshot URL signing failed.") from None

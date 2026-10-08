@@ -3,7 +3,7 @@ Mobile App Router - Endpoints dedicated for Student/User/Guest Mobile Applicatio
 """
 
 from fastapi import APIRouter, HTTPException
-from database import is_db_connected
+from database import is_db_connected, registered_vehicles_collection
 import store
 
 router = APIRouter(tags=["Mobile App"])
@@ -145,56 +145,95 @@ def auth_microsoft(payload: dict):
 
 @router.get("/parking/user-vehicles")
 def get_user_vehicles(user_email: str = "", user_id: str = ""):
-    if not user_email and not user_id:
-        return store.registered_vehicles
-    user_list = [v for v in store.registered_vehicles if (user_id and v.get("user_id") == user_id) or (user_email and v.get("user_email") == user_email)]
-    if user_list:
-        return user_list[:1]
-    # Return single default vehicle for u6814509@au.edu if not found
-    if "u6814509" in user_email or "au.edu" in user_email:
-        return [{
-            "id": 10,
-            "user_id": "6814509",
-            "userId": "6814509",
-            "plate": "3กค 5678",
-            "license_plate": "3กค 5678",
-            "province": "Bangkok",
-            "vehicle_type": "car",
-            "brand": "Honda",
-            "model": "Honda Civic RS (Black)",
-            "color": "Black",
-            "owner": "Pattarawadee A.",
-            "user_email": user_email,
-            "role": "Student",
-            "score": 100,
-            "status": "Active"
-        }]
-    return []
+    if not is_db_connected() or registered_vehicles_collection is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "user_id": 1,
+        "plate": 1,
+        "license_plate": 1,
+        "province": 1,
+        "vehicle_type": 1,
+        "brand": 1,
+        "model": 1,
+        "color": 1,
+        "owner": 1,
+        "user_email": 1,
+        "role": 1,
+        "score": 1,
+        "status": 1,
+        "registered_at": 1,
+    }
+
+    query = {}
+    if user_email:
+        query["user_email"] = user_email
+    elif user_id:
+        query["user_id"] = user_id
+
+    vehicles = list(registered_vehicles_collection.find(query, projection))
+
+    for vehicle in vehicles:
+        plate = vehicle.get("plate") or vehicle.get("license_plate") or ""
+        vehicle["plate"] = plate
+        vehicle["license_plate"] = plate
+        vehicle.setdefault("vehicle_type", "car")
+        vehicle.setdefault("brand", "")
+        vehicle.setdefault("model", "")
+        vehicle.setdefault("color", "")
+        vehicle.setdefault("owner", "Registered Driver")
+        vehicle.setdefault("score", 100)
+        vehicle.setdefault("status", "Active")
+
+        if "user_id" not in vehicle:
+            email = vehicle.get("user_email", "")
+            email_digits = "".join(filter(str.isdigit, email.split("@")[0]))
+            vehicle["user_id"] = email_digits
+        vehicle["userId"] = vehicle.get("user_id", "")
+
+    return vehicles[:1] if (user_email or user_id) else vehicles
 
 @router.post("/parking/register-vehicle")
 def register_vehicle(payload: dict):
+    from datetime import datetime, timezone
+    import uuid
+
+    if not is_db_connected() or registered_vehicles_collection is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
     email = payload.get("user_email") or payload.get("email") or ""
     role = (payload.get("role") or "Student").lower()
     plate = payload.get("plate") or payload.get("license_plate") or "Unregistered"
+    norm_plate = plate.strip().upper()
 
     if email and role != "admin":
-        existing_user_vehicles = [v for v in store.registered_vehicles if v.get("user_email") == email]
-        if len(existing_user_vehicles) >= 1:
+        if registered_vehicles_collection.find_one(
+            {"user_email": email},
+            {"_id": 1}
+        ):
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Registration Limit Reached: 1 vehicle is allowed per account."
             )
 
-    norm_plate = plate.strip().upper()
-    for v in store.registered_vehicles:
-        existing_plate = (v.get("plate") or v.get("license_plate") or "").strip().upper()
+    for vehicle in registered_vehicles_collection.find(
+        {},
+        {"plate": 1, "license_plate": 1}
+    ):
+        existing_plate = (
+            vehicle.get("plate")
+            or vehicle.get("license_plate")
+            or ""
+        ).strip().upper()
+
         if existing_plate and existing_plate == norm_plate:
             raise HTTPException(
                 status_code=400,
                 detail=f"License plate '{plate}' is already registered in the system."
             )
 
-    new_id = len(store.registered_vehicles) + 1
     v_type = payload.get("vehicle_type") or "car"
     brand = payload.get("brand") or ""
     model = payload.get("model") or f"{brand} Vehicle".strip()
@@ -202,17 +241,20 @@ def register_vehicle(payload: dict):
     owner = payload.get("owner") or "Registered Driver"
     user_role = (payload.get("role") or "Student").title()
     provided_user_id = payload.get("user_id") or payload.get("userId")
-    
+
     if user_role in ["Staff", "Faculty"]:
-        staff_faculty_count = sum(1 for v in store.registered_vehicles if str(v.get("role")).title() in ["Staff", "Faculty"])
-        user_id = provided_user_id or str(staff_faculty_count + 1)
+        user_id = provided_user_id or uuid.uuid4().hex[:8]
     else:
-        email_digits = "".join(filter(str.isdigit, email.split("@")[0])) if email else ""
-        user_id = provided_user_id or (email_digits if email_digits else f"6607{new_id:04d}")
-    
+        email_digits = "".join(
+            filter(str.isdigit, email.split("@")[0])
+        ) if email else ""
+        user_id = provided_user_id or (
+            email_digits if email_digits else uuid.uuid4().hex[:8]
+        )
+
     new_vehicle = {
-        "id": new_id,
-        "user_id": user_id,
+        "id": uuid.uuid4().hex,
+        "user_id": str(user_id),
         "plate": plate,
         "license_plate": plate,
         "vehicle_type": v_type,
@@ -224,16 +266,10 @@ def register_vehicle(payload: dict):
         "role": user_role,
         "score": 100,
         "status": "Active",
-        "registered_at": "2026-09-25T23:00:00.000Z",
-        "vehicle_photo": payload.get("vehicle_photo") or None
+        "registered_at": datetime.now(timezone.utc).isoformat(),
     }
-    store.registered_vehicles.append(new_vehicle)
 
-    if is_db_connected():
-        try:
-            print(f"[Database Sync] Vehicle registered: {plate} ({owner})")
-        except Exception as e:
-            print(f"[Database Warning] Could not sync new vehicle to DB: {e}")
+    registered_vehicles_collection.insert_one(dict(new_vehicle))
 
     return {
         "status": "success",
@@ -243,18 +279,37 @@ def register_vehicle(payload: dict):
 
 @router.delete("/parking/delete-vehicle")
 def delete_vehicle(user_email: str = "", plate: str = ""):
-    store.registered_vehicles = [
-        v for v in store.registered_vehicles 
-        if not (v.get("plate") == plate or v.get("license_plate") == plate or v.get("user_email") == user_email)
-    ]
+    if not is_db_connected() or registered_vehicles_collection is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
-    if is_db_connected():
-        try:
-            print(f"[Database Sync] Vehicle deleted: {plate or user_email}")
-        except Exception as e:
-            print(f"[Database Warning] Could not sync vehicle delete to DB: {e}")
+    if not user_email and not plate:
+        raise HTTPException(
+            status_code=400,
+            detail="user_email or plate is required"
+        )
 
-    return {"status": "success", "message": f"Vehicle {plate} deleted successfully"}
+    if plate:
+        result = registered_vehicles_collection.delete_one({
+            "$or": [
+                {"plate": plate},
+                {"license_plate": plate}
+            ]
+        })
+    else:
+        result = registered_vehicles_collection.delete_one({
+            "user_email": user_email
+        })
+
+    if result.deleted_count == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Registered vehicle not found"
+        )
+
+    return {
+        "status": "success",
+        "message": "Vehicle deleted successfully"
+    }
 
 @router.get("/notifications")
 def get_user_notifications_endpoint(email: str = "u6814509@au.edu"):

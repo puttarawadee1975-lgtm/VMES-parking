@@ -6,3 +6,6 @@ opencv-python-headless
 numpy
 qrcode[pil]
 boto3
+pymongo>=4.6,<5
+email-validator>=2,<3
+python-multipart>=0.0.9,<1
