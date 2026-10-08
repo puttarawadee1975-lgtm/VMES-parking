@@ -2,6 +2,9 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export const getApiHost = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return API_BASE_URL;
+  }
   if (typeof window !== 'undefined') {
     const hn = window.location.hostname;
     if (hn === 'localhost' || hn === '127.0.0.1' || hn === '::1' || window.location.port === '5173' || window.location.port === '3000') {

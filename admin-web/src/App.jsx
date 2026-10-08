@@ -11,7 +11,7 @@ import ParkingOccupancyView from './components/ParkingOccupancyView';
 import ViolationsTable from './components/ViolationsTable';
 import LiveOverviewDashboard from './components/LiveOverviewDashboard';
 import AdminLoginScreen from './components/AdminLoginScreen';
-import { fetchAPI, getImageUrl } from './api';
+import { fetchAPI, getImageUrl, getApiHost } from './api';
 
 export default function App() {
   const [adminUser, setAdminUser] = useState(() => {
@@ -519,8 +519,8 @@ export default function App() {
                 gateType="ENTRY"
                 currentDetection={logs.find(l => l.gate.includes('ENTRY')) || logs[0]}
                 onTriggerScan={() => handleTriggerScan('ENTRY')}
-                streamUrl="http://localhost:8000/cameras/stream/1"
-                statusUrl="http://localhost:8000/cameras/status/1"
+                streamUrl={`${getApiHost()}/cameras/stream/1`}
+                statusUrl={`${getApiHost()}/cameras/status/1`}
               />
               <CameraStream
                 gateName="Gate 2 (Exit Gate)"
@@ -528,8 +528,8 @@ export default function App() {
                 gateType="EXIT"
                 currentDetection={logs.find(l => l.gate.includes('EXIT'))}
                 onTriggerScan={() => handleTriggerScan('EXIT')}
-                streamUrl="http://localhost:8000/cameras/stream/2"
-                statusUrl="http://localhost:8000/cameras/status/2"
+                streamUrl={`${getApiHost()}/cameras/stream/2`}
+                statusUrl={`${getApiHost()}/cameras/status/2`}
               />
             </div>
           </div>

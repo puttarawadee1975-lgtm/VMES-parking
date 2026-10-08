@@ -67,27 +67,15 @@ def get_dashboard():
     }
 
 @router.get("/admin/gate-history")
-def get_gate_history():
+async def get_gate_history():
+    """Return recorded camera detections for the Admin Web history."""
+    from detection import get_all_detections
+
+    detections = await get_all_detections()
     return {
         "history": [
-            {
-                "id": "6aace42827c2105c820a69db",
-                "plate": "ก-1687",
-                "vehicle_type": "car",
-                "helmet": None,
-                "violation": False,
-                "penalty_applied": False,
-                "gate": "VMES Entry Gate (Cam 01)",
-                "direction": "IN",
-                "camera_id": "01",
-                "zone": "Zone A (Building 1 - Car)",
-                "timestamp": "2026-09-18T07:11:35.797Z",
-                "matched_email": None,
-                "matched_user": "Guest Driver",
-                "role": "Guest",
-                "user_id": "GUEST",
-                "image_url": "/snapshots/entry_cam01_1789715495_ก1687.jpg"
-            }
+            item.model_dump(mode="json") if hasattr(item, "model_dump") else item
+            for item in detections
         ]
     }
 
