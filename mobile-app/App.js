@@ -21,7 +21,7 @@ import { registerForPushNotificationsAsync, sendLocalPhonePushNotification } fro
 WebBrowser.maybeCompleteAuthSession();
 
 // Data & Mock Sets
-import { DEMO_ACCOUNTS, SIMULATED_VEHICLES, INITIAL_DETECTION_LOGS } from './src/data/mockData';
+import { DEMO_ACCOUNTS, SIMULATED_VEHICLES, INITIAL_DETECTION_LOGS, getEnglishFormattedDate, getEnglishFormattedTime } from './src/data/mockData';
 
 // Reusable UI Components
 import Header from './src/components/Header';
@@ -209,7 +209,17 @@ function MainApp() {
       // 2. Restore saved parking spot if not exited yet
       getSpotFromMongoDB(currentUser.email).then((spotRes) => {
         if (spotRes && spotRes.has_spot && spotRes.spot) {
-          setParkedSpot(spotRes.spot);
+          const spot = spotRes.spot;
+          const timestamp = Number(spot.timestamp ?? spot.scannedAt);
+          const savedAt = Number.isFinite(timestamp) && timestamp > 0
+            ? new Date(timestamp)
+            : null;
+
+          setParkedSpot({
+            ...spot,
+            savedDate: spot.savedDate || (savedAt ? getEnglishFormattedDate(savedAt) : ''),
+            savedTime: spot.savedTime || (savedAt ? getEnglishFormattedTime(savedAt) : '')
+          });
         }
       }).catch(err => console.warn('Failed to restore saved spot:', err));
     }

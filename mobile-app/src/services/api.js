@@ -1,8 +1,8 @@
 export const API_BASE_URL =
-  'http://127.0.0.1:8000';
+  'http://56.10.12.228:8000';
 
 export const WS_BASE_URL =
-  'ws://127.0.0.1:8000/ws/detections';
+  'ws://56.10.12.228:8000/ws/detections';
 
 let storedToken = null;
 
@@ -47,10 +47,6 @@ const fetchAPI = async (endpoint, options = {}) => {
   }
 
   const candidateHosts = [
-    'http://192.168.1.42:8000',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://10.0.2.2:8000',
     API_BASE_URL,
   ];
 

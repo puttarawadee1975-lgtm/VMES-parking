@@ -10,7 +10,7 @@ import {
   Platform
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { getGateDetectionsHistory } from '../services/api';
+import { getGateDetectionsHistory, API_BASE_URL } from '../services/api';
 import { formatDisplayPlate } from '../utils/provinceHelper';
 
 export default function GateHistoryModal({
@@ -65,7 +65,7 @@ export default function GateHistoryModal({
           const gateName = isExit ? 'Exit gate' : 'Entry gate';
 
           const rawImg = item.image_url || item.imageUrl || item.snapshot_url;
-          const imgUrl = rawImg ? (rawImg.startsWith('http') ? rawImg : `http://localhost:8000${rawImg}`) : null;
+          const imgUrl = rawImg ? (rawImg.startsWith('http') ? rawImg : `${API_BASE_URL}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`) : null;
 
           if (isV) {
             return {
