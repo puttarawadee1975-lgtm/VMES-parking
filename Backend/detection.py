@@ -12,12 +12,16 @@ from database import (
     detection_logs_collection,
     users_collection,
     parking_status_collection,
+    parking_sessions_collection,
     registered_vehicles_collection,
     saved_spots_collection,
 )
 from store import update_in_memory_parking_status
 
 from schemas import DetectionLogCreate, DetectionLogResponse
+from parking_sessions import normalize_plate as normalize_session_plate
+from parking_session_store import apply_session_transition
+from database import get_mongo_client
 
 router = APIRouter(prefix="/detections", tags=["AI Detections"])
 
@@ -253,58 +257,83 @@ async def ingest_detection_event(payload: DetectionLogCreate):
     if len(IN_MEMORY_DETECTIONS) > 100:
         IN_MEMORY_DETECTIONS.pop()
 
-    # Automatically update parking slots in real-time (ONLY FOR CARS)
+    # Only accepted parking-session transitions may change car occupancy.
+    session_action = None
+    session_zone = None
+
     if vehicle_type == "car":
         z_req = (payload.zone or "").upper()
-        search_zone = "Zone A"
-        if "ZONE C" in z_req or "C-" in z_req:
-            search_zone = "Zone C"
-        
-        if parking_status_collection is not None:
-            zone_doc = parking_status_collection.find_one({"zone": {"$regex": search_zone, "$options": "i"}})
-            if zone_doc:
-                occupied = zone_doc.get("occupied_slots", 0)
-                total = zone_doc.get("total_slots", 10)
-                if resolved_gate_type == "ENTRY":
-                    occupied = min(total, occupied + 1)
-                elif resolved_gate_type == "EXIT":
-                    occupied = max(0, occupied - 1)
+        search_zone = "Zone C" if "ZONE C" in z_req or "C-" in z_req else "Zone A"
 
-                avail = max(0, total - occupied)
-                parking_status_collection.update_one(
-                    {"_id": zone_doc["_id"]},
-                    {
-                        "$set": {
-                            "occupied_slots": occupied,
-                            "available_slots": avail,
-                            "occupied": occupied,
-                            "available": avail,
-                            "last_updated": now
-                        }
-                    }
+        plate_key = normalize_session_plate(payload.license_plate)
+
+        if plate_key:
+            try:
+                session_result = apply_session_transition(
+                    client=get_mongo_client(),
+                    sessions_collection=parking_sessions_collection,
+                    occupancy_collection=parking_status_collection,
+                    plate=payload.license_plate,
+                    zone=search_zone,
+                    gate_type=resolved_gate_type,
                 )
+            except Exception:
+                if detection_logs_collection is not None and inserted_id != "mock_id":
+                    try:
+                        detection_logs_collection.update_one(
+                            {"_id": res.inserted_id},
+                            {"$set": {"parking_session_action": "ERROR"}},
+                        )
+                    except Exception:
+                        pass
+                cached_response["parking_session_action"] = "ERROR"
+                raise
+            session_action = session_result["action"]
+            session_zone = session_result["zone"]
 
-        try:
-            update_in_memory_parking_status(search_zone, resolved_gate_type)
-        except Exception as e:
-            print(f"[Parking Status Update Error] {e}")
+            if session_action in {"ENTER", "EXIT"}:
+                try:
+                    update_in_memory_parking_status(
+                        session_zone,
+                        "ENTRY" if session_action == "ENTER" else "EXIT",
+                    )
+                except Exception as e:
+                    print(f"[Parking Status Cache Update Error] {e}")
 
     # Automatically mark active saved spot as Exited on CCTV EXIT gate scan
-    if resolved_gate_type == "EXIT" and saved_spots_collection is not None:
-        clean_lp = (payload.license_plate or "").replace("-", "").replace(" ", "").upper()
-        if matched_user and matched_user.get("email"):
-            saved_spots_collection.update_many(
-                {"user_email": matched_user["email"], "status": "Active Parked"},
-                {"$set": {"status": "Exited", "exit_timestamp": now, "exitTime": now.strftime("%I:%M %p")}}
+    try:
+        if session_action == "EXIT" and saved_spots_collection is not None:
+            clean_lp = (payload.license_plate or "").replace("-", "").replace(" ", "").upper()
+            if matched_user and matched_user.get("email"):
+                saved_spots_collection.update_many(
+                    {"user_email": matched_user["email"], "status": "Active Parked"},
+                    {"$set": {"status": "Exited", "exit_timestamp": now, "exitTime": now.strftime("%I:%M %p")}}
+                )
+            elif clean_lp:
+                for sp in saved_spots_collection.find({"status": "Active Parked"}):
+                    sp_p = (sp.get("plate") or "").replace("-", "").replace(" ", "").upper()
+                    if sp_p and sp_p == clean_lp:
+                        saved_spots_collection.update_one(
+                            {"_id": sp["_id"]},
+                            {"$set": {"status": "Exited", "exit_timestamp": now, "exitTime": now.strftime("%I:%M %p")}}
+                        )
+
+    except Exception as e:
+        print(f"[Saved Spot Exit Sync Error] {e}")
+
+    # Persist the parking-session outcome for detection history.
+    log_response.parking_session_action = session_action
+    if detection_logs_collection is not None and inserted_id != "mock_id":
+        try:
+            detection_logs_collection.update_one(
+                {"_id": res.inserted_id},
+                {"$set": {"parking_session_action": session_action}},
             )
-        elif clean_lp:
-            for sp in saved_spots_collection.find({"status": "Active Parked"}):
-                sp_p = (sp.get("plate") or "").replace("-", "").replace(" ", "").upper()
-                if sp_p and sp_p == clean_lp:
-                    saved_spots_collection.update_one(
-                        {"_id": sp["_id"]},
-                        {"$set": {"status": "Exited", "exit_timestamp": now, "exitTime": now.strftime("%I:%M %p")}}
-                    )
+        except Exception as e:
+            print(f"[Detection Session Status Persistence Error] {e}")
+
+    # Update this detection's cached response, not another camera's record.
+    cached_response["parking_session_action"] = session_action
 
     # Automatic notification dispatch is unavailable: routers.notifications is not implemented.
 
@@ -337,6 +366,7 @@ async def get_all_detections(days: int = 30):
                         helmet_detected=doc.get("helmet_detected"),
                         violation=doc.get("violation", False),
                         penalty_applied=doc.get("penalty_applied"),
+                        parking_session_action=doc.get("parking_session_action"),
                         gate_type=doc.get("gate_type", "ENTRY"),
                         camera_id=doc.get("camera_id"),
                         zone=doc.get("zone", "-"),

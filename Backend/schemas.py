@@ -50,6 +50,9 @@ class DetectionLogResponse(DetectionLogCreate):
     id: str
     matched_user: Optional[str] = None
     penalty_applied: Optional[bool] = None
+    parking_session_action: Optional[Literal[
+        "ENTER", "EXIT", "DUPLICATE", "UNKNOWN_EXIT", "ERROR"
+    ]] = None
 
 # Driving Score Audit Log Schemas
 class DrivingScoreLogCreate(BaseModel):

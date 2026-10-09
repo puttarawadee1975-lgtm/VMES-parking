@@ -20,6 +20,7 @@ COLLECTION_NAMES = {
     "registered_vehicles_collection": "registered_vehicles",
     "detection_logs_collection": "detection_logs",
     "parking_status_collection": "parking_status",
+    "parking_sessions_collection": "parking_sessions",
     "parking_spots_collection": "parking_spots",
     "user_saved_spots_collection": "user_saved_spots",
     "saved_spots_collection": "saved_spots",
@@ -99,6 +100,14 @@ def init_db():
     return True
 
 
+
+def get_mongo_client():
+    """Return the initialized shared MongoDB client."""
+    if _client is None:
+        raise DatabaseUnavailableError("MongoDB client is not initialized.")
+    return _client
+
+
 def is_db_connected():
     """Return True only after a live ping; raise on failure, never fake success."""
     _ping(_client)
@@ -112,6 +121,7 @@ users_collection = _database[COLLECTION_NAMES["users_collection"]]
 registered_vehicles_collection = _database[COLLECTION_NAMES["registered_vehicles_collection"]]
 detection_logs_collection = _database[COLLECTION_NAMES["detection_logs_collection"]]
 parking_status_collection = _database[COLLECTION_NAMES["parking_status_collection"]]
+parking_sessions_collection = _database[COLLECTION_NAMES["parking_sessions_collection"]]
 parking_spots_collection = _database[COLLECTION_NAMES["parking_spots_collection"]]
 user_saved_spots_collection = _database[COLLECTION_NAMES["user_saved_spots_collection"]]
 saved_spots_collection = _database[COLLECTION_NAMES["saved_spots_collection"]]

@@ -406,7 +406,7 @@ while cap.isOpened():
                     is_motorcycle = (v_type == "motorcycle")
 
                     zone_target = (
-                        "Zone C (Motorcycle Only)"
+                        "Zone B (Motorcycle Only)"
                         if is_motorcycle
                         else DEFAULT_ZONE
                     )
@@ -440,6 +440,7 @@ while cap.isOpened():
             if missing_plate_scans >= PLATE_CLEAR_SCANS:
                 recent_plates.clear()
                 last_submitted_plate = None
+                submitted_plates.clear()
                 current_display_plate = "Scanning..."
 
     # ---------- 3. Render HUD Banner ----------
