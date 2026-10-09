@@ -317,7 +317,41 @@ def get_user_notifications_endpoint(email: str = "u6814509@au.edu"):
 
 @router.get("/parking/status")
 def get_parking_status():
-    return store.parking_status_memory
+    from database import parking_status_collection
+
+    zones = [dict(zone) for zone in store.parking_status_memory]
+
+    try:
+        if parking_status_collection is None:
+            return zones
+
+        for zone in zones:
+            zone_name = zone.get("zone")
+
+            if zone_name not in ("Zone A", "Zone C"):
+                continue
+
+            record = parking_status_collection.find_one(
+                {"zone": zone_name},
+                {"_id": 0, "occupied_slots": 1}
+            )
+
+            if record is None:
+                continue
+
+            total = int(zone["total_slots"])
+            occupied = max(
+                0,
+                min(total, int(record.get("occupied_slots", 0)))
+            )
+
+            zone["occupied_slots"] = occupied
+            zone["available_slots"] = total - occupied
+
+    except Exception as exc:
+        print(f"[Parking Status Warning] MongoDB read failed: {exc}")
+
+    return zones
 
 @router.get("/parking/occupied-spots")
 def get_occupied_spots(term: str = "2026-1"):
