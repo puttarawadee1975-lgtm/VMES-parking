@@ -436,15 +436,10 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     return sum > 0 ? sum : 18;
   }, [zones]);
 
-  const occupiedCarsCount = useMemo(() => {
-    return activeVehiclesList.filter(s => {
-      const vType = (s.vehicleType || s.vehicle_type || '').toLowerCase();
-      const zStr = (s.zone || '').toUpperCase();
-      return vType !== 'motorcycle' && !zStr.includes('ZONE B') && !zStr.includes('ZONE D');
-    }).length;
-  }, [activeVehiclesList]);
-
-  const availableCarSpots = Math.max(0, totalCarCapacity - occupiedCarsCount);
+  // Use the backend's MongoDB-backed car occupancy for summary cards.
+  // Historical gate logs remain available in the vehicle records below.
+  const occupiedCarsCount = occupied;
+  const availableCarSpots = available;
 
   const estMotos = useMemo(() => {
     return activeVehiclesList.filter(s => {
