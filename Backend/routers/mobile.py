@@ -332,7 +332,7 @@ def get_parking_status():
                 continue
 
             record = parking_status_collection.find_one(
-                {"zone": zone_name},
+                {"zone": {"$regex": f"^{zone_name}($|[^A-Za-z0-9])", "$options": "i"}},
                 {"_id": 0, "occupied_slots": 1}
             )
 
