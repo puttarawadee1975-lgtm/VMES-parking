@@ -30,7 +30,7 @@ print(f"[AI PIPELINE] Initializing on device: {DEVICE.upper()} (Apple Silicon M1
 # Load OCR & Models
 print("[AI PIPELINE] Loading EasyOCR (Thai + English)...")
 import torch
-reader = easyocr.Reader(['th', 'en'], gpu=torch.cuda.is_available())
+reader = easyocr.Reader(['th', 'en'], gpu=(DEVICE == 'mps' or DEVICE == 'cuda'))
 
 print("[AI PIPELINE] Loading YOLO Models...")
 helmet_model = YOLO("helmet_model.pt")

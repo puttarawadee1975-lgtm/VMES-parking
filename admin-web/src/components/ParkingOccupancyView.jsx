@@ -193,37 +193,6 @@ export default function ParkingOccupancyView({ parkingOccupancy, logs = [], vehi
     yestObj.setDate(yestObj.getDate() - 1);
     const yestStr = yestObj.toISOString().split('T')[0];
 
-    // Add historical detection logs if available
-    (logs || []).forEach((l, index) => {
-      const logDate = l.rawDate ? String(l.rawDate).slice(0, 10) : (l.timestamp ? String(l.timestamp).slice(0, 10) : todayStr);
-      const plate = l.plate || l.license_plate || '-';
-      const key = `${plate}-${logDate}`;
-
-      if (!seenPlatesAndDates.has(key)) {
-        seenPlatesAndDates.add(key);
-        const isExit = (l.gate || '').toUpperCase().includes('EXIT') || (l.gate_type || '').toUpperCase().includes('EXIT') || l.status === 'Completed';
-        const isGuest = l.role === 'Guest' || l.user_id === 'GUEST' || l.userId === 'GUEST' || (l.owner && l.owner.toLowerCase().includes('guest')) || !l.owner;
-        const hasSavedSpot = Boolean(l.isSpotSaved || (l.floor && l.floor !== '-' && (l.pillar || l.spot) && (l.pillar || l.spot) !== '-'));
-
-        list.push({
-          id: l.id || `LOG-${index + 100}`,
-          owner: l.owner || (isGuest ? 'Guest Driver' : 'Registered Driver'),
-          userId: l.userId || l.user_id || (isGuest ? 'GUEST' : (l.ownerEmail ? l.ownerEmail.split('@')[0].toUpperCase() : 'USER')),
-          role: l.role || (isGuest ? 'Guest' : 'Student'),
-          plate: plate,
-          province: (plate === '-' || !plate || plate === 'Unregistered') ? '-' : (l.province || '-'),
-          zone: l.zone && l.zone !== '-' ? l.zone.split('(')[0].trim() : (hasSavedSpot ? 'Zone A' : '-'),
-          floor: hasSavedSpot ? l.floor : '-',
-          pillar: hasSavedSpot ? (l.pillar || l.spot) : '-',
-          entryTime: l.time ? `${l.time} (${l.gate || 'Gate 1 Entry'})` : '08:24 AM (Gate 1 Entry)',
-          exitTime: isExit ? '05:30 PM (Gate 2 Exit)' : 'Active (In Building)',
-          rawDate: logDate,
-          savedDate: logDate,
-          status: isExit ? 'Exited' : 'Active Parked',
-          isSpotSaved: hasSavedSpot
-        });
-      }
-    });
 
     return list;
   }, [parkedSpots, logs]);
