@@ -19,14 +19,22 @@ export default function AdminLoginScreen({ onLoginSuccess }) {
   };
 
   const resolveUserName = (acc) => {
-    if (!acc) return 'AU Admin User';
+    if (!acc) return 'Admin User';
     if (acc.name && acc.name.trim() !== '') return acc.name.trim();
     if (acc.idTokenClaims?.name && acc.idTokenClaims.name.trim() !== '') return acc.idTokenClaims.name.trim();
     if (acc.username) {
       const prefix = acc.username.split('@')[0];
-      return prefix ? prefix.toUpperCase() : acc.username;
+      if (prefix) {
+        return prefix
+          .replace(/[._-]/g, ' ')
+          .split(' ')
+          .filter(Boolean)
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(' ');
+      }
+      return acc.username;
     }
-    return 'AU Admin User';
+    return 'Admin User';
   };
 
   useEffect(() => {
@@ -98,7 +106,7 @@ export default function AdminLoginScreen({ onLoginSuccess }) {
     // Direct fallback if MSAL is not configured or fails
     const fallbackUser = {
       email: 'admin@au.edu',
-      name: 'AU Admin',
+      name: 'admin@au.edu',
       role: 'admin',
       signedInAt: new Date().toISOString()
     };

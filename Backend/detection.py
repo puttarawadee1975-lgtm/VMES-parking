@@ -419,7 +419,7 @@ async def get_detection_snapshot(detection_id: str):
 def clean_text(text: str) -> str:
     text = text.upper()
     text = text.replace(" ", "")
-    text = re.sub(r"[^ก-ฮ0-9A-Z-]", "", text)
+    text = re.sub(r"[^ก-ฮ\u0E30-\u0E4E0-9A-Z-]", "", text)
     return text
 
 def extract_plate(texts: list) -> str:
@@ -583,9 +583,15 @@ async def scan_plate_from_image(payload: OCRScanRequest):
                 img = cv2.resize(img, (target_w, target_h), interpolation=cv2.INTER_AREA)
                 h, w = img.shape[:2]
 
-            # Crop ROI frame box generously (center 90% width, 70% height)
-            crop_w = int(w * 0.90)
-            crop_h = int(h * 0.70)
+            # Crop ROI frame box to match exact camera viewfinder frame overlay on mobile screen
+            v_type = (payload.vehicle_type or "car").lower()
+            if v_type == "motorcycle":
+                crop_w = int(w * 0.70)
+                crop_h = int(h * 0.60)
+            else:  # car
+                crop_w = int(w * 0.88)
+                crop_h = int(h * 0.48)
+
             start_x = max(0, (w - crop_w) // 2)
             start_y = max(0, (h - crop_h) // 2)
             roi_img = img[start_y:start_y + crop_h, start_x:start_x + crop_w]

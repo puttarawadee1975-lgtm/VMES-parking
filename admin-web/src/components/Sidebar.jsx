@@ -118,7 +118,7 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
         <div className="sidebar-footer">
           <div
             className="user-pill"
-            title={adminUser?.name || "Chief Security Officer #01"}
+            title={adminUser?.email ? `${adminUser?.name || ''} (${adminUser.email})` : (adminUser?.name || '')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -132,7 +132,7 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
               <div
                 className="user-name"
                 style={{
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 700,
                   color: 'var(--text-primary)',
                   whiteSpace: 'nowrap',
@@ -141,7 +141,7 @@ export default function Sidebar({ activeTab, setActiveTab, onClearViolationFilte
                   flex: 1
                 }}
               >
-                {adminUser?.name || 'Chief Security Officer #01'}
+                {adminUser?.name || adminUser?.email || ''}
               </div>
             )}
 

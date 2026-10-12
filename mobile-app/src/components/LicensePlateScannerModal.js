@@ -52,7 +52,7 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
     try {
       if (cameraRef.current && Platform.OS !== 'web') {
         const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.85,
+          quality: 0.5,
           base64: true
         });
         if (photo) {
@@ -84,8 +84,8 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
       } catch (ocrErr) {
         console.warn('Backend OCR call failed:', ocrErr);
       }
-    } else {
-      // Demo / Web / Simulator fallback plate
+    } else if (Platform.OS === 'web') {
+      // Demo / Web fallback plate ONLY when running on Web browser
       detectedPlate = '3กฮ 5678';
       detectedProvince = 'กรุงเทพมหานคร';
     }

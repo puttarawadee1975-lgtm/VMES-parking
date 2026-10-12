@@ -45,6 +45,9 @@ export default function Header({ pageTitle, pageSubtitle, selectedTerm = '2026-1
             value={selectedTerm}
             onChange={(e) => onSelectTerm && onSelectTerm(e.target.value)}
             style={{
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              appearance: 'none',
               background: 'transparent',
               border: 'none',
               fontSize: 14,
@@ -52,7 +55,10 @@ export default function Header({ pageTitle, pageSubtitle, selectedTerm = '2026-1
               color: '#0f172a',
               cursor: 'pointer',
               outline: 'none',
-              paddingRight: 8
+              paddingRight: 18,
+              paddingLeft: 4,
+              fontFamily: 'inherit',
+              lineHeight: 1.2
             }}
           >
             {Object.keys(ACADEMIC_TERMS)
