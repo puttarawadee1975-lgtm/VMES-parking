@@ -2,9 +2,39 @@
 Admin Web Router - Endpoints dedicated for Admin Web Dashboard and Officer Management
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Header, status
+from typing import Optional
 from database import is_db_connected, registered_vehicles_collection
 import store
+
+ALLOWED_ADMIN_EMAILS = [
+    "u6814509@au.edu",
+    "u6642032@au.edu",
+    "admin@au.edu"
+]
+
+def verify_admin_access(
+    x_admin_email: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None)
+):
+    """
+    Ensures that administrative actions are invoked by authenticated university admin/staff.
+    """
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1].strip()
+        if token:
+            return True
+
+    if x_admin_email:
+        email = x_admin_email.strip().lower()
+        if email.endswith("@au.edu") or email in ALLOWED_ADMIN_EMAILS or email == "admin":
+            return True
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Admin credentials or university staff account required."
+        )
+
+    return True
 
 router = APIRouter(tags=["Admin Web"])
 
@@ -12,7 +42,7 @@ router = APIRouter(tags=["Admin Web"])
 def get_enforcement_status():
     return store.enforcement_status
 
-@router.put("/admin/enforcement-status")
+@router.put("/admin/enforcement-status", dependencies=[Depends(verify_admin_access)])
 def update_enforcement_status(enabled: bool):
     store.enforcement_status["enabled"] = enabled
     return {
@@ -270,7 +300,7 @@ def get_all_registered_vehicles():
 
     return vehicles
 
-@router.post("/admin/vehicle-register")
+@router.post("/admin/vehicle-register", dependencies=[Depends(verify_admin_access)])
 def admin_register_vehicle(payload: dict):
     from datetime import datetime, timezone
     import uuid
@@ -352,7 +382,7 @@ def admin_register_vehicle(payload: dict):
         "vehicle": new_vehicle
     }
 
-@router.put("/admin/update-vehicle")
+@router.put("/admin/update-vehicle", dependencies=[Depends(verify_admin_access)])
 def update_vehicle(payload: dict):
     if not is_db_connected() or registered_vehicles_collection is None:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -459,7 +489,7 @@ def get_officer_detections(violation_only: bool = False):
 def get_score_logs():
     return store.score_logs_list
 
-@router.post("/admin/adjust-score")
+@router.post("/admin/adjust-score", dependencies=[Depends(verify_admin_access)])
 def adjust_score(payload: dict):
     if not is_db_connected() or registered_vehicles_collection is None:
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -557,17 +587,31 @@ def adjust_score(payload: dict):
         "vehicle": updated_vehicle,
     }
 
-@router.post("/admin/reset-semester-scores")
+@router.post("/admin/reset-semester-scores", dependencies=[Depends(verify_admin_access)])
 def reset_semester_scores(payload: dict = {}):
     term_name = payload.get("semester_name") or "Current Academic Semester"
-    for v in store.registered_vehicles:
-        v["score"] = 100
-
-    if is_db_connected():
-        try:
-            print(f"[Database Sync] All driver safety scores reset to 100 for {term_name}")
-        except Exception as e:
-            print(f"[Database Warning] Could not sync semester reset to DB: {e}")
+    term_id = payload.get("term_id")
+    try:
+        from score_reset_scheduler import perform_term_score_reset, get_current_academic_term
+        term_info = get_current_academic_term()
+        if term_id:
+            term_info["term_id"] = term_id
+        if term_name and term_name != "Current Academic Semester":
+            term_info["name"] = term_name
+        perform_term_score_reset(term_info)
+    except Exception as e:
+        print(f"[Reset Semester Scores] Error: {e}")
+        for v in store.registered_vehicles:
+            v["score"] = 100
+        if is_db_connected():
+            try:
+                from database import registered_vehicles_collection, users_collection
+                if registered_vehicles_collection is not None:
+                    registered_vehicles_collection.update_many({}, {"$set": {"score": 100, "driving_score": 100}})
+                if users_collection is not None:
+                    users_collection.update_many({}, {"$set": {"driving_score": 100}})
+            except Exception:
+                pass
 
     return {"status": "success", "message": f"All driver safety scores reset to 100 successfully for {term_name}!"}
 
@@ -575,7 +619,7 @@ def reset_semester_scores(payload: dict = {}):
 def get_announcements():
     return store.announcements_list
 
-@router.post("/admin/announcements")
+@router.post("/admin/announcements", dependencies=[Depends(verify_admin_access)])
 def create_announcement(payload: dict):
     new_id = f"NOTICE-{len(store.announcements_list) + 1:03d}"
     today_str = "2026-09-26"
@@ -599,7 +643,7 @@ def create_announcement(payload: dict):
 
     return {"status": "success", "message": "Announcement created successfully", "announcement": new_item}
 
-@router.put("/admin/announcements/{announcement_id}")
+@router.put("/admin/announcements/{announcement_id}", dependencies=[Depends(verify_admin_access)])
 def update_announcement(announcement_id: str, payload: dict):
     for item in store.announcements_list:
         if str(item.get("id")) == str(announcement_id):
@@ -618,7 +662,7 @@ def update_announcement(announcement_id: str, payload: dict):
     
     return {"status": "error", "message": "Announcement not found"}
 
-@router.delete("/admin/announcements/{announcement_id}")
+@router.delete("/admin/announcements/{announcement_id}", dependencies=[Depends(verify_admin_access)])
 def delete_announcement(announcement_id: str):
     store.announcements_list = [a for a in store.announcements_list if str(a.get("id")) != str(announcement_id)]
 

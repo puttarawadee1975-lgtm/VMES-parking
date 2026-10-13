@@ -41,34 +41,46 @@ export default function Header({ pageTitle, pageSubtitle, selectedTerm = '2026-1
             <i className="ri-calendar-event-line"></i>
           </div>
 
-          <select
-            value={selectedTerm}
-            onChange={(e) => onSelectTerm && onSelectTerm(e.target.value)}
-            style={{
-              WebkitAppearance: 'none',
-              MozAppearance: 'none',
-              appearance: 'none',
-              background: 'transparent',
-              border: 'none',
-              fontSize: 14,
-              fontWeight: 800,
-              color: '#0f172a',
-              cursor: 'pointer',
-              outline: 'none',
-              paddingRight: 18,
-              paddingLeft: 4,
-              fontFamily: 'inherit',
-              lineHeight: 1.2
-            }}
-          >
-            {Object.keys(ACADEMIC_TERMS)
-              .filter(key => ACADEMIC_TERMS[key].hasData !== false)
-              .map(key => (
-                <option key={key} value={key}>
-                  {ACADEMIC_TERMS[key].label.replace(/\s*\(.*?\)/g, '')}
-                </option>
-              ))}
-          </select>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <select
+              value={selectedTerm}
+              onChange={(e) => onSelectTerm && onSelectTerm(e.target.value)}
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                appearance: 'none',
+                background: 'transparent',
+                border: 'none',
+                fontSize: 14,
+                fontWeight: 800,
+                color: '#0f172a',
+                cursor: 'pointer',
+                outline: 'none',
+                paddingRight: 20,
+                paddingLeft: 4,
+                fontFamily: 'inherit',
+                lineHeight: 1.2
+              }}
+            >
+              {Object.keys(ACADEMIC_TERMS)
+                .filter(key => ACADEMIC_TERMS[key].hasData !== false)
+                .map(key => (
+                  <option key={key} value={key}>
+                    {ACADEMIC_TERMS[key].label.replace(/\s*\(.*?\)/g, '')}
+                  </option>
+                ))}
+            </select>
+            <i
+              className="ri-arrow-down-s-line"
+              style={{
+                position: 'absolute',
+                right: 2,
+                pointerEvents: 'none',
+                fontSize: 16,
+                color: '#64748b'
+              }}
+            ></i>
+          </div>
         </div>
 
       </div>

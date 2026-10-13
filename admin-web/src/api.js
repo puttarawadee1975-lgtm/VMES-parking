@@ -17,7 +17,19 @@ export const getApiHost = () => {
 export const fetchAPI = async (endpoint, options = {}) => {
   const host = getApiHost();
   try {
-    const res = await fetch(`${host}${endpoint}`, options);
+    let headers = { ...(options.headers || {}) };
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('admin_user');
+      if (stored) {
+        try {
+          const user = JSON.parse(stored);
+          if (user?.email) {
+            headers['X-Admin-Email'] = user.email;
+          }
+        } catch (e) {}
+      }
+    }
+    const res = await fetch(`${host}${endpoint}`, { ...options, headers });
     return res;
   } catch (e) {
     console.warn(`[API] Network error fetching from ${host}${endpoint}:`, e);

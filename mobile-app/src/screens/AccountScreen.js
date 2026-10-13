@@ -7,6 +7,7 @@ import SettingsModal from '../components/SettingsModal';
 import GateHistoryModal from '../components/GateHistoryModal';
 import MyVehiclesModal from '../components/MyVehiclesModal';
 import DrivingScoreModal from '../components/DrivingScoreModal';
+import { WS_BASE_URL } from '../services/api';
 
 export default function AccountScreen({
   currentUser,
@@ -14,7 +15,7 @@ export default function AccountScreen({
   onOpenQRScanner,
   onExitBuilding,
   onLogout,
-  websocketUrl = 'ws://168.120.248.53:8000/ws/detections',
+  websocketUrl = WS_BASE_URL,
   setWebsocketUrl = () => { },
   wsConnected = false,
   onTestWebSocket = () => { },

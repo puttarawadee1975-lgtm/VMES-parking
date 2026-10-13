@@ -70,6 +70,13 @@ try:
 except Exception:
     raise RuntimeError("Required QR router failed to load or register.") from None
 
+# 6. Automatic Monthly Safety Score Reset Scheduler
+@app.on_event("startup")
+async def startup_event():
+    import asyncio
+    from score_reset_scheduler import monthly_score_reset_loop
+    asyncio.create_task(monthly_score_reset_loop())
+
 @app.get("/")
 def home():
     return {

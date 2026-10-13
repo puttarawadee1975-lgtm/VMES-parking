@@ -15,7 +15,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthRequest, makeRedirectUri, ResponseType, exchangeCodeAsync, Prompt } from 'expo-auth-session';
-import { loginWithMicrosoft, saveSpotToMongoDB, getSpotFromMongoDB, clearSpotInMongoDB, registerVehicleToMongoDB, deleteVehicleFromMongoDB, getUserVehiclesFromMongoDB, getUserNotifications } from './src/services/api';
+import { loginWithMicrosoft, saveSpotToMongoDB, getSpotFromMongoDB, clearSpotInMongoDB, registerVehicleToMongoDB, deleteVehicleFromMongoDB, getUserVehiclesFromMongoDB, getUserNotifications, WS_BASE_URL } from './src/services/api';
 import { registerForPushNotificationsAsync, sendLocalPhonePushNotification } from './src/services/notificationService';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -33,8 +33,6 @@ import NotificationsModal from './src/components/NotificationsModal';
 // Role-based & Tab Screens
 import AuthScreen from './src/screens/AuthScreen';
 import StudentHomeScreen from './src/screens/StudentHomeScreen';
-import AdminHomeScreen from './src/screens/AdminHomeScreen';
-import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import MyVehicleScreen from './src/screens/MyVehicleScreen';
 import AccountScreen from './src/screens/AccountScreen';
 import QRScanScreen from './src/screens/QRScanScreen';
@@ -169,7 +167,7 @@ function MainApp() {
   const [tripHistory, setTripHistory] = useState([]);
 
   // Settings State
-  const [websocketUrl, setWebsocketUrl] = useState('ws://168.120.248.53:8000/ws/detections');
+  const [websocketUrl, setWebsocketUrl] = useState(WS_BASE_URL);
   const [wsConnected, setWsConnected] = useState(false);
   const [confidenceHelmet, setConfidenceHelmet] = useState(50);
   const [confidencePlate, setConfidencePlate] = useState(40);
