@@ -13,7 +13,7 @@ import {
   SafeAreaView
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { toThaiProvince, formatDisplayPlate } from '../utils/provinceHelper';
+import { toThaiProvince, formatDisplayPlate, stripEmojis } from '../utils/provinceHelper';
 import LicensePlateScannerModal from './LicensePlateScannerModal';
 import ProvincePickerModal from './ProvincePickerModal';
 
@@ -38,8 +38,10 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
       return;
     }
     const fullPlate = formatDisplayPlate(`${newPlate.trim().toUpperCase()} ${newProvince}`);
-    const icon = vehicleType === 'car' ? '🚗' : '🛵';
-    const fullModel = `${icon} ${newBrand.trim()} ${newModel.trim()} (${newColor.trim()})`.trim();
+    const cleanBrand = stripEmojis(newBrand);
+    const cleanModel = stripEmojis(newModel);
+    const cleanColor = stripEmojis(newColor);
+    const fullModel = cleanColor ? `${cleanBrand} ${cleanModel} (${cleanColor})`.trim() : `${cleanBrand} ${cleanModel}`.trim();
 
     const success = onAdd(fullPlate, fullModel);
     if (success !== false) {
@@ -232,7 +234,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                 </Text>
                 <TextInput
                   value={newBrand}
-                  onChangeText={setNewBrand}
+                  onChangeText={(val) => setNewBrand(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                   placeholder={vehicleType === 'car' ? "e.g. Toyota, Honda, Mazda" : "e.g. Honda, Yamaha, Vespa"}
                   placeholderTextColor="#94a3b8"
                   style={{
@@ -255,7 +257,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                 </Text>
                 <TextInput
                   value={newModel}
-                  onChangeText={setNewModel}
+                  onChangeText={(val) => setNewModel(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                   placeholder={vehicleType === 'car' ? "e.g. Camry, Civic" : "e.g. Click 160, Wave 125i"}
                   placeholderTextColor="#94a3b8"
                   style={{
@@ -278,7 +280,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd, insets }) {
                 </Text>
                 <TextInput
                   value={newColor}
-                  onChangeText={setNewColor}
+                  onChangeText={(val) => setNewColor(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                   placeholder="e.g. White, Black, Matte Gray"
                   placeholderTextColor="#94a3b8"
                   style={{

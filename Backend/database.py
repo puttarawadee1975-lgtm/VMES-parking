@@ -25,6 +25,7 @@ COLLECTION_NAMES = {
     "user_saved_spots_collection": "user_saved_spots",
     "saved_spots_collection": "saved_spots",
     "system_settings_collection": "system_settings",
+    "notifications_collection": "notifications",
 }
 
 _client = None
@@ -126,3 +127,4 @@ parking_spots_collection = _database[COLLECTION_NAMES["parking_spots_collection"
 user_saved_spots_collection = _database[COLLECTION_NAMES["user_saved_spots_collection"]]
 saved_spots_collection = _database[COLLECTION_NAMES["saved_spots_collection"]]
 system_settings_collection = _database[COLLECTION_NAMES["system_settings_collection"]]
+notifications_collection = _database[COLLECTION_NAMES["notifications_collection"]]

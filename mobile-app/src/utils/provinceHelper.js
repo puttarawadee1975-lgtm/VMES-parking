@@ -286,3 +286,14 @@ export function formatDisplayPlate(plateStr) {
 
   return str.trim();
 }
+
+/**
+ * Strips all emojis and variation selectors from a string, keeping letters, numbers, spaces, and punctuation.
+ */
+export function stripEmojis(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}

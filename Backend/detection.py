@@ -15,6 +15,7 @@ from database import (
     parking_sessions_collection,
     registered_vehicles_collection,
     saved_spots_collection,
+    notifications_collection,
 )
 from store import update_in_memory_parking_status
 
@@ -333,9 +334,29 @@ async def ingest_detection_event(payload: DetectionLogCreate):
             print(f"[Detection Session Status Persistence Error] {e}")
 
     # Update this detection's cached response, not another camera's record.
-    cached_response["parking_session_action"] = session_action
-
-    # Automatic notification dispatch is unavailable: routers.notifications is not implemented.
+    # Automatic notification dispatch on safety violation to user
+    if is_violation and notifications_collection is not None:
+        target_email = (matched_user.get("email") if matched_user else None) or (registered_vehicle.get("user_email") if registered_vehicle else None)
+        if target_email:
+            try:
+                import uuid
+                noti_title = "Safety Alert: Helmet Violation Warning" if (vehicle_type == "motorcycle" and not helmet_detected) else "Safety Alert: Campus Rule Violation"
+                noti_msg = f"Riding without a helmet was detected at {gate_name}. -10 Driving Score points deducted." if (vehicle_type == "motorcycle" and not helmet_detected) else f"Traffic rule violation detected at {gate_name} for vehicle {payload.license_plate}."
+                notifications_collection.insert_one({
+                    "id": f"NOTIF-{uuid.uuid4().hex[:8].upper()}",
+                    "user_email": target_email,
+                    "title": noti_title,
+                    "message": noti_msg,
+                    "type": "helmet_violation" if (vehicle_type == "motorcycle" and not helmet_detected) else "traffic_violation",
+                    "category": "Safety Alert",
+                    "scoreDeducted": 10 if (penalty_applied or not helmet_detected) else 0,
+                    "location": gate_name,
+                    "plate": payload.license_plate,
+                    "timestamp": now.isoformat(),
+                    "read": False
+                })
+            except Exception as e:
+                print(f"[Notification Dispatch Error] {e}")
 
     return log_response
 

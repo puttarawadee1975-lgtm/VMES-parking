@@ -539,7 +539,7 @@ function MainApp() {
       return { ...prev, vehicles: updatedVehicles };
     });
 
-    showToast('🛵 Vehicle registered successfully');
+    showToast('Vehicle registered successfully');
     return true;
   };
 

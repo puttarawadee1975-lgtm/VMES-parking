@@ -19,6 +19,7 @@ class TestDetectionEndpoint(unittest.TestCase):
             "parking_sessions_collection",
             "registered_vehicles_collection",
             "saved_spots_collection",
+            "notifications_collection",
         ):
             setattr(database, name, MagicMock(name=name))
 

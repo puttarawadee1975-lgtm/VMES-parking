@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getAnnouncements, getUserNotifications } from '../services/api';
+import { getAnnouncements, getUserNotifications, markNotificationAsRead } from '../services/api';
 import AnnouncementDetailModal from './AnnouncementDetailModal';
 import DrivingScoreModal from './DrivingScoreModal';
 
@@ -149,7 +149,10 @@ export default function NotificationsModal({
   };
 
   const handleOpenDetail = (item) => {
-
+    if (item.unread) {
+      markNotificationAsRead(item.id);
+      setDynamicNotis(prev => prev.map(n => n.id === item.id ? { ...n, unread: false } : n));
+    }
     if (item.type === 'warning' || item.category === 'Safety Alert' || item.scoreDeducted > 0) {
       setShowDrivingScoreModal(true);
     } else {

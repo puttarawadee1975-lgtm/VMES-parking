@@ -26,7 +26,7 @@ export const DEMO_ACCOUNTS = {
     userId: '65070042',
     email: '65070042@student.university.ac.th',
     vehicles: [
-      { plate: '1AB 8924 Bangkok', model: '🛵 Honda PCX 160 (White)' }
+      { plate: '1AB 8924 Bangkok', model: 'Honda PCX 160 (White)' }
     ],
     safetyScore: 100
   },
@@ -36,7 +36,7 @@ export const DEMO_ACCOUNTS = {
     userId: '64010589',
     email: 'thanawat.p@student.university.ac.th',
     vehicles: [
-      { plate: '2EF 5519 Chiang Mai', model: '🛵 Yamaha NMAX (Gray)' }
+      { plate: '2EF 5519 Chiang Mai', model: 'Yamaha NMAX (Gray)' }
     ],
     safetyScore: 100
   },
@@ -48,7 +48,7 @@ export const DEMO_ACCOUNTS = {
     userId: '1',
     email: 'faculty.staff@au.edu',
     vehicles: [
-      { plate: '2KH 9999 Bangkok', model: '🛵 Honda Wave 110i (Blue)' }
+      { plate: '2KH 9999 Bangkok', model: 'Honda Wave 110i (Blue)' }
     ],
     safetyScore: 95
   },
@@ -58,7 +58,7 @@ export const DEMO_ACCOUNTS = {
     userId: '2',
     email: 'faculty@au.edu',
     vehicles: [
-      { plate: 'KK 888 Bangkok', model: '🚗 Mazda 3 (White)' }
+      { plate: 'KK 888 Bangkok', model: 'Mazda 3 (White)' }
     ],
     safetyScore: 90
   }

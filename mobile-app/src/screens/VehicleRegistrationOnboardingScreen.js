@@ -16,7 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import ProvincePickerModal from '../components/ProvincePickerModal';
 import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
 import IdCardScannerModal from '../components/IdCardScannerModal';
-import { formatDisplayPlate } from '../utils/provinceHelper';
+import { formatDisplayPlate, stripEmojis } from '../utils/provinceHelper';
 
 export default function VehicleRegistrationOnboardingScreen({
   currentUser,
@@ -150,8 +150,10 @@ export default function VehicleRegistrationOnboardingScreen({
 
     setIsSubmitting(true);
     const fullPlate = formatDisplayPlate(`${plateNumber.trim()} ${province}`);
-    const icon = vehicleType === 'car' ? '🚗' : '🛵';
-    const fullModel = `${icon} ${brand.trim()} ${model.trim()} (${color.trim()})`.trim();
+    const cleanBrand = stripEmojis(brand);
+    const cleanModel = stripEmojis(model);
+    const cleanColor = stripEmojis(color);
+    const fullModel = cleanColor ? `${cleanBrand} ${cleanModel} (${cleanColor})`.trim() : `${cleanBrand} ${cleanModel}`.trim();
 
     const success = onRegisterVehicle(fullPlate, fullModel, {
       vehicle_front_photo: frontPhoto,
@@ -476,7 +478,7 @@ export default function VehicleRegistrationOnboardingScreen({
               </Text>
               <TextInput
                 value={brand}
-                onChangeText={setBrand}
+                onChangeText={(val) => setBrand(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                 placeholder={
                   vehicleType === 'car'
                     ? "e.g. Toyota, Honda, Mazda"
@@ -506,7 +508,7 @@ export default function VehicleRegistrationOnboardingScreen({
               </Text>
               <TextInput
                 value={model}
-                onChangeText={setModel}
+                onChangeText={(val) => setModel(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                 placeholder={
                   vehicleType === 'car'
                     ? "e.g. Camry, Civic, Mazda 3"
@@ -536,7 +538,7 @@ export default function VehicleRegistrationOnboardingScreen({
               </Text>
               <TextInput
                 value={color}
-                onChangeText={setColor}
+                onChangeText={(val) => setColor(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                 placeholder="e.g. Black, White, Red, Blue, Silver"
                 placeholderTextColor="#94a3b8"
                 style={{

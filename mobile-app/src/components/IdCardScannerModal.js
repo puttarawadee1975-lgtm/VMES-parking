@@ -6,7 +6,6 @@ import {
   Modal,
   SafeAreaView,
   Platform,
-  Vibration,
   ActivityIndicator,
   Dimensions,
   Image,
@@ -39,10 +38,6 @@ export default function IdCardScannerModal({ visible, onClose, onCaptureSuccess,
   const handleTakePicture = async () => {
     if (isCapturing) return;
     setIsCapturing(true);
-
-    try {
-      if (Platform.OS !== 'web') Vibration.vibrate(80);
-    } catch (e) { }
 
     try {
       if (cameraRef.current && Platform.OS !== 'web') {

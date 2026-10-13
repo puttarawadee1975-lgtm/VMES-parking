@@ -9,7 +9,7 @@ import {
   Platform
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { formatDisplayPlate } from '../utils/provinceHelper';
+import { formatDisplayPlate, stripEmojis } from '../utils/provinceHelper';
 import EditVehicleModal from './EditVehicleModal';
 
 export default function MyVehiclesModal({
@@ -199,7 +199,7 @@ export default function MyVehiclesModal({
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>{formatDisplayPlate(v.plate)}</Text>
                       <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                        {v.model?.replace(/^[🛵🏍️🚗?❓\s]+/, '') || 'Registered Vehicle'}
+                        {stripEmojis(v.model) || 'Registered Vehicle'}
                       </Text>
                     </View>
                   </View>

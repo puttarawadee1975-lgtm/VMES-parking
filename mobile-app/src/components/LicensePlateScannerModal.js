@@ -6,7 +6,6 @@ import {
   Modal,
   SafeAreaView,
   Platform,
-  Vibration,
   ActivityIndicator,
   Dimensions,
   Image,
@@ -41,10 +40,6 @@ export default function LicensePlateScannerModal({ visible, onClose, onScanSucce
   const handleTakePicture = async () => {
     if (isCapturing) return;
     setIsCapturing(true);
-
-    try {
-      if (Platform.OS !== 'web') Vibration.vibrate(80);
-    } catch (e) { }
 
     let base64Photo = null;
     let photoUri = null;

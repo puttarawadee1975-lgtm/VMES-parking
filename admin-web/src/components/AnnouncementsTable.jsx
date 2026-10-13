@@ -166,7 +166,7 @@ export default function AnnouncementsTable() {
                 <th>Title & Topic</th>
                 <th>Announcement Content</th>
                 <th>Date Posted</th>
-                <th>Auto-Expire Date</th>
+                <th>Expire Date</th>
                 <th>Priority</th>
                 <th>Action</th>
               </tr>
@@ -242,7 +242,7 @@ export default function AnnouncementsTable() {
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#475569', fontWeight: 700 }}>
-                  Auto-Expire Date <span style={{ color: '#dc2626' }}>*</span>
+                  Expire Date <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <input 
                   type="date"

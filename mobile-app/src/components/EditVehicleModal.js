@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { formatDisplayPlate } from '../utils/provinceHelper';
+import { formatDisplayPlate, stripEmojis } from '../utils/provinceHelper';
 import ProvincePickerModal from './ProvincePickerModal';
 import LicensePlateScannerModal from './LicensePlateScannerModal';
 
@@ -62,8 +62,8 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
         setProvince('');
       }
 
-      // 3. Parse brand, model, and color from vehicle.model e.g. "🛵 Honda PCX 160 (Black)"
-      const cleanModelStr = (vehicle.model || '').replace(/^[🛵🏍️🚗?❓\s]+/, '').trim();
+      // 3. Parse brand, model, and color from vehicle.model
+      const cleanModelStr = stripEmojis(vehicle.model || '');
       
       // Extract color inside parentheses e.g. "(Black)"
       const colorMatch = cleanModelStr.match(/\(([^)]+)\)$/);
@@ -181,9 +181,11 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
       return;
     }
 
-    const icon = vehicleType === 'car' ? '🚗' : '🛵';
     const newFullPlate = formatDisplayPlate(`${plateNumber.trim()} ${province}`);
-    const newFullModel = `${icon} ${brand.trim()} ${modelName.trim()} (${color.trim()})`.trim();
+    const cleanBrand = stripEmojis(brand);
+    const cleanModel = stripEmojis(modelName);
+    const cleanColor = stripEmojis(color);
+    const newFullModel = cleanColor ? `${cleanBrand} ${cleanModel} (${cleanColor})`.trim() : `${cleanBrand} ${cleanModel}`.trim();
 
     onSave(vehicle?.plate, newFullPlate, newFullModel, {
       vehicle_front_photo: frontPhoto,
@@ -377,7 +379,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                 </Text>
                 <TextInput
                   value={brand}
-                  onChangeText={setBrand}
+                  onChangeText={(val) => setBrand(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                   placeholder="e.g. Honda, Yamaha, Vespa, Toyota"
                   placeholderTextColor="#94a3b8"
                   style={{
@@ -401,7 +403,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                 </Text>
                 <TextInput
                   value={modelName}
-                  onChangeText={setModelName}
+                  onChangeText={(val) => setModelName(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                   placeholder="e.g. PCX 160, Click 160, Civic, Yaris"
                   placeholderTextColor="#94a3b8"
                   style={{
@@ -425,7 +427,7 @@ export default function EditVehicleModal({ visible, onClose, vehicle, onSave }) 
                 </Text>
                 <TextInput
                   value={color}
-                  onChangeText={setColor}
+                  onChangeText={(val) => setColor(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                   placeholder="e.g. Black, White, Red, Blue, Matte Gray"
                   placeholderTextColor="#94a3b8"
                   style={{

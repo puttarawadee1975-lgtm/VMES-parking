@@ -312,8 +312,61 @@ def delete_vehicle(user_email: str = "", plate: str = ""):
     }
 
 @router.get("/notifications")
-def get_user_notifications_endpoint(email: str = "u6814509@au.edu"):
+def get_user_notifications_endpoint(email: str = ""):
+    target_email = email.strip()
+    if is_db_connected():
+        try:
+            from database import notifications_collection
+            if notifications_collection is not None:
+                import re
+                query_clauses = [{"target_audience": "all"}]
+                if target_email:
+                    query_clauses.extend([
+                        {"user_email": target_email},
+                        {"user_email": {"$regex": f"^{re.escape(target_email)}$", "$options": "i"}},
+                    ])
+                docs = list(notifications_collection.find({"$or": query_clauses}).sort("timestamp", -1).limit(50))
+                for d in docs:
+                    d["_id"] = str(d["_id"])
+                    if "id" not in d:
+                        d["id"] = d["_id"]
+                return docs
+        except Exception as e:
+            print(f"[Notifications DB Error] {e}")
+
+    # Fallback to in-memory store if DB is disconnected
+    if target_email:
+        return [n for n in store.user_notifications if n.get("user_email") == target_email or n.get("target_audience") == "all"]
     return store.user_notifications
+
+@router.post("/notifications/read")
+@router.post("/notifications/mark-read")
+def mark_notification_read(payload: dict):
+    noti_id = payload.get("id") or payload.get("noti_id")
+    if not noti_id:
+        return {"status": "error", "message": "Notification id is required"}
+
+    if is_db_connected():
+        try:
+            from database import notifications_collection
+            if notifications_collection is not None:
+                from bson import ObjectId
+                query_list = [{"id": noti_id}]
+                if len(noti_id) == 24:
+                    try:
+                        query_list.append({"_id": ObjectId(noti_id)})
+                    except Exception:
+                        pass
+                notifications_collection.update_many({"$or": query_list}, {"$set": {"read": True}})
+                return {"status": "success", "message": "Notification marked as read"}
+        except Exception as e:
+            print(f"[Mark Noti Read Error] {e}")
+
+    for n in store.user_notifications:
+        if n.get("id") == noti_id:
+            n["read"] = True
+            break
+    return {"status": "success", "message": "Notification marked as read"}
 
 @router.get("/parking/status")
 def get_parking_status():

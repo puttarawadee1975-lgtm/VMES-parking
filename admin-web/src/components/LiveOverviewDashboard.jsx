@@ -41,15 +41,20 @@ export default function LiveOverviewDashboard({
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
 
   useEffect(() => {
-    fetchAPI(`/admin/dashboard`)
+    fetchAPI(`/admin/dashboard?term=${encodeURIComponent(selectedTerm)}`)
       .then(res => res && res.ok ? res.json() : null)
       .then(data => {
         if (data) {
+          // Guard: If remote backend returns hardcoded mock (1284 scans / 146 violations), ignore it completely
+          if (data.totalScans === 1284 && data.violationsCount === 146) {
+            console.warn('[Dashboard] Discarded legacy mockup data from remote backend.');
+            return;
+          }
           setLiveTermSummary(data);
         }
       })
       .catch(() => { });
-  }, [selectedTerm]);
+  }, [selectedTerm, (logs || []).length, (vehicles || []).length]);
 
   const computedHourlyFromLogs = useMemo(() => {
     const targetSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
@@ -127,9 +132,7 @@ export default function LiveOverviewDashboard({
   }, [logs]);
 
   const currentTermData = useMemo(() => {
-    const rawHourly = (liveTermSummary?.hourlyOccupancy && liveTermSummary.hourlyOccupancy.length > 0)
-      ? liveTermSummary.hourlyOccupancy
-      : (computedHourlyFromLogs || []);
+    const rawHourly = computedHourlyFromLogs || [];
 
     const activeHourly = rawHourly.map(h => {
       const slots = Math.min(18, Math.max(0, h.avgSlots || 0));
@@ -144,71 +147,67 @@ export default function LiveOverviewDashboard({
     const rates = activeHourly.map(h => h.ratePct || 0);
     const avgOccRate = rates.length > 0 ? (rates.reduce((a, b) => a + b, 0) / rates.length).toFixed(1) : '0.0';
 
-    // Calculate vehicleType dynamically based on logs
-    let computedVehicleType = liveTermSummary?.vehicleType;
-    if (!computedVehicleType) {
-      if (!logs || logs.length === 0) {
-        computedVehicleType = {
-          motorcycles: { trips: 0, pct: 0 },
-          cars: { trips: 0, pct: 0 }
-        };
-      } else {
-        let motoCount = 0;
-        let carCount = 0;
-        logs.forEach(l => {
-          const vStr = String(l.vehicle || l.vehicle_type || '').toLowerCase();
-          if (vStr.includes('motorcycle') || vStr.includes('bike') || vStr.includes('moto') || vStr.includes('มอเตอร์ไซค์')) {
-            motoCount++;
-          } else {
-            carCount++;
-          }
-        });
-        const total = motoCount + carCount;
-        const motoPct = total > 0 ? parseFloat(((motoCount / total) * 100).toFixed(1)) : 0;
-        const carPct = total > 0 ? parseFloat(((carCount / total) * 100).toFixed(1)) : 0;
-        computedVehicleType = {
-          motorcycles: { trips: motoCount, pct: motoPct },
-          cars: { trips: carCount, pct: carPct }
-        };
-      }
+    // Calculate vehicleType dynamically directly from real logs
+    let computedVehicleType;
+    if (logs && logs.length > 0) {
+      let motoCount = 0;
+      let carCount = 0;
+      logs.forEach(l => {
+        const vStr = String(l.vehicle || l.vehicle_type || '').toLowerCase();
+        if (vStr.includes('motorcycle') || vStr.includes('bike') || vStr.includes('moto') || vStr.includes('มอเตอร์ไซค์')) {
+          motoCount++;
+        } else {
+          carCount++;
+        }
+      });
+      const total = motoCount + carCount;
+      const motoPct = total > 0 ? parseFloat(((motoCount / total) * 100).toFixed(1)) : 0;
+      const carPct = total > 0 ? parseFloat(((carCount / total) * 100).toFixed(1)) : 0;
+      computedVehicleType = {
+        motorcycles: { trips: motoCount, pct: motoPct },
+        cars: { trips: carCount, pct: carPct }
+      };
+    } else {
+      computedVehicleType = {
+        motorcycles: { trips: 0, pct: 0 },
+        cars: { trips: 0, pct: 0 }
+      };
     }
 
-    // Calculate userType dynamically based on logs
-    let computedUserType = liveTermSummary?.userType;
-    if (!computedUserType) {
-      if (!logs || logs.length === 0) {
-        computedUserType = {
-          registered: { trips: 0, pct: 0 },
-          unregistered: { trips: 0, pct: 0 }
-        };
-      } else {
-        let regCount = 0;
-        let unregCount = 0;
-        logs.forEach(l => {
-          const ownerStr = String(l.owner || '').toLowerCase();
-          if (ownerStr && !ownerStr.includes('guest') && !ownerStr.includes('unregistered') && ownerStr !== 'unknown') {
-            regCount++;
-          } else {
-            unregCount++;
-          }
-        });
-        const total = regCount + unregCount;
-        const regPct = total > 0 ? parseFloat(((regCount / total) * 100).toFixed(1)) : 0;
-        const unregPct = total > 0 ? parseFloat(((unregCount / total) * 100).toFixed(1)) : 0;
-        computedUserType = {
-          registered: { trips: regCount, pct: regPct },
-          unregistered: { trips: unregCount, pct: unregPct }
-        };
-      }
+    // Calculate userType dynamically directly from real logs
+    let computedUserType;
+    if (logs && logs.length > 0) {
+      let regCount = 0;
+      let unregCount = 0;
+      logs.forEach(l => {
+        const ownerStr = String(l.owner || l.matched_user || '').toLowerCase();
+        if (ownerStr && !ownerStr.includes('guest') && !ownerStr.includes('unregistered') && ownerStr !== 'unknown') {
+          regCount++;
+        } else {
+          unregCount++;
+        }
+      });
+      const total = regCount + unregCount;
+      const regPct = total > 0 ? parseFloat(((regCount / total) * 100).toFixed(1)) : 0;
+      const unregPct = total > 0 ? parseFloat(((unregCount / total) * 100).toFixed(1)) : 0;
+      computedUserType = {
+        registered: { trips: regCount, pct: regPct },
+        unregistered: { trips: unregCount, pct: unregPct }
+      };
+    } else {
+      computedUserType = {
+        registered: { trips: 0, pct: 0 },
+        unregistered: { trips: 0, pct: 0 }
+      };
     }
 
     return {
       label: (ACADEMIC_TERMS[selectedTerm]?.label || 'Semester 1 / 2026').replace(/\s*\(.*?\)/g, ''),
       period: ACADEMIC_TERMS[selectedTerm]?.period || '',
-      totalScans: liveTermSummary?.totalScans ?? (logs ? logs.length : 0),
-      violationsCount: liveTermSummary?.violationsCount ?? (logs ? logs.filter(l => l.violation).length : 0),
-      avgSafetyScore: liveTermSummary?.avgSafetyScore ?? 100,
-      avgOccupancyRate: `${avgOccRate}%`,
+      totalScans: (logs && logs.length > 0) ? logs.length : 0,
+      violationsCount: (logs && logs.length > 0) ? logs.filter(l => l.violation || l.isViolation).length : 0,
+      avgSafetyScore: (logs && logs.length > 0) ? (liveTermSummary?.avgSafetyScore ?? 100) : 0,
+      avgOccupancyRate: (logs && logs.length > 0) ? `${avgOccRate}%` : '0.0%',
       vehicleType: computedVehicleType,
       userType: computedUserType,
       hourlyOccupancy: activeHourly,
@@ -218,9 +217,7 @@ export default function LiveOverviewDashboard({
 
   const termTrendData = useMemo(() => {
     let trendList = [];
-    if (liveTermSummary?.monthlyTrend && liveTermSummary.monthlyTrend.length > 0) {
-      trendList = liveTermSummary.monthlyTrend;
-    } else if (logs && logs.length > 0) {
+    if (logs && logs.length > 0) {
       const monthsMap = {};
       const monthOrder = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
 
@@ -232,7 +229,7 @@ export default function LiveOverviewDashboard({
             monthsMap[mKey] = { month: mKey, traffic: 0, violations: 0 };
           }
           monthsMap[mKey].traffic += 1;
-          if (log.violation) {
+          if (log.violation || log.isViolation) {
             monthsMap[mKey].violations += 1;
           }
         }
@@ -241,7 +238,18 @@ export default function LiveOverviewDashboard({
       trendList = Object.values(monthsMap).sort((a, b) => monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month));
     }
 
-    if (!trendList || trendList.length === 0) return [];
+    if (!trendList || trendList.length === 0) {
+      const defaultMonths = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
+      return defaultMonths.map(m => ({
+        month: m,
+        traffic: 0,
+        trafficPct: 0.0,
+        trafficHeightPct: 0,
+        violations: 0,
+        violationPct: 0.0,
+        violationHeightPct: 0
+      }));
+    }
 
     const totalScans = currentTermData.totalScans || trendList.reduce((s, m) => s + (m.traffic || 0), 0) || 1;
     const totalViolations = currentTermData.violationsCount || trendList.reduce((s, m) => s + (m.violations || 0), 0) || 1;
@@ -254,8 +262,8 @@ export default function LiveOverviewDashboard({
       const violations = m.violations || 0;
       const trafficPct = parseFloat(((traffic / totalScans) * 100).toFixed(1));
       const violationPct = parseFloat(((violations / totalViolations) * 100).toFixed(1));
-      const trafficHeightPct = Math.max(16, Math.round((traffic / maxTraffic) * 100));
-      const violationHeightPct = Math.max(16, Math.round((violations / maxViolations) * 100));
+      const trafficHeightPct = traffic > 0 ? Math.max(16, Math.round((traffic / maxTraffic) * 100)) : 0;
+      const violationHeightPct = violations > 0 ? Math.max(16, Math.round((violations / maxViolations) * 100)) : 0;
 
       return {
         month: m.month,
@@ -270,11 +278,15 @@ export default function LiveOverviewDashboard({
   }, [logs, currentTermData, liveTermSummary]);
 
   const avgSafetyScore = useMemo(() => {
-    if (liveTermSummary?.avgSafetyScore) return liveTermSummary.avgSafetyScore;
-    if (!vehicles || vehicles.length === 0) return currentTermData.avgSafetyScore;
-    const sum = vehicles.reduce((acc, v) => acc + (v.score ?? 100), 0);
-    return Math.round(sum / vehicles.length);
-  }, [vehicles, currentTermData, liveTermSummary]);
+    if (vehicles && vehicles.length > 0) {
+      const sum = vehicles.reduce((acc, v) => acc + (v.score ?? 100), 0);
+      return Math.round(sum / vehicles.length);
+    }
+    if (liveTermSummary?.avgSafetyScore !== undefined && (logs?.length > 0 || vehicles?.length > 0)) {
+      return liveTermSummary.avgSafetyScore;
+    }
+    return 0;
+  }, [vehicles, logs, liveTermSummary]);
 
   // Chart 4 Config: Time-based Occupancy Rate (Hourly Trend Line)
   const hourlyChartData = useMemo(() => {

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, TextInput, Image } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import ParkingLocationCard from '../components/ParkingLocationCard';
-import { toThaiProvince, formatDisplayPlate } from '../utils/provinceHelper';
+import { toThaiProvince, formatDisplayPlate, stripEmojis } from '../utils/provinceHelper';
 import LicensePlateScannerModal from '../components/LicensePlateScannerModal';
 import DrivingScoreModal from '../components/DrivingScoreModal';
 import EditVehicleModal from '../components/EditVehicleModal';
@@ -117,8 +117,9 @@ export default function MyVehicleScreen({
 
     const thaiProvince = toThaiProvince(newProvince.trim());
     const fullPlate = `${newPlate.trim().toUpperCase()} ${thaiProvince}`;
-    const icon = vehicleType === 'motorcycle' ? '🛵' : '🚗';
-    const fullModel = `${icon} ${newModel.trim()} (${newColor.trim()})`;
+    const cleanModel = stripEmojis(newModel);
+    const cleanColor = stripEmojis(newColor);
+    const fullModel = cleanColor ? `${cleanModel} (${cleanColor})` : cleanModel;
 
     if (onAddVehicle) {
       const success = onAddVehicle(fullPlate, fullModel, vehiclePhoto);
@@ -189,7 +190,7 @@ export default function MyVehicleScreen({
                     : 'bg-slate-50 border-slate-200'
                   }`}
               >
-                <Text className="text-lg mr-2">🛵</Text>
+                <FontAwesome5 name="motorcycle" size={16} color={vehicleType === 'motorcycle' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 8 }} />
                 <Text className={`text-xs font-bold ${vehicleType === 'motorcycle' ? 'text-blue-700' : 'text-slate-600'}`}>
                   Motorcycle
                 </Text>
@@ -203,9 +204,9 @@ export default function MyVehicleScreen({
                     : 'bg-slate-50 border-slate-200'
                   }`}
               >
-                <Text className="text-lg mr-2">🚗</Text>
+                <Ionicons name="car-outline" size={18} color={vehicleType === 'car' ? '#1d4ed8' : '#64748b'} style={{ marginRight: 8 }} />
                 <Text className={`text-xs font-bold ${vehicleType === 'car' ? 'text-blue-700' : 'text-slate-600'}`}>
-                  Automobile
+                  Car
                 </Text>
               </TouchableOpacity>
             </View>
@@ -289,7 +290,7 @@ export default function MyVehicleScreen({
             </Text>
             <TextInput
               value={newModel}
-              onChangeText={setNewModel}
+              onChangeText={(val) => setNewModel(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
               placeholder="e.g. Honda PCX 160, Yamaha Grand Filano"
               placeholderTextColor="#94a3b8"
               style={{
@@ -312,7 +313,7 @@ export default function MyVehicleScreen({
             </Text>
             <TextInput
               value={newColor}
-              onChangeText={setNewColor}
+              onChangeText={(val) => setNewColor(val.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
               placeholder="e.g. White, Black, Matte Gray"
               placeholderTextColor="#94a3b8"
               style={{
@@ -533,7 +534,6 @@ export default function MyVehicleScreen({
           ) : (
             currentUser.vehicles.map((v, i) => {
               const isCar = checkIsCar(v);
-              const emoji = isCar ? '🚗' : '🛵';
               return (
                 <TouchableOpacity
                   key={i}
@@ -551,7 +551,7 @@ export default function MyVehicleScreen({
                     </View>
                     <View className="flex-1">
                       <Text className="text-slate-900 font-bold text-xs">{formatDisplayPlate(v.plate)}</Text>
-                      <Text className="text-slate-500 text-[10px] mt-0.5">{emoji} {v.model?.replace(/^[🛵🏍️🚗🚘?❓\s]+/, '')}</Text>
+                      <Text className="text-slate-500 text-[10px] mt-0.5">{stripEmojis(v.model)}</Text>
                     </View>
                   </View>
                   <View className="flex-row items-center gap-2">

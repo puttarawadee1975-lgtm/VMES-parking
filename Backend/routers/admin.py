@@ -21,49 +21,190 @@ def update_enforcement_status(enabled: bool):
     }
 
 @router.get("/admin/dashboard")
-def get_dashboard():
+def get_dashboard(term: str = "2026-1"):
+    if not is_db_connected():
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    from database import (
+        detection_logs_collection,
+        registered_vehicles_collection,
+        parking_status_collection,
+    )
+    from datetime import datetime, timezone, timedelta
+
+    # 1. Fetch real detection logs from MongoDB
+    logs = []
+    if detection_logs_collection is not None:
+        logs = list(
+            detection_logs_collection.find({}, {"snapshot_base64": 0}).sort("timestamp", -1)
+        )
+
+    total_scans = len(logs)
+    violations_count = sum(1 for l in logs if l.get("violation") is True)
+
+    # 2. Fetch real registered vehicles for Avg Safety Score
+    vehicles = []
+    if registered_vehicles_collection is not None:
+        vehicles = list(registered_vehicles_collection.find({}, {"score": 1, "_id": 0}))
+
+    scores = [v.get("score", 100) for v in vehicles if v.get("score") is not None]
+    avg_safety_score = round(sum(scores) / len(scores)) if scores else 100
+
+    # 3. Vehicle Type breakdown (Motorcycles vs Cars)
+    moto_trips = 0
+    car_trips = 0
+    for l in logs:
+        v_type = str(l.get("vehicle_type", "") or l.get("vehicle", "")).lower()
+        if any(k in v_type for k in ["motorcycle", "bike", "moto", "มอเตอร์ไซค์"]):
+            moto_trips += 1
+        else:
+            car_trips += 1
+
+    moto_pct = round((moto_trips / total_scans * 100), 1) if total_scans > 0 else 0.0
+    car_pct = round((car_trips / total_scans * 100), 1) if total_scans > 0 else 0.0
+
+    # 4. User Type breakdown (Registered vs Unregistered / Guests)
+    reg_trips = 0
+    unreg_trips = 0
+    for l in logs:
+        matched = str(
+            l.get("matched_user", "") or l.get("owner", "") or l.get("matched_email", "")
+        ).lower()
+        if matched and not any(
+            k in matched for k in ["guest", "unregistered", "delivery", "visitor", "unknown"]
+        ):
+            reg_trips += 1
+        else:
+            unreg_trips += 1
+
+    reg_pct = round((reg_trips / total_scans * 100), 1) if total_scans > 0 else 0.0
+    unreg_pct = round((unreg_trips / total_scans * 100), 1) if total_scans > 0 else 0.0
+
+    # 5. Monthly Trend
+    month_order = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"]
+    months_map = {}
+    for l in logs:
+        ts = l.get("timestamp")
+        if isinstance(ts, str):
+            try:
+                ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except Exception:
+                ts = None
+        if ts:
+            m_key = ts.strftime("%b")
+            if m_key not in months_map:
+                months_map[m_key] = {"month": m_key, "traffic": 0, "violations": 0}
+            months_map[m_key]["traffic"] += 1
+            if l.get("violation") is True:
+                months_map[m_key]["violations"] += 1
+
+    monthly_trend = sorted(
+        months_map.values(),
+        key=lambda m: month_order.index(m["month"]) if m["month"] in month_order else 99
+    )
+
+    # 6. Hourly Occupancy Curve (Operating hours: 09:00 - 18:00)
+    target_slots = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"]
+    building_capacity = 18
+
+    current_occupied = 0
+    if parking_status_collection is not None:
+        try:
+            for z in parking_status_collection.find():
+                z_name = str(z.get("zone", "")).upper()
+                if "ZONE A" in z_name or "ZONE C" in z_name:
+                    current_occupied += int(z.get("occupied_slots", 0))
+        except Exception:
+            pass
+
+    days_map = {}
+    for l in logs:
+        ts = l.get("timestamp")
+        if isinstance(ts, str):
+            try:
+                ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except Exception:
+                ts = None
+        if ts:
+            ts_local = ts.astimezone(timezone(timedelta(hours=7))) if ts.tzinfo else ts + timedelta(hours=7)
+            h = ts_local.hour
+            if 9 <= h <= 18:
+                date_key = ts_local.strftime("%Y-%m-%d")
+                if date_key not in days_map:
+                    days_map[date_key] = []
+                days_map[date_key].append((ts_local, l))
+
+    day_keys = list(days_map.keys())
+    total_days = len(day_keys) or 1
+    slot_sums = {s: 0 for s in target_slots}
+    hour_to_slot = {
+        9: "09:00", 10: "10:00", 11: "11:00", 12: "12:00", 13: "13:00",
+        14: "14:00", 15: "15:00", 16: "16:00", 17: "17:00", 18: "18:00"
+    }
+
+    if day_keys:
+        for dk in day_keys:
+            day_logs = sorted(days_map[dk], key=lambda x: x[0])
+            daily_occ = 0
+            day_slot_map = {}
+            for dt, log in day_logs:
+                gt = str(log.get("gate_type") or "").upper()
+                if "EXIT" in gt or "GATE 2" in gt or "CAM 02" in gt or "CAM2" in gt:
+                    daily_occ = max(0, daily_occ - 1)
+                else:
+                    daily_occ += 1
+                h = dt.hour
+                s_key = "18:00" if h >= 18 else ("09:00" if h < 9 else hour_to_slot.get(h, "09:00"))
+                day_slot_map[s_key] = daily_occ
+
+            last_val = 0
+            for t in target_slots:
+                if t in day_slot_map:
+                    last_val = day_slot_map[t]
+                slot_sums[t] += last_val
+
+    hourly_occupancy = []
+    for t in target_slots:
+        avg_slots = round(slot_sums[t] / total_days, 1) if day_keys else float(current_occupied)
+        avg_slots = max(0.0, min(float(building_capacity), avg_slots))
+        rate_pct = round((avg_slots / building_capacity) * 100, 1)
+        hourly_occupancy.append({
+            "time": t,
+            "avgSlots": avg_slots,
+            "ratePct": rate_pct,
+            "capacity": building_capacity
+        })
+
+    rates = [h["ratePct"] for h in hourly_occupancy]
+    avg_occ_rate = f"{round(sum(rates) / len(rates), 1)}%" if rates else "0.0%"
+
     return {
-        "totalScans": 1284,
-        "violationsCount": 146,
-        "avgSafetyScore": 88,
-        "hourlyOccupancy": [
-            {"time": "09:00", "avgSlots": 5},
-            {"time": "10:00", "avgSlots": 8},
-            {"time": "11:00", "avgSlots": 11},
-            {"time": "12:00", "avgSlots": 14},
-            {"time": "13:00", "avgSlots": 12},
-            {"time": "14:00", "avgSlots": 10},
-            {"time": "15:00", "avgSlots": 13},
-            {"time": "16:00", "avgSlots": 9},
-            {"time": "17:00", "avgSlots": 7},
-            {"time": "18:00", "avgSlots": 4}
-        ],
+        "totalScans": total_scans,
+        "violationsCount": violations_count,
+        "avgSafetyScore": avg_safety_score,
+        "avgOccupancyRate": avg_occ_rate,
+        "hourlyOccupancy": hourly_occupancy,
         "vehicleType": {
             "motorcycles": {
-                "trips": 850,
-                "pct": 66.2
+                "trips": moto_trips,
+                "pct": moto_pct
             },
             "cars": {
-                "trips": 434,
-                "pct": 33.8
+                "trips": car_trips,
+                "pct": car_pct
             }
         },
         "userType": {
             "registered": {
-                "trips": 1100,
-                "pct": 85.7
+                "trips": reg_trips,
+                "pct": reg_pct
             },
             "unregistered": {
-                "trips": 184,
-                "pct": 14.3
+                "trips": unreg_trips,
+                "pct": unreg_pct
             }
         },
-        "monthlyTrend": [
-            {"month": "Jun", "traffic": 220, "violations": 25},
-            {"month": "Jul", "traffic": 280, "violations": 31},
-            {"month": "Aug", "traffic": 350, "violations": 38},
-            {"month": "Sep", "traffic": 434, "violations": 52}
-        ]
+        "monthlyTrend": monthly_trend
     }
 
 @router.get("/admin/gate-history")
@@ -384,6 +525,31 @@ def adjust_score(payload: dict):
             "status": 1,
         }
     )
+
+    target_email = updated_vehicle.get("user_email") or email
+    if target_email:
+        try:
+            from database import notifications_collection
+            if notifications_collection is not None:
+                import uuid
+                from datetime import datetime, timezone
+                reason = payload.get("reason") or ("Safety Score Deduction" if change < 0 else "Safety Score Adjustment")
+                points_str = f"{change:+d}" if change != 0 else "0"
+                notifications_collection.insert_one({
+                    "id": f"NOTIF-{uuid.uuid4().hex[:8].upper()}",
+                    "user_email": target_email,
+                    "title": f"Driving Score Updated ({points_str} Points)",
+                    "message": f"{reason}: Your driving score is now {new_score}/100.",
+                    "type": "penalty" if change < 0 else "bonus",
+                    "category": "Safety Alert",
+                    "scoreDeducted": abs(change) if change < 0 else 0,
+                    "location": "Campus Security Office",
+                    "plate": updated_vehicle.get("plate") or "",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "read": False
+                })
+        except Exception as e:
+            print(f"[Adjust Score Noti Error] {e}")
 
     return {
         "status": "success",

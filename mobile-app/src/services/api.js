@@ -340,6 +340,23 @@ export const getUserNotifications = async (userEmail) => {
   return [];
 };
 
+// 15.1 Mark Notification Read
+export const markNotificationAsRead = async (notiId) => {
+  if (!notiId) return null;
+  try {
+    const res = await fetchAPI('/notifications/read', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ id: notiId }),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to mark notification read:', err);
+    return null;
+  }
+};
+
 // 16. AI License Plate OCR Camera Scan API
 export const scanPlateImageAPI = async (base64Image, vehicleType = 'car') => {
   try {

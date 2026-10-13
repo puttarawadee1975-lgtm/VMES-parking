@@ -98,11 +98,12 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter vehicles by Student ID or Name
+  // Filter vehicles by User ID or Name
   const filteredVehicles = (vehicles || []).filter(item => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
-    const idMatch = (item.id || '').toLowerCase().includes(q);
+    const userIdVal = item.user_id || item.userId || item.id || '';
+    const idMatch = userIdVal.toLowerCase().includes(q);
     const nameMatch = (item.owner || '').toLowerCase().includes(q);
     const plateMatch = (item.plate || '').toLowerCase().includes(q);
     return idMatch || nameMatch || plateMatch;
@@ -123,7 +124,7 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
             <i className="ri-search-line"></i>
             <input 
               type="text" 
-              placeholder="Search Student ID or Name..." 
+              placeholder="Search User ID or Name..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ minWidth: 220 }}
@@ -161,7 +162,7 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
           <table className="table">
             <thead>
               <tr>
-                <th style={{ width: '18%' }}>Student ID</th>
+                <th style={{ width: '18%' }}>User ID</th>
                 <th style={{ width: '22%' }}>Name</th>
                 <th style={{ width: '18%' }}>Safety Score</th>
                 <th style={{ width: '24%' }}>Last Violation</th>
@@ -171,7 +172,7 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
             <tbody>
               {filteredVehicles.map((item, i) => (
                 <tr key={i}>
-                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.id}</td>
+                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.user_id || item.userId || item.id}</td>
                   <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.owner}</td>
                   <td style={{ 
                     fontWeight: 900, 
@@ -242,7 +243,7 @@ export default function ScoresTable({ vehicles, logs = [], onAdjustScore, onView
               <div>
                 <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{adjustTarget.owner}</div>
                 <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                  Student ID: <strong>{adjustTarget.id}</strong> • Plate: <strong>{adjustTarget.plate}</strong>
+                  User ID: <strong>{adjustTarget.user_id || adjustTarget.userId || adjustTarget.id}</strong> • Plate: <strong>{adjustTarget.plate}</strong>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>

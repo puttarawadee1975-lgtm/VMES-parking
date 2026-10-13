@@ -136,20 +136,8 @@ score_logs_list = [
     }
 ]
 
-# Notifications List (Only Helmet Safety Alerts and Announcements)
-user_notifications = [
-    {
-        "id": "NOTIF-001",
-        "title": "Safety Alert: Helmet Violation Warning",
-        "message": "Riding without a helmet was detected at Gate 1 Entrance. -10 Driving Score points deducted.",
-        "type": "helmet_violation",
-        "category": "Safety Alert",
-        "scoreDeducted": 10,
-        "location": "Gate 1 (Main Entrance)",
-        "timestamp": "2026-10-04T08:30:00.000Z",
-        "read": False
-    }
-]
+# Notifications List (Live user notifications stored in MongoDB)
+user_notifications = []
 
 # Official Campus Announcements Management
 announcements_list = [

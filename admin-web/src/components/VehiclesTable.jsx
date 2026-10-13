@@ -2,6 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { THAI_PROVINCES } from '../data/provincesData';
 import { getImageUrl, fetchAPI } from '../api';
 
+export const stripEmojis = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 const CAR_COLORS = [
   { name: 'White', label: 'White', hex: '#ffffff' },
   { name: 'Black', label: 'Black', hex: '#0f172a' },
@@ -387,17 +395,17 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
     setNewBrand(v.brand || '');
     
     // Parse model if not separated
-    let parsedModel = v.model || '';
+    let parsedModel = stripEmojis(v.model || '');
     if (!parsedModel && v.vehicle) {
-      parsedModel = v.vehicle.replace(/Motorcycle|Car|\([^)]*\)/gi, '').trim();
+      parsedModel = stripEmojis(v.vehicle.replace(/Motorcycle|Car|\([^)]*\)/gi, ''));
     }
     setNewModel(parsedModel);
 
     // Parse color if not separated
-    let parsedColor = v.color || '';
+    let parsedColor = stripEmojis(v.color || '');
     if (!parsedColor && v.vehicle) {
       const match = v.vehicle.match(/\(([^)]+)\)/);
-      if (match) parsedColor = match[1];
+      if (match) parsedColor = stripEmojis(match[1]);
     }
     setNewColor(parsedColor);
 
@@ -417,7 +425,10 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
 
     setSubmitting(true);
     try {
-      const fullModelStr = `${newBrand} ${newModel}`.trim();
+      const cleanBrand = stripEmojis(newBrand);
+      const cleanModel = stripEmojis(newModel);
+      const cleanColor = stripEmojis(newColor);
+      const fullModelStr = `${cleanBrand} ${cleanModel}`.trim();
       if (editingVehicle) {
         // Edit existing vehicle
         await fetchAPI('/admin/update-vehicle', {
@@ -429,10 +440,10 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
             user_email: newEmail.trim(),
             plate: newPlate.trim(),
             vehicle_type: newVehicleType,
-            brand: newBrand.trim(),
+            brand: cleanBrand,
             model: fullModelStr || 'Vehicle',
-            color: newColor.trim(),
-            owner: newOwner.trim(),
+            color: cleanColor,
+            owner: stripEmojis(newOwner),
             role: newRole,
             province: newProvince
           })
@@ -447,9 +458,9 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
             role: newRole,
             plate: newPlate.trim(),
             vehicle_type: newVehicleType,
-            brand: newBrand.trim(),
+            brand: cleanBrand,
             model: fullModelStr || 'Honda PCX 160',
-            color: newColor.trim()
+            color: cleanColor
           })
         });
       }
@@ -562,14 +573,14 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
           <table className="table">
             <thead>
               <tr>
-                <th>Student ID</th>
+                <th>User ID</th>
                 <th>Name</th>
                 <th>Role</th>
                 <th>Vehicle Type</th>
                 <th>License Plate</th>
                 <th>Vehicle Details</th>
                 <th>Vehicle Photo</th>
-                <th>Student ID Card</th>
+                <th>User ID Card</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -580,7 +591,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                 let detailsStr = item.brand || item.model 
                   ? `${item.brand || ''} ${item.model || ''} ${item.color ? `(${item.color})` : ''}`.trim() 
                   : (item.vehicle || '').replace(/^(Car|Motorcycle)\s*/i, '').trim();
-                if (!detailsStr) detailsStr = item.vehicle || 'Standard Vehicle';
+                detailsStr = stripEmojis(detailsStr) || stripEmojis(item.vehicle) || 'Standard Vehicle';
 
                 return (
                   <tr key={i}>
@@ -665,7 +676,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
-                  Registered Vehicle & Student ID Documents
+                  Registered Vehicle & User ID Documents
                 </h4>
               </div>
               <button
@@ -677,17 +688,17 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
               </button>
             </div>
 
-            {/* Student & Vehicle Info Card */}
+            {/* User & Vehicle Info Card */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: 14, marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <span style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{selectedPhotoVehicle.owner}</span>
                 <span className="badge badge-primary">{selectedPhotoVehicle.role}</span>
               </div>
               <div style={{ fontSize: 12, color: '#475569' }}>
-                Student ID: <strong>{selectedPhotoVehicle.id}</strong> • Plate: <strong>{selectedPhotoVehicle.plate}</strong>
+                User ID: <strong>{selectedPhotoVehicle.user_id || selectedPhotoVehicle.userId || selectedPhotoVehicle.id}</strong> • Plate: <strong>{selectedPhotoVehicle.plate}</strong>
               </div>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                Model: <strong>{selectedPhotoVehicle.vehicle}</strong>
+                Model: <strong>{stripEmojis(selectedPhotoVehicle.brand ? `${selectedPhotoVehicle.brand} ${selectedPhotoVehicle.model}` : (selectedPhotoVehicle.model || selectedPhotoVehicle.vehicle || 'Standard Vehicle'))}</strong>
               </div>
             </div>
 
@@ -699,60 +710,63 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
               marginBottom: (selectedPhotoVehicle.id_card_photo_url || selectedPhotoVehicle.student_id_photo_url) ? 14 : 0 
             }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <i className="ri-car-line"></i> 1. Front Photo (Front & License Plate)
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <i className="ri-car-line" style={{ color: '#0f172a' }}></i> 1. Front Photo (Front & License Plate)
                 </div>
-                <div style={{ width: '100%', height: 210, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
-                  <img
-                    src={getImageUrl(selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url)}
-                    alt="Front Photo"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=80'; }}
-                  />
+                <div style={{ width: '100%', height: 210, borderRadius: 12, overflow: 'hidden', background: '#f8fafc', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {(selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url) ? (
+                    <img
+                      src={getImageUrl(selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url)}
+                      alt="Front Photo"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=80'; }}
+                    />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#94a3b8', padding: 16 }}>
+                      <i className="ri-image-line" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: '#cbd5e1' }}></i>
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>No Front Photo Uploaded</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#0284c7', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <i className="ri-car-line"></i> 2. Side Photo (Side View)
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <i className="ri-car-line" style={{ color: '#0f172a' }}></i> 2. Side Photo (Side View)
                 </div>
-                <div style={{ width: '100%', height: 210, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #cbd5e1' }}>
-                  <img
-                    src={getImageUrl(selectedPhotoVehicle.side_photo_url || selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url)}
-                    alt="Side Photo"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=600&auto=format&fit=crop&q=80'; }}
-                  />
+                <div style={{ width: '100%', height: 210, borderRadius: 12, overflow: 'hidden', background: '#f8fafc', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {(selectedPhotoVehicle.side_photo_url || selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url) ? (
+                    <img
+                      src={getImageUrl(selectedPhotoVehicle.side_photo_url || selectedPhotoVehicle.front_photo_url || selectedPhotoVehicle.vehicle_photo_url)}
+                      alt="Side Photo"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=600&auto=format&fit=crop&q=80'; }}
+                    />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#94a3b8', padding: 16 }}>
+                      <i className="ri-image-line" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: '#cbd5e1' }}></i>
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>No Side Photo Uploaded</div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Student ID Card Section */}
+            {/* User ID Card Section */}
             {(selectedPhotoVehicle.id_card_photo_url || selectedPhotoVehicle.student_id_photo_url) && (
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <i className="ri-id-card-line"></i> 3. Student ID Card (Identity Verification)
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <i className="ri-id-card-line" style={{ color: '#0f172a' }}></i> 3. User ID Card (Identity Verification)
                 </div>
                 <div style={{ width: '100%', height: 200, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img
                     src={getImageUrl(selectedPhotoVehicle.id_card_photo_url || selectedPhotoVehicle.student_id_photo_url)}
-                    alt="Student ID Card"
+                    alt="User ID Card"
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 </div>
               </div>
             )}
-
-            <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setSelectedPhotoVehicle(null)}
-                style={{ padding: '8px 20px', fontWeight: 700 }}
-              >
-                Close
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -844,7 +858,7 @@ export default function VehiclesTable({ vehicles, onRefreshVehicles }) {
                   type="text"
                   placeholder="e.g. Honda PCX 160"
                   value={newModel}
-                  onChange={e => setNewModel(e.target.value)}
+                  onChange={e => setNewModel(e.target.value.replace(/[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu, ''))}
                   style={{ width: '100%', padding: '10px 14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 10, color: '#0f172a', fontSize: 13, fontWeight: 600 }}
                 />
               </div>
